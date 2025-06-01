@@ -439,13 +439,19 @@
         window.initializeFirebaseApp();
     </script>
 
-    <!-- App Scripts -->
+    <!-- Firebase App Scripts - RICHTIGE REIHENFOLGE WICHTIG! -->
     <script src="firebase-main.js"></script>
     <script src="firebase-auth.js"></script>
     <script src="firebase-news.js"></script>
     <script src="firebase-themen.js"></script>
+    <script src="firebase-gruppen.js"></script>
     <script src="firebase-bewertung.js"></script>
+    <script src="firebase-vorlagen.js"></script>
+    <script src="firebase-admin.js"></script>
+    <script src="firebase-datenverwaltung.js"></script>
+    <script src="firebase-uebersicht.js"></script>
     <script src="firebase-pdf.js"></script>
+    <script src="firebase-init.js"></script>
 
     <style>
         .loading-spinner {
