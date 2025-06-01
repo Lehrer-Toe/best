@@ -485,18 +485,29 @@ body {
     box-shadow: 0 0 10px rgba(255,255,255,0.5);
 }
 
-/* KORRIGIERTE Notenfarben - alle mit klaren Farben */
-.note-1-0 { background: #2ecc71; color: white; } /* Hellgrün - sehr gut */
-.note-1-5 { background: #27ae60; color: white; } /* Grün - sehr gut */
-.note-2-0 { background: #f39c12; color: white; } /* Orange - gut */
-.note-2-5 { background: #e67e22; color: white; } /* Dunkler Orange - gut */
-.note-3-0 { background: #f1c40f; color: #333; } /* Gelb - befriedigend */
-.note-3-5 { background: #d68910; color: white; } /* Gelbbraun - befriedigend */
-.note-4-0 { background: #e74c3c; color: white; } /* Rot - ausreichend */
-.note-4-5 { background: #c0392b; color: white; } /* Dunkelrot - ausreichend */
-.note-5-0 { background: #8b0000; color: white; } /* Dunkelrot - mangelhaft */
-.note-5-5 { background: #6b0000; color: white; } /* Sehr dunkelrot - mangelhaft */
-.note-6-0 { background: #4a0000; color: white; } /* Schwarz-rot - ungenügend */
+/* KORRIGIERTE Notenfarben - ALLE Noten richtig farbig */
+/* Sehr gut (1.0 - 1.5) - Grün */
+.note-1-0 { background: #27ae60 !important; color: white !important; } 
+.note-1-5 { background: #2ecc71 !important; color: white !important; } 
+
+/* Gut (2.0 - 2.5) - Hellgrün/Gelbgrün */
+.note-2-0 { background: #f1c40f !important; color: #2c3e50 !important; } 
+.note-2-5 { background: #f39c12 !important; color: white !important; } 
+
+/* Befriedigend (3.0 - 3.5) - Orange */
+.note-3-0 { background: #e67e22 !important; color: white !important; } 
+.note-3-5 { background: #d35400 !important; color: white !important; } 
+
+/* Ausreichend (4.0 - 4.5) - Rot */
+.note-4-0 { background: #e74c3c !important; color: white !important; } 
+.note-4-5 { background: #c0392b !important; color: white !important; } 
+
+/* Mangelhaft (5.0 - 5.5) - Dunkelrot */
+.note-5-0 { background: #922b21 !important; color: white !important; } 
+.note-5-5 { background: #7b241c !important; color: white !important; } 
+
+/* Ungenügend (6.0) - Sehr dunkelrot */
+.note-6-0 { background: #641e16 !important; color: white !important; } 
 
 .nicht-bewertet-btn {
     background: #95a5a6;
