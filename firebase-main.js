@@ -1,4 +1,4 @@
-// Firebase Hauptsystem - Realtime Database - KORRIGIERT
+// Firebase Hauptsystem - Realtime Database
 console.log('🚀 Firebase Main System geladen');
 
 // Globale Daten-Cache für bessere Performance
@@ -69,7 +69,7 @@ async function loadSystemData() {
     }
 }
 
-// App nach Login initialisieren - KORRIGIERT
+// App nach Login initialisieren
 function initializeAppAfterLogin() {
     console.log('🚀 Initialisiere App nach Login...');
     
@@ -81,17 +81,12 @@ function initializeAppAfterLogin() {
     console.log('👤 Benutzer:', currentUser.name, 'Rolle:', currentUser.role);
     
     try {
-        // WICHTIG: System-Daten nochmal laden falls nicht vollständig
-        ensureSystemDataLoaded();
-        
         // Realtime Listeners für benutzerspezifische Daten
         setupRealtimeListeners();
         
         // Lade Inhalte der aktiven Tabs
         loadNews();
-        if (currentUser.role === 'lehrer') {
-            loadThemen();
-        }
+        loadThemen();
         updateFirebaseStatus();
         
         console.log('✅ App-Interface geladen');
@@ -99,31 +94,6 @@ function initializeAppAfterLogin() {
     } catch (error) {
         console.error('❌ Fehler beim Laden der App-Inhalte:', error);
     }
-}
-
-// NEUE FUNKTION: System-Daten sicherstellen
-async function ensureSystemDataLoaded() {
-    console.log('🔍 Prüfe System-Daten...');
-    
-    // Prüfe ob Checkpoints geladen sind
-    if (!dataCache.bewertungsCheckpoints || Object.keys(dataCache.bewertungsCheckpoints).length === 0) {
-        console.log('📥 Lade fehlende Bewertungs-Checkpoints...');
-        await loadBewertungsCheckpoints();
-    }
-    
-    // Prüfe ob Fächer geladen sind
-    if (!dataCache.faecher || Object.keys(dataCache.faecher).length === 0) {
-        console.log('📥 Lade fehlende Fächer...');
-        await loadFaecher();
-    }
-    
-    // Prüfe ob Stärken-Formulierungen geladen sind
-    if (!dataCache.staerkenFormulierungen || Object.keys(dataCache.staerkenFormulierungen).length === 0) {
-        console.log('📥 Lade fehlende Stärken-Formulierungen...');
-        await loadStaerkenFormulierungen();
-    }
-    
-    console.log('✅ System-Daten vollständig');
 }
 
 // === DATEN LADEN ===
@@ -201,7 +171,7 @@ async function loadFaecher() {
     }
 }
 
-// Bewertungs-Checkpoints laden - ERWEITERT
+// Bewertungs-Checkpoints laden
 async function loadBewertungsCheckpoints() {
     try {
         const checkpointsRef = window.firebaseDB.ref(window.database, 'system/bewertungsCheckpoints');
@@ -209,9 +179,8 @@ async function loadBewertungsCheckpoints() {
         
         if (snapshot.exists()) {
             dataCache.bewertungsCheckpoints = snapshot.val();
-            console.log('✅ Bewertungs-Checkpoints geladen:', Object.keys(dataCache.bewertungsCheckpoints).length, 'Kategorien');
+            console.log('✅ Bewertungs-Checkpoints geladen');
         } else {
-            console.log('📝 Erstelle Default Bewertungs-Checkpoints...');
             // Default Checkpoints erstellen
             const defaultCheckpoints = {
                 "Fachliches Arbeiten": [
@@ -258,13 +227,11 @@ async function loadBewertungsCheckpoints() {
             
             await window.firebaseDB.set(checkpointsRef, defaultCheckpoints);
             dataCache.bewertungsCheckpoints = defaultCheckpoints;
-            console.log('✅ Default Bewertungs-Checkpoints erstellt mit', Object.keys(defaultCheckpoints).length, 'Kategorien');
+            console.log('✅ Default Bewertungs-Checkpoints erstellt');
         }
     } catch (error) {
         console.error('❌ Fehler beim Laden der Bewertungs-Checkpoints:', error);
-        console.error('Details:', error);
-        // Nicht werfen - App soll trotzdem funktionieren
-        dataCache.bewertungsCheckpoints = {};
+        throw error;
     }
 }
 
@@ -290,12 +257,11 @@ async function loadBriefvorlage() {
         }
     } catch (error) {
         console.error('❌ Fehler beim Laden der Briefvorlage:', error);
-        // Nicht werfen - App soll trotzdem funktionieren
-        dataCache.briefvorlage = {};
+        throw error;
     }
 }
 
-// Stärken-Formulierungen laden - ERWEITERT
+// Stärken-Formulierungen laden
 async function loadStaerkenFormulierungen() {
     try {
         const staerkenRef = window.firebaseDB.ref(window.database, 'system/staerkenFormulierungen');
@@ -303,16 +269,10 @@ async function loadStaerkenFormulierungen() {
         
         if (snapshot.exists()) {
             dataCache.staerkenFormulierungen = snapshot.val();
-            console.log('✅ Stärken-Formulierungen geladen:', Object.keys(dataCache.staerkenFormulierungen).length, 'Formulierungen');
+            console.log('✅ Stärken-Formulierungen geladen');
         } else {
-            console.log('📝 Erstelle Default Stärken-Formulierungen...');
             // Default Formulierungen erstellen (basierend auf Checkpoints)
             const defaultFormulierungen = {};
-            
-            // Sicherstellen dass Checkpoints geladen sind
-            if (!dataCache.bewertungsCheckpoints || Object.keys(dataCache.bewertungsCheckpoints).length === 0) {
-                await loadBewertungsCheckpoints();
-            }
             
             Object.entries(dataCache.bewertungsCheckpoints).forEach(([kategorie, checkpoints]) => {
                 checkpoints.forEach((text, index) => {
@@ -323,12 +283,11 @@ async function loadStaerkenFormulierungen() {
             
             await window.firebaseDB.set(staerkenRef, defaultFormulierungen);
             dataCache.staerkenFormulierungen = defaultFormulierungen;
-            console.log('✅ Default Stärken-Formulierungen erstellt mit', Object.keys(defaultFormulierungen).length, 'Formulierungen');
+            console.log('✅ Default Stärken-Formulierungen erstellt');
         }
     } catch (error) {
         console.error('❌ Fehler beim Laden der Stärken-Formulierungen:', error);
-        // Nicht werfen - App soll trotzdem funktionieren
-        dataCache.staerkenFormulierungen = {};
+        throw error;
     }
 }
 
@@ -518,22 +477,7 @@ window.firebaseFunctions = {
     getDatabaseRef: (path) => window.firebaseDB.ref(window.database, path),
     
     // Cache Access
-    dataCache,
-    
-    // NEUE FUNKTION: Debug
-    debugInfo: () => {
-        console.log('🔍 Firebase System Debug Info:');
-        console.log('User:', currentUser);
-        console.log('Cache:', dataCache);
-        console.log('Listeners:', Object.keys(activeListeners));
-        console.log('Checkpoints:', Object.keys(dataCache.bewertungsCheckpoints || {}));
-        console.log('Fächer:', Object.keys(dataCache.faecher || {}));
-        return {
-            user: currentUser,
-            cache: dataCache,
-            listeners: Object.keys(activeListeners)
-        };
-    }
+    dataCache
 };
 
 // Window Event Listeners
