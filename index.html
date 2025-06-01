@@ -12,7 +12,7 @@
         <div class="loading-card">
             <h1>Zeig, was du kannst!</h1>
             <div class="loading-spinner"></div>
-            <p>System wird geladen...</p>
+            <p>Firebase wird initialisiert...</p>
             <div id="loadingProgress" class="loading-progress"></div>
         </div>
     </div>
@@ -24,20 +24,19 @@
             <form id="loginForm">
                 <div class="form-group">
                     <label for="email">E-Mail:</label>
-                    <input type="email" id="email" required>
+                    <input type="email" id="email" required autocomplete="email">
                 </div>
                 <div class="form-group">
                     <label for="password">Passwort:</label>
-                    <input type="password" id="password" required>
+                    <input type="password" id="password" required autocomplete="current-password">
                 </div>
                 <button type="submit" class="login-btn">Anmelden</button>
                 <div id="errorMessage" class="error-message"></div>
             </form>
-            <div style="margin-top: 2rem; font-size: 0.9rem; color: #666;">
-                <strong>Demo-Accounts:</strong><br>
-                Admin: admin@schule.de / admin123<br>
-                Lehrer: riffel@schule.de / lehrer123<br>
-                Weitere: kretz@schule.de, toellner@schule.de, schwarz@schule.de, heiler@schule.de (alle: lehrer123)
+            
+            <!-- Firebase Authentication Status -->
+            <div id="authStatus" style="margin-top: 1rem; font-size: 0.9rem; color: #666;">
+                <div id="firebaseStatus">🔄 Firebase wird initialisiert...</div>
             </div>
         </div>
     </div>
@@ -48,7 +47,7 @@
             <h1>Zeig, was du kannst!</h1>
             <div class="user-info">
                 <span id="currentUser"></span>
-                <button class="logout-btn" onclick="logout()">Abmelden</button>
+                <button class="logout-btn" onclick="firebaseLogout()">Abmelden</button>
             </div>
         </div>
 
@@ -62,8 +61,6 @@
                 <button class="tab-btn" onclick="openTab('bewerten')" id="bewertenTab">Schüler bewerten</button>
                 <button class="tab-btn" onclick="openTab('vorlagen')" id="vorlagenTab">Bewertungsvorlagen</button>
                 <button class="tab-btn" onclick="openTab('uebersicht')" id="uebersichtTab">Übersicht</button>
-                <button class="tab-btn" onclick="openTab('faecher')" id="faecherTab">Fächer</button>
-                <button class="tab-btn" onclick="openTab('checkpoints')" id="checkpointsTab">Checkpoints</button>
                 <button class="tab-btn" onclick="openTab('adminvorlagen')" id="adminvorlagenTab">Vorlagen</button>
             </div>
 
@@ -188,13 +185,20 @@
             <div id="daten" class="tab-content">
                 <h2>Datenverwaltung</h2>
                 <div class="card">
+                    <h3>Firebase Status</h3>
+                    <div id="firebaseInfo">
+                        <p>Status: <span id="dbStatus">🔄 Verbindung wird geprüft...</span></p>
+                        <p>Benutzer: <span id="dbUser">-</span></p>
+                        <p>Letzter Sync: <span id="lastSync">-</span></p>
+                    </div>
+                </div>
+                <div class="card">
                     <h3>Schuljahr</h3>
                     <div class="input-group">
                         <label>Aktuelles Schuljahr:</label>
                         <input type="text" id="schuljahr" value="2025/26" placeholder="z.B. 2025/26">
                         <button class="btn" onclick="schuljahrSpeichern()">Speichern</button>
                     </div>
-                    <p><small><strong>Wichtig:</strong> Bei einem Schuljahrwechsel werden alle aktuellen Bewertungen und Gruppen archiviert und gelöscht!</small></p>
                 </div>
                 <div class="card">
                     <h3>Datenexport</h3>
@@ -310,6 +314,50 @@
                 </div>
             </div>
 
+            <!-- Admin Vorlagen Tab (nur Admin) -->
+            <div id="adminvorlagen" class="tab-content">
+                <h2>System-Vorlagen bearbeiten</h2>
+                
+                <!-- Fächer verwalten -->
+                <div class="card">
+                    <div id="faecherVerwaltung">
+                        <!-- Fächer-Verwaltung wird hier angezeigt -->
+                    </div>
+                </div>
+                
+                <!-- Bewertungs-Checkpoints verwalten -->
+                <div class="card">
+                    <div id="checkpointsVerwaltung">
+                        <!-- Checkpoints-Verwaltung wird hier angezeigt -->
+                    </div>
+                </div>
+                
+                <!-- Standardformulierungen für Stärken -->
+                <div class="card">
+                    <h3>Standardformulierungen für Stärken</h3>
+                    <p><em>Verwenden Sie [NAME] als Platzhalter für den Schülernamen. Ohne [NAME] wird nur der Text verwendet.</em></p>
+                    <div id="staerkenFormulierungen">
+                        <!-- Formulierungen werden hier angezeigt -->
+                    </div>
+                    <button class="btn btn-success" onclick="staerkenFormulierungenSpeichern()">Speichern</button>
+                </div>
+                
+                <!-- Briefvorlage -->
+                <div class="card">
+                    <h3>Briefvorlage</h3>
+                    <p><em>Verwenden Sie [NAME] als Platzhalter für den Schülernamen.</em></p>
+                    <div class="input-group brief-input-group">
+                        <label>Anrede/Einleitung:</label>
+                        <textarea id="briefAnrede" rows="6" placeholder="Liebe/r [NAME]..." class="brief-textarea"></textarea>
+                    </div>
+                    <div class="input-group brief-input-group">
+                        <label>Schlussformel:</label>
+                        <textarea id="briefSchluss" rows="6" placeholder="Mit freundlichen Grüßen..." class="brief-textarea"></textarea>
+                    </div>
+                    <button class="btn btn-success" onclick="briefvorlageSpeichern()">Speichern</button>
+                </div>
+            </div>
+
             <!-- Übersicht Tab -->
             <div id="uebersicht" class="tab-content">
                 <h2>Meine Übersicht</h2>
@@ -352,68 +400,52 @@
                     <!-- Schüler werden hier angezeigt -->
                 </div>
             </div>
-
-            <!-- Fächer Tab (nur Admin) -->
-            <div id="faecher" class="tab-content">
-                <h2>Fächer verwalten</h2>
-                <div class="card">
-                    <div id="faecherVerwaltung">
-                        <!-- Fächer-Verwaltung wird hier angezeigt -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Checkpoints Tab (nur Admin) -->
-            <div id="checkpoints" class="tab-content">
-                <h2>Bewertungs-Checkpoints verwalten</h2>
-                <div class="card">
-                    <p><em>Hier können Sie die Bewertungskriterien und die zugehörigen Formulierungen für die PDF-Ausgabe bearbeiten.</em></p>
-                    <div id="checkpointsVerwaltung">
-                        <!-- Checkpoints-Verwaltung wird hier angezeigt -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Admin Vorlagen Tab (nur Admin) -->
-            <div id="adminvorlagen" class="tab-content">
-                <h2>System-Vorlagen bearbeiten</h2>
-                
-                <!-- Standardformulierungen für Stärken -->
-                <div class="card">
-                    <h3>Standardformulierungen für Stärken</h3>
-                    <p><em>Verwenden Sie [NAME] als Platzhalter für den Schülernamen. Ohne [NAME] wird nur der Text verwendet.</em></p>
-                    <div id="staerkenFormulierungen">
-                        <!-- Formulierungen werden hier angezeigt -->
-                    </div>
-                    <button class="btn btn-success" onclick="staerkenFormulierungenSpeichern()">Speichern</button>
-                </div>
-                
-                <!-- Briefvorlage -->
-                <div class="card">
-                    <h3>Briefvorlage</h3>
-                    <p><em>Verwenden Sie [NAME] als Platzhalter für den Schülernamen.</em></p>
-                    <div class="input-group brief-input-group">
-                        <label>Anrede/Einleitung:</label>
-                        <textarea id="briefAnrede" rows="6" placeholder="Liebe/r [NAME]..." class="brief-textarea"></textarea>
-                    </div>
-                    <div class="input-group brief-input-group">
-                        <label>Schlussformel:</label>
-                        <textarea id="briefSchluss" rows="6" placeholder="Mit freundlichen Grüßen..." class="brief-textarea"></textarea>
-                    </div>
-                    <button class="btn btn-success" onclick="briefvorlageSpeichern()">Speichern</button>
-                </div>
-            </div>
         </div>
     </div>
 
-    <!-- NUR DIESE SCRIPTS - KEINE FIREBASE! -->
-    <script src="main.js"></script>
-    <script src="login.js"></script>
-    <script src="news.js"></script>
-    <script src="themen.js"></script>
-    <script src="bewertung.js"></script>
-    <script src="pdf.js"></script>
-    <script src="admin-vorlagen.js"></script>
+    <!-- Firebase SDK - v9 (modular) -->
+    <script type="module">
+        // Firebase v9 - modular SDK
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js';
+        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js';
+        import { getDatabase, ref, set, get, push, remove, onValue, off } from 'https://www.gstatic.com/firebasejs/9.15.0/firebase-database.js';
+
+        // Deine Firebase Konfiguration (ERSETZE DIESE WERTE!)
+        const firebaseConfig = {
+            apiKey: "DEIN_API_KEY",
+            authDomain: "DEIN_PROJECT_ID.firebaseapp.com",
+            databaseURL: "https://DEIN_PROJECT_ID-default-rtdb.firebaseio.com/",
+            projectId: "DEIN_PROJECT_ID",
+            storageBucket: "DEIN_PROJECT_ID.appspot.com",
+            messagingSenderId: "DEIN_SENDER_ID",
+            appId: "DEINE_APP_ID"
+        };
+
+        // Firebase initialisieren
+        window.firebaseApp = initializeApp(firebaseConfig);
+        window.auth = getAuth(window.firebaseApp);
+        window.database = getDatabase(window.firebaseApp);
+
+        // Firebase Funktionen global verfügbar machen
+        window.firebaseAuth = { signInWithEmailAndPassword, signOut, onAuthStateChanged };
+        window.firebaseDB = { ref, set, get, push, remove, onValue, off };
+
+        console.log('🔥 Firebase v9 initialisiert');
+        
+        // Firebase Status anzeigen
+        document.getElementById('firebaseStatus').innerHTML = '🔥 Firebase bereit';
+        
+        // Firebase initialisieren und dann App starten
+        window.initializeFirebaseApp();
+    </script>
+
+    <!-- App Scripts -->
+    <script src="firebase-main.js"></script>
+    <script src="firebase-auth.js"></script>
+    <script src="firebase-news.js"></script>
+    <script src="firebase-themen.js"></script>
+    <script src="firebase-bewertung.js"></script>
+    <script src="firebase-pdf.js"></script>
 
     <style>
         .loading-spinner {
@@ -429,44 +461,19 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        
+        .loading-progress {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        #authStatus {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 3px solid #667eea;
+        }
     </style>
-
-    <script>
-        // KOMPLETT CLEAN - KEIN FIREBASE!
-        window.addEventListener('load', async function() {
-            console.log('🚀 System startet - JSON-basiert, KEIN Firebase');
-            
-            try {
-                // Warte bis alle Scripts geladen sind
-                if (typeof loadInitialData === 'function') {
-                    await loadInitialData();
-                    
-                    document.getElementById('loadingScreen').style.display = 'none';
-                    document.getElementById('loginScreen').style.display = 'flex';
-                    
-                    // Fächer-Filter füllen
-                    setTimeout(() => {
-                        const filterSelect = document.getElementById('themenFachFilter');
-                        if (filterSelect && alleFaecherGlobal) {
-                            let html = '<option value="">Alle Fächer</option>';
-                            Object.entries(alleFaecherGlobal).forEach(([kuerzel, name]) => {
-                                html += `<option value="${kuerzel}">${name}</option>`;
-                            });
-                            filterSelect.innerHTML = html;
-                        }
-                    }, 100);
-                    
-                    console.log('✅ System erfolgreich gestartet - JSON-basiert');
-                } else {
-                    throw new Error('loadInitialData function not found');
-                }
-                
-            } catch (error) {
-                console.error('❌ Fehler beim Starten:', error);
-                document.getElementById('loadingProgress').innerHTML = 
-                    '<p style="color: #e74c3c;">Fehler: ' + error.message + '</p>';
-            }
-        });
-    </script>
 </body>
 </html>
