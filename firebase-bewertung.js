@@ -3,7 +3,7 @@ console.log('📊 Firebase Bewertungs-System geladen');
 
 // Globale Variablen für Bewertung
 let aktuelleBewertung = null;
-let aktuelleVorlage = null;
+let aktuelleVorlageForBewertung = null;
 
 // Bewertungs-Tab Navigation
 function openBewertungTab(tabName) {
@@ -213,7 +213,7 @@ async function bewertungStarten(schuelerId, schuelerName, thema) {
         }
         
         aktuelleBewertung = { schuelerId, schuelerName, thema };
-        aktuelleVorlage = vorlageData;
+        aktuelleVorlageForBewertung = vorlageData;
         
         await showBewertungsRaster();
         
@@ -253,7 +253,7 @@ async function showBewertungsRaster() {
             aktuelleBewertung.freitext = vorhandeneBewertung.freitext || '';
             berechneDurchschnitt();
         } else {
-            aktuelleBewertung.noten = new Array(aktuelleVorlage.kategorien.length);
+            aktuelleBewertung.noten = new Array(aktuelleVorlageForBewertung.kategorien.length);
             aktuelleBewertung.staerken = {};
             aktuelleBewertung.freitext = '';
         }
@@ -269,7 +269,7 @@ function loadBewertungsTab(vorhandeneBewertung) {
     const container = document.getElementById('bewertungsRasterContent');
     
     let html = `
-        <div class="vorlage-titel">Bewertungsvorlage: ${aktuelleVorlage.name}</div>
+        <div class="vorlage-titel">Bewertungsvorlage: ${aktuelleVorlageForBewertung.name}</div>
         <h3>Bewertung: ${aktuelleBewertung.schuelerName}</h3>
         <p>Thema: ${aktuelleBewertung.thema}</p>
         
@@ -282,7 +282,7 @@ function loadBewertungsTab(vorhandeneBewertung) {
         </div>
     `;
     
-    aktuelleVorlage.kategorien.forEach((kategorie, index) => {
+    aktuelleVorlageForBewertung.kategorien.forEach((kategorie, index) => {
         const vorhandeneNote = vorhandeneBewertung?.noten?.[index];
         html += `
             <div class="kategorie">
@@ -488,7 +488,7 @@ function berechneDurchschnitt() {
     
     aktuelleBewertung.noten.forEach((note, index) => {
         if (note !== undefined) {
-            const gewichtung = aktuelleVorlage.kategorien[index].gewichtung;
+            const gewichtung = aktuelleVorlageForBewertung.kategorien[index].gewichtung;
             summe += note * gewichtung;
             gewichtungSumme += gewichtung;
         }
@@ -551,7 +551,7 @@ async function bewertungSpeichern() {
             schuelerName: aktuelleBewertung.schuelerName,
             thema: aktuelleBewertung.thema,
             lehrer: window.firebaseFunctions.getCurrentUserName(),
-            vorlage: aktuelleVorlage.name,
+            vorlage: aktuelleVorlageForBewertung.name,
             noten: [...aktuelleBewertung.noten],
             endnote: endnote,
             datum: window.firebaseFunctions.formatGermanDate(),
@@ -588,7 +588,7 @@ function bewertungAbbrechen() {
     document.getElementById('bewertungsListe').classList.remove('hidden');
     
     aktuelleBewertung = null;
-    aktuelleVorlage = null;
+    aktuelleVorlageForBewertung = null;
     
     // Bewertungsliste neu laden
     loadBewertungen();
