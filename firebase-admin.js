@@ -10,7 +10,6 @@ function loadAdminVorlagen() {
     // Alle Admin-Bereiche laden
     loadFaecherVerwaltung();
     loadCheckpointsVerwaltung();
-    loadStaerkenFormulierungen();
     loadBriefvorlage();
 }
 
@@ -172,7 +171,7 @@ async function faecherSpeichern() {
     }
 }
 
-// === BEWERTUNGS-CHECKPOINTS VERWALTUNG ===
+// === CHECKPOINTS-VERWALTUNG (Neu strukturiert) ===
 
 async function loadCheckpointsVerwaltung() {
     console.log('📋 Lade Checkpoints-Verwaltung...');
@@ -181,45 +180,72 @@ async function loadCheckpointsVerwaltung() {
     if (!container) return;
     
     try {
-        // Checkpoints aus Cache holen
+        // Checkpoints und Formulierungen aus Cache holen
         const checkpoints = window.firebaseFunctions.dataCache.bewertungsCheckpoints;
+        const formulierungen = window.firebaseFunctions.dataCache.staerkenFormulierungen;
         
         let html = `
-            <h3>Bewertungs-Checkpoints verwalten</h3>
-            <p>Diese Checkpoints stehen bei der Stärken-Bewertung zur Verfügung.</p>
+            <h3>Bewertungs-Checkpoints und Formulierungen verwalten</h3>
+            <p>Hier können Sie die Bewertungskriterien und die dazugehörigen Sätze für die PDFs bearbeiten.</p>
+            <div class="checkpoint-hilfe">
+                <strong>Hinweis:</strong> Verwenden Sie [NAME] als Platzhalter für den Schülernamen in den Formulierungen.
+            </div>
         `;
         
         Object.entries(checkpoints).forEach(([kategorie, items]) => {
             html += `
-                <div class="checkpoint-kategorie">
+                <div class="checkpoint-kategorie-erweitert">
                     <h4>${getKategorieIcon(kategorie)} ${kategorie}</h4>
-                    <div class="checkpoints-liste" id="checkpoints-${kategorie.replace(/\s/g, '-')}">
+                    <div class="checkpoints-formulierungen" id="checkpoints-${kategorie.replace(/\s/g, '-')}">
             `;
             
-            items.forEach((text, index) => {
+            items.forEach((checkpointText, index) => {
+                const key = `${kategorie}_${index}`;
+                const formulierung = formulierungen[key] || checkpointText;
+                
                 html += `
-                    <div class="checkpoint-item">
-                        <input type="text" value="${text}" 
-                               onchange="checkpointChanged('${kategorie}', ${index}, this.value)">
-                        <button class="btn btn-danger btn-sm" 
-                                onclick="checkpointLoeschen('${kategorie}', ${index})">Löschen</button>
+                    <div class="checkpoint-formulierung-item">
+                        <div class="checkpoint-nummer">Checkpoint ${index + 1}:</div>
+                        <div class="checkpoint-inputs">
+                            <div class="input-group">
+                                <label>Bewertungskriterium:</label>
+                                <input type="text" value="${checkpointText}" 
+                                       class="checkpoint-text" 
+                                       data-kategorie="${kategorie}" 
+                                       data-index="${index}"
+                                       onchange="checkpointTextChanged('${kategorie}', ${index}, this.value)">
+                            </div>
+                            <div class="input-group">
+                                <label>Formulierung für PDF:</label>
+                                <input type="text" value="${formulierung}" 
+                                       class="formulierung-text"
+                                       data-key="${key}"
+                                       onchange="formulierungChanged('${key}', this.value)">
+                            </div>
+                            <button class="btn btn-danger btn-sm" 
+                                    onclick="checkpointEntfernen('${kategorie}', ${index})">Entfernen</button>
+                        </div>
                     </div>
                 `;
             });
             
             html += `
-                    <div class="checkpoint-item">
-                        <input type="text" placeholder="Neuer Checkpoint..." 
-                               id="new-checkpoint-${kategorie.replace(/\s/g, '-')}">
-                        <button class="btn btn-success btn-sm" 
-                                onclick="checkpointHinzufuegen('${kategorie}')">Hinzufügen</button>
+                    <div class="checkpoint-formulierung-item neue-item">
+                        <div class="input-group">
+                            <input type="text" placeholder="Neues Bewertungskriterium..." 
+                                   id="new-checkpoint-${kategorie.replace(/\s/g, '-')}">
+                            <input type="text" placeholder="Formulierung für PDF..." 
+                                   id="new-formulierung-${kategorie.replace(/\s/g, '-')}">
+                            <button class="btn btn-success btn-sm" 
+                                    onclick="checkpointHinzufuegen('${kategorie}')">Hinzufügen</button>
+                        </div>
                     </div>
                 </div>
                 </div>
             `;
         });
         
-        html += `<button class="btn btn-success" onclick="checkpointsSpeichern()">Alle Änderungen speichern</button>`;
+        html += `<button class="btn btn-success" onclick="checkpointsUndFormulierungenSpeichern()">Alle Änderungen speichern</button>`;
         
         container.innerHTML = html;
         
@@ -242,19 +268,34 @@ function getKategorieIcon(kategorie) {
     return icons[kategorie] || '📋';
 }
 
-// Checkpoint geändert
-function checkpointChanged(kategorie, index, neuerText) {
+// Checkpoint-Text geändert
+function checkpointTextChanged(kategorie, index, neuerText) {
     console.log('📝 Checkpoint geändert:', kategorie, index, '->', neuerText);
+}
+
+// Formulierung geändert
+function formulierungChanged(key, neueFormulierung) {
+    console.log('📝 Formulierung geändert:', key, '->', neueFormulierung);
 }
 
 // Checkpoint hinzufügen
 function checkpointHinzufuegen(kategorie) {
-    const inputId = `new-checkpoint-${kategorie.replace(/\s/g, '-')}`;
-    const input = document.getElementById(inputId);
-    const text = input?.value.trim();
+    const checkpointInputId = `new-checkpoint-${kategorie.replace(/\s/g, '-')}`;
+    const formulierungInputId = `new-formulierung-${kategorie.replace(/\s/g, '-')}`;
     
-    if (!text) {
-        alert('Bitte Text eingeben!');
+    const checkpointInput = document.getElementById(checkpointInputId);
+    const formulierungInput = document.getElementById(formulierungInputId);
+    
+    const checkpointText = checkpointInput?.value.trim();
+    const formulierungText = formulierungInput?.value.trim();
+    
+    if (!checkpointText) {
+        alert('Bitte Bewertungskriterium eingeben!');
+        return;
+    }
+    
+    if (!formulierungText) {
+        alert('Bitte Formulierung für PDF eingeben!');
         return;
     }
     
@@ -263,50 +304,68 @@ function checkpointHinzufuegen(kategorie) {
     const liste = document.getElementById(listeId);
     if (!liste) return;
     
+    // Index für neuen Checkpoint ermitteln
+    const existingItems = liste.querySelectorAll('.checkpoint-formulierung-item:not(.neue-item)');
+    const newIndex = existingItems.length;
+    const key = `${kategorie}_${newIndex}`;
+    
     // Neues Item vor dem Eingabe-Item einfügen
     const neuesItem = document.createElement('div');
-    neuesItem.className = 'checkpoint-item';
-    
-    // Index für neuen Checkpoint ermitteln
-    const existingItems = liste.querySelectorAll('.checkpoint-item');
-    const newIndex = existingItems.length - 1; // -1 wegen dem Eingabe-Item
-    
+    neuesItem.className = 'checkpoint-formulierung-item';
     neuesItem.innerHTML = `
-        <input type="text" value="${text}" 
-               onchange="checkpointChanged('${kategorie}', ${newIndex}, this.value)">
-        <button class="btn btn-danger btn-sm" 
-                onclick="checkpointLoeschen('${kategorie}', ${newIndex})">Löschen</button>
+        <div class="checkpoint-nummer">Checkpoint ${newIndex + 1}:</div>
+        <div class="checkpoint-inputs">
+            <div class="input-group">
+                <label>Bewertungskriterium:</label>
+                <input type="text" value="${checkpointText}" 
+                       class="checkpoint-text" 
+                       data-kategorie="${kategorie}" 
+                       data-index="${newIndex}"
+                       onchange="checkpointTextChanged('${kategorie}', ${newIndex}, this.value)">
+            </div>
+            <div class="input-group">
+                <label>Formulierung für PDF:</label>
+                <input type="text" value="${formulierungText}" 
+                       class="formulierung-text"
+                       data-key="${key}"
+                       onchange="formulierungChanged('${key}', this.value)">
+            </div>
+            <button class="btn btn-danger btn-sm" 
+                    onclick="checkpointEntfernen('${kategorie}', ${newIndex})">Entfernen</button>
+        </div>
     `;
     
     // Vor dem letzten Element (Eingabe-Item) einfügen
-    const eingabeItem = liste.lastElementChild;
+    const eingabeItem = liste.querySelector('.neue-item');
     liste.insertBefore(neuesItem, eingabeItem);
     
-    // Eingabefeld leeren
-    input.value = '';
+    // Eingabefelder leeren
+    checkpointInput.value = '';
+    formulierungInput.value = '';
     
-    console.log('➕ Checkpoint hinzugefügt:', kategorie, text);
+    console.log('➕ Checkpoint hinzugefügt:', kategorie, checkpointText);
 }
 
-// Checkpoint löschen
-function checkpointLoeschen(kategorie, index) {
-    if (confirm('Checkpoint wirklich löschen?')) {
-        const checkpointItem = event.target.closest('.checkpoint-item');
+// Checkpoint entfernen
+function checkpointEntfernen(kategorie, index) {
+    if (confirm('Checkpoint und Formulierung wirklich löschen?')) {
+        const checkpointItem = event.target.closest('.checkpoint-formulierung-item');
         if (checkpointItem) {
             checkpointItem.remove();
         }
-        console.log('🗑️ Checkpoint gelöscht:', kategorie, index);
+        console.log('🗑️ Checkpoint entfernt:', kategorie, index);
     }
 }
 
-// Checkpoints speichern
-async function checkpointsSpeichern() {
-    console.log('💾 Speichere Checkpoints...');
+// Checkpoints und Formulierungen speichern
+async function checkpointsUndFormulierungenSpeichern() {
+    console.log('💾 Speichere Checkpoints und Formulierungen...');
     
     if (!window.firebaseFunctions.requireAdmin()) return;
     
     try {
         const neueCheckpoints = {};
+        const neueFormulierungen = {};
         
         // Alle Kategorien durchgehen
         const kategorien = Object.keys(window.firebaseFunctions.dataCache.bewertungsCheckpoints);
@@ -316,21 +375,29 @@ async function checkpointsSpeichern() {
             const liste = document.getElementById(listeId);
             
             if (liste) {
-                const items = [];
-                const checkpointItems = liste.querySelectorAll('.checkpoint-item');
+                const checkpointItems = [];
+                const items = liste.querySelectorAll('.checkpoint-formulierung-item:not(.neue-item)');
                 
-                checkpointItems.forEach(item => {
-                    const input = item.querySelector('input[onchange]'); // Nur die mit onchange, nicht das Eingabe-Feld
-                    if (input) {
-                        const text = input.value.trim();
-                        if (text) {
-                            items.push(text);
+                items.forEach((item, realIndex) => {
+                    const checkpointInput = item.querySelector('.checkpoint-text');
+                    const formulierungInput = item.querySelector('.formulierung-text');
+                    
+                    if (checkpointInput && formulierungInput) {
+                        const checkpointText = checkpointInput.value.trim();
+                        const formulierungText = formulierungInput.value.trim();
+                        
+                        if (checkpointText && formulierungText) {
+                            checkpointItems.push(checkpointText);
+                            
+                            // Formulierung mit neuem Index speichern
+                            const key = `${kategorie}_${realIndex}`;
+                            neueFormulierungen[key] = formulierungText;
                         }
                     }
                 });
                 
-                if (items.length > 0) {
-                    neueCheckpoints[kategorie] = items;
+                if (checkpointItems.length > 0) {
+                    neueCheckpoints[kategorie] = checkpointItems;
                 }
             }
         });
@@ -340,153 +407,32 @@ async function checkpointsSpeichern() {
             return;
         }
         
-        // Checkpoints in Firebase speichern
+        // Checkpoints speichern
         const checkpointsRef = window.firebaseFunctions.getDatabaseRef('system/bewertungsCheckpoints');
         await window.firebaseDB.set(checkpointsRef, neueCheckpoints);
         
+        // Formulierungen speichern
+        const formulierungenRef = window.firebaseFunctions.getDatabaseRef('system/staerkenFormulierungen');
+        await window.firebaseDB.set(formulierungenRef, neueFormulierungen);
+        
         // Cache aktualisieren
         window.firebaseFunctions.dataCache.bewertungsCheckpoints = neueCheckpoints;
-        
-        // Stärken-Formulierungen auch aktualisieren
-        await updateStaerkenFormulierungenFromCheckpoints(neueCheckpoints);
-        
-        // News erstellen
-        if (window.newsFunctions) {
-            await window.newsFunctions.createNewsForAction(
-                'Bewertungs-Checkpoints aktualisiert', 
-                'Die Bewertungs-Checkpoints wurden vom Administrator aktualisiert.'
-            );
-        }
-        
-        console.log('✅ Checkpoints gespeichert');
-        alert('Bewertungs-Checkpoints wurden erfolgreich gespeichert!');
-        
-    } catch (error) {
-        console.error('❌ Fehler beim Speichern der Checkpoints:', error);
-        alert('Fehler beim Speichern der Checkpoints: ' + error.message);
-    }
-}
-
-// === STÄRKEN-FORMULIERUNGEN ===
-
-async function loadStaerkenFormulierungen() {
-    console.log('💪 Lade Stärken-Formulierungen...');
-    
-    const container = document.getElementById('staerkenFormulierungen');
-    if (!container) return;
-    
-    try {
-        const formulierungen = window.firebaseFunctions.dataCache.staerkenFormulierungen;
-        const checkpoints = window.firebaseFunctions.dataCache.bewertungsCheckpoints;
-        
-        let html = '';
-        
-        Object.entries(checkpoints).forEach(([kategorie, items]) => {
-            html += `
-                <div class="staerken-formulierung">
-                    <h4>${getKategorieIcon(kategorie)} ${kategorie}</h4>
-            `;
-            
-            items.forEach((defaultText, index) => {
-                const key = `${kategorie}_${index}`;
-                const aktuelleFormulierung = formulierungen[key] || defaultText;
-                
-                html += `
-                    <div class="formulierung-item">
-                        <label>Checkpoint ${index + 1}:</label>
-                        <input type="text" value="${aktuelleFormulierung}" 
-                               data-key="${key}" 
-                               onchange="formulierungChanged('${key}', this.value)">
-                        <small style="color: #666;">Standard: ${defaultText}</small>
-                    </div>
-                `;
-            });
-            
-            html += '</div>';
-        });
-        
-        container.innerHTML = html;
-        
-    } catch (error) {
-        console.error('❌ Fehler beim Laden der Stärken-Formulierungen:', error);
-        container.innerHTML = '<p style="color: #e74c3c;">Fehler beim Laden der Stärken-Formulierungen!</p>';
-    }
-}
-
-// Formulierung geändert
-function formulierungChanged(key, neueFormulierung) {
-    console.log('📝 Formulierung geändert:', key, '->', neueFormulierung);
-}
-
-// Stärken-Formulierungen speichern
-async function staerkenFormulierungenSpeichern() {
-    console.log('💾 Speichere Stärken-Formulierungen...');
-    
-    if (!window.firebaseFunctions.requireAdmin()) return;
-    
-    try {
-        const neueFormulierungen = {};
-        
-        // Alle Formulierungs-Inputs sammeln
-        const inputs = document.querySelectorAll('input[data-key]');
-        inputs.forEach(input => {
-            const key = input.getAttribute('data-key');
-            const value = input.value.trim();
-            if (key && value) {
-                neueFormulierungen[key] = value;
-            }
-        });
-        
-        // Formulierungen in Firebase speichern
-        const formulierungenRef = window.firebaseFunctions.getDatabaseRef('system/staerkenFormulierungen');
-        await window.firebaseDB.set(formulierungenRef, neueFormulierungen);
-        
-        // Cache aktualisieren
         window.firebaseFunctions.dataCache.staerkenFormulierungen = neueFormulierungen;
         
         // News erstellen
         if (window.newsFunctions) {
             await window.newsFunctions.createNewsForAction(
-                'Stärken-Formulierungen aktualisiert', 
-                'Die Stärken-Formulierungen wurden vom Administrator aktualisiert.'
+                'Bewertungskriterien aktualisiert', 
+                'Die Bewertungs-Checkpoints und Formulierungen wurden vom Administrator aktualisiert.'
             );
         }
         
-        console.log('✅ Stärken-Formulierungen gespeichert');
-        alert('Stärken-Formulierungen wurden erfolgreich gespeichert!');
+        console.log('✅ Checkpoints und Formulierungen gespeichert');
+        alert('Bewertungskriterien und Formulierungen wurden erfolgreich gespeichert!');
         
     } catch (error) {
-        console.error('❌ Fehler beim Speichern der Stärken-Formulierungen:', error);
-        alert('Fehler beim Speichern der Stärken-Formulierungen: ' + error.message);
-    }
-}
-
-// Stärken-Formulierungen von Checkpoints aktualisieren
-async function updateStaerkenFormulierungenFromCheckpoints(neueCheckpoints) {
-    try {
-        const aktuelleFormulierungen = window.firebaseFunctions.dataCache.staerkenFormulierungen;
-        const neueFormulierungen = {};
-        
-        // Alle neuen Checkpoints durchgehen
-        Object.entries(neueCheckpoints).forEach(([kategorie, items]) => {
-            items.forEach((text, index) => {
-                const key = `${kategorie}_${index}`;
-                // Behalte bestehende Formulierung oder nutze Checkpoint-Text
-                neueFormulierungen[key] = aktuelleFormulierungen[key] || text;
-            });
-        });
-        
-        // Formulierungen in Firebase speichern
-        const formulierungenRef = window.firebaseFunctions.getDatabaseRef('system/staerkenFormulierungen');
-        await window.firebaseDB.set(formulierungenRef, neueFormulierungen);
-        
-        // Cache aktualisieren
-        window.firebaseFunctions.dataCache.staerkenFormulierungen = neueFormulierungen;
-        
-        console.log('✅ Stärken-Formulierungen automatisch aktualisiert');
-        
-    } catch (error) {
-        console.error('❌ Fehler beim Auto-Update der Stärken-Formulierungen:', error);
+        console.error('❌ Fehler beim Speichern:', error);
+        alert('Fehler beim Speichern: ' + error.message);
     }
 }
 
