@@ -137,6 +137,11 @@ function displayPDF(content, schuelerName) {
                     margin-bottom: 40px;
                     padding-bottom: 20px;
                 }
+                .briefkopf img {
+                    max-width: 100%;
+                    height: auto;
+                    margin-bottom: 20px;
+                }
                 .briefkopf h1 {
                     color: #2c3e50;
                     margin: 0;
@@ -269,18 +274,7 @@ function displayPDF(content, schuelerName) {
             <button class="print-btn" onclick="window.print()">🖨️ Drucken</button>
             
             <div class="briefkopf">
-                <div class="briefkopf-fallback">
-                    <div class="briefkopf-logo-fallback">
-                        <span>🎺</span>
-                    </div>
-                    <div class="briefkopf-text">
-                        <h1 style="margin: 0; color: #2c3e50;">Realschule Bad Schönborn</h1>
-                        <div class="briefkopf-info">
-                            Schulstraße 12 • 76669 Bad Schönborn<br>
-                            Tel: 07253/12345 • info@rs-badschoenborn.de
-                        </div>
-                    </div>
-                </div>
+                ${createBriefkopfHTML()}
                 <h2>Zeig, was du kannst! - Projektbewertung</h2>
             </div>
             
@@ -315,6 +309,26 @@ function displayPDF(content, schuelerName) {
     
     popup.document.write(htmlContent);
     popup.document.close();
+}
+
+function createBriefkopfHTML() {
+    // Versuche Briefkopf-Bild zu laden
+    return `
+        <img src="briefkopf.png" alt="Briefkopf" style="max-width: 100%; height: auto;" 
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <div class="briefkopf-fallback" style="display: none;">
+            <div class="briefkopf-logo-fallback">
+                <span>🎺</span>
+            </div>
+            <div class="briefkopf-text">
+                <h1 style="margin: 0; color: #2c3e50;">Realschule Bad Schönborn</h1>
+                <div class="briefkopf-info">
+                    Schulstraße 12 • 76669 Bad Schönborn<br>
+                    Tel: 07253/12345 • info@rs-badschoenborn.de
+                </div>
+            </div>
+        </div>
+    `;
 }
 
 function formatPDFContent(text, schuelerName) {
