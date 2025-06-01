@@ -428,9 +428,9 @@
             // Firebase Status anzeigen
             document.getElementById('firebaseStatus').innerHTML = '🔥 Firebase bereit';
             
-            // Firebase initialisieren und dann App starten
-            if (typeof window.initializeFirebaseApp === 'function') {
-                window.initializeFirebaseApp();
+            // DIREKTE INITIALISIERUNG - Ohne firebase-init.js Konflikt
+            if (typeof initializeFirebaseApp === 'function') {
+                initializeFirebaseApp();
             }
         } catch (error) {
             console.error('❌ KRITISCHER FEHLER bei Firebase-Initialisierung:', error);
@@ -444,7 +444,7 @@
         }
     </script>
 
-    <!-- Firebase App Scripts - RICHTIGE REIHENFOLGE WICHTIG! -->
+    <!-- Firebase App Scripts - KORREKTE REIHENFOLGE! -->
     <script src="firebase-main.js"></script>
     <script src="firebase-auth.js"></script>
     <script src="firebase-news.js"></script>
@@ -456,7 +456,7 @@
     <script src="firebase-datenverwaltung.js"></script>
     <script src="firebase-uebersicht.js"></script>
     <script src="firebase-pdf.js"></script>
-    <script src="firebase-init.js"></script>
+    <!-- ENTFERNT: firebase-init.js - verursacht Konflikte -->
 
     <style>
         .loading-spinner {
