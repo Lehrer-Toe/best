@@ -410,24 +410,38 @@
         import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js';
         import { getDatabase, ref, set, get, push, remove, onValue, off } from 'https://www.gstatic.com/firebasejs/9.15.0/firebase-database.js';
 
+        // KORRIGIERTER IMPORT - richtige Datei
         import { firebaseConfig } from './firebase-config.js';
         
         // Firebase initialisieren
-        window.firebaseApp = initializeApp(firebaseConfig);
-        window.auth = getAuth(window.firebaseApp);
-        window.database = getDatabase(window.firebaseApp);
+        try {
+            window.firebaseApp = initializeApp(firebaseConfig);
+            window.auth = getAuth(window.firebaseApp);
+            window.database = getDatabase(window.firebaseApp);
 
-        // Firebase Funktionen global verfügbar machen
-        window.firebaseAuth = { signInWithEmailAndPassword, signOut, onAuthStateChanged };
-        window.firebaseDB = { ref, set, get, push, remove, onValue, off };
+            // Firebase Funktionen global verfügbar machen
+            window.firebaseAuth = { signInWithEmailAndPassword, signOut, onAuthStateChanged };
+            window.firebaseDB = { ref, set, get, push, remove, onValue, off };
 
-        console.log('🔥 Firebase v9 initialisiert');
-        
-        // Firebase Status anzeigen
-        document.getElementById('firebaseStatus').innerHTML = '🔥 Firebase bereit';
-        
-        // Firebase initialisieren und dann App starten
-        window.initializeFirebaseApp();
+            console.log('🔥 Firebase v9 erfolgreich initialisiert');
+            
+            // Firebase Status anzeigen
+            document.getElementById('firebaseStatus').innerHTML = '🔥 Firebase bereit';
+            
+            // Firebase initialisieren und dann App starten
+            if (typeof window.initializeFirebaseApp === 'function') {
+                window.initializeFirebaseApp();
+            }
+        } catch (error) {
+            console.error('❌ KRITISCHER FEHLER bei Firebase-Initialisierung:', error);
+            document.getElementById('firebaseStatus').innerHTML = '❌ Firebase Fehler: ' + error.message;
+            
+            // Fallback anzeigen
+            document.getElementById('loadingScreen').style.display = 'none';
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('errorMessage').textContent = 'Firebase konnte nicht initialisiert werden: ' + error.message;
+            document.getElementById('errorMessage').style.display = 'block';
+        }
     </script>
 
     <!-- Firebase App Scripts - RICHTIGE REIHENFOLGE WICHTIG! -->
