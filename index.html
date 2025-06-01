@@ -61,7 +61,7 @@
                 <button class="tab-btn" onclick="openTab('bewerten')" id="bewertenTab">Schüler bewerten</button>
                 <button class="tab-btn" onclick="openTab('vorlagen')" id="vorlagenTab">Bewertungsvorlagen</button>
                 <button class="tab-btn" onclick="openTab('uebersicht')" id="uebersichtTab">Übersicht</button>
-                <button class="tab-btn" onclick="openTab('adminvorlagen')" id="adminvorlagenTab">Vorlagen</button>
+                <button class="tab-btn" onclick="openTab('adminvorlagen')" id="adminvorlagenTab">System-Vorlagen</button>
             </div>
 
             <!-- News Tab -->
@@ -314,7 +314,7 @@
                 </div>
             </div>
 
-            <!-- Admin Vorlagen Tab (nur Admin) -->
+            <!-- Admin System-Vorlagen Tab (nur Admin) -->
             <div id="adminvorlagen" class="tab-content">
                 <h2>System-Vorlagen bearbeiten</h2>
                 
@@ -325,21 +325,11 @@
                     </div>
                 </div>
                 
-                <!-- Bewertungs-Checkpoints verwalten -->
+                <!-- Bewertungs-Checkpoints und Formulierungen verwalten -->
                 <div class="card">
                     <div id="checkpointsVerwaltung">
-                        <!-- Checkpoints-Verwaltung wird hier angezeigt -->
+                        <!-- Erweiterte Checkpoints-Verwaltung wird hier angezeigt -->
                     </div>
-                </div>
-                
-                <!-- Standardformulierungen für Stärken -->
-                <div class="card">
-                    <h3>Standardformulierungen für Stärken</h3>
-                    <p><em>Verwenden Sie [NAME] als Platzhalter für den Schülernamen. Ohne [NAME] wird nur der Text verwendet.</em></p>
-                    <div id="staerkenFormulierungen">
-                        <!-- Formulierungen werden hier angezeigt -->
-                    </div>
-                    <button class="btn btn-success" onclick="staerkenFormulierungenSpeichern()">Speichern</button>
                 </div>
                 
                 <!-- Briefvorlage -->
@@ -428,9 +418,9 @@
             // Firebase Status anzeigen
             document.getElementById('firebaseStatus').innerHTML = '🔥 Firebase bereit';
             
-            // DIREKTE INITIALISIERUNG - Ohne firebase-init.js Konflikt
-            if (typeof initializeFirebaseApp === 'function') {
-                initializeFirebaseApp();
+            // Firebase initialisieren und dann App starten
+            if (typeof window.initializeFirebaseApp === 'function') {
+                window.initializeFirebaseApp();
             }
         } catch (error) {
             console.error('❌ KRITISCHER FEHLER bei Firebase-Initialisierung:', error);
@@ -444,7 +434,7 @@
         }
     </script>
 
-    <!-- Firebase App Scripts - KORREKTE REIHENFOLGE! -->
+    <!-- Firebase App Scripts - RICHTIGE REIHENFOLGE WICHTIG! -->
     <script src="firebase-main.js"></script>
     <script src="firebase-auth.js"></script>
     <script src="firebase-news.js"></script>
@@ -456,7 +446,7 @@
     <script src="firebase-datenverwaltung.js"></script>
     <script src="firebase-uebersicht.js"></script>
     <script src="firebase-pdf.js"></script>
-    <!-- ENTFERNT: firebase-init.js - verursacht Konflikte -->
+    <script src="firebase-init.js"></script>
 
     <style>
         .loading-spinner {
