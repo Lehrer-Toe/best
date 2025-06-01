@@ -40,24 +40,20 @@ function showApp() {
     console.log('👤 Benutzer angemeldet:', currentUser.name, 'Rolle:', currentUser.role);
     
     // ALLE Tabs erst mal verstecken
-    document.getElementById('newsTab').style.display = 'none';
-    document.getElementById('themenTab').style.display = 'none';
-    document.getElementById('gruppenTab').style.display = 'none';
-    document.getElementById('lehrerTab').style.display = 'none';
-    document.getElementById('datenTab').style.display = 'none';
-    document.getElementById('bewertenTab').style.display = 'none';
-    document.getElementById('vorlagenTab').style.display = 'none';
-    document.getElementById('uebersichtTab').style.display = 'none';
-    document.getElementById('adminvorlagenTab').style.display = 'none';
+    hideAllTabs();
     
     // Tabs je nach Rolle anzeigen
     if (currentUser.role === 'admin') {
+        // Admin sieht alle Tabs
         document.getElementById('newsTab').style.display = 'block';
         document.getElementById('lehrerTab').style.display = 'block';
         document.getElementById('datenTab').style.display = 'block';
+        document.getElementById('faecherTab').style.display = 'block';
+        document.getElementById('checkpointsTab').style.display = 'block';
         document.getElementById('adminvorlagenTab').style.display = 'block';
         console.log('👑 Admin-Interface aktiviert');
     } else {
+        // Lehrer sieht nur diese Tabs
         document.getElementById('newsTab').style.display = 'block';
         document.getElementById('themenTab').style.display = 'block';
         document.getElementById('gruppenTab').style.display = 'block';
@@ -73,20 +69,27 @@ function showApp() {
     }
 }
 
+function hideAllTabs() {
+    const allTabs = [
+        'newsTab', 'themenTab', 'gruppenTab', 'lehrerTab', 'datenTab', 
+        'bewertenTab', 'vorlagenTab', 'uebersichtTab', 'faecherTab', 
+        'checkpointsTab', 'adminvorlagenTab'
+    ];
+    
+    allTabs.forEach(tabId => {
+        const tab = document.getElementById(tabId);
+        if (tab) {
+            tab.style.display = 'none';
+        }
+    });
+}
+
 function logout() {
     console.log('👋 Benutzer meldet sich ab:', currentUser ? currentUser.name : 'unbekannt');
     currentUser = null;
     
     // Alle Tabs verstecken beim Logout
-    document.getElementById('newsTab').style.display = 'none';
-    document.getElementById('themenTab').style.display = 'none';
-    document.getElementById('gruppenTab').style.display = 'none';
-    document.getElementById('lehrerTab').style.display = 'none';
-    document.getElementById('datenTab').style.display = 'none';
-    document.getElementById('bewertenTab').style.display = 'none';
-    document.getElementById('vorlagenTab').style.display = 'none';
-    document.getElementById('uebersichtTab').style.display = 'none';
-    document.getElementById('adminvorlagenTab').style.display = 'none';
+    hideAllTabs();
     
     document.getElementById('loginScreen').style.display = 'flex';
     document.getElementById('appContainer').style.display = 'none';
