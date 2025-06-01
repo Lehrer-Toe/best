@@ -61,7 +61,9 @@
                 <button class="tab-btn" onclick="openTab('bewerten')" id="bewertenTab">Schüler bewerten</button>
                 <button class="tab-btn" onclick="openTab('vorlagen')" id="vorlagenTab">Bewertungsvorlagen</button>
                 <button class="tab-btn" onclick="openTab('uebersicht')" id="uebersichtTab">Übersicht</button>
-                <button class="tab-btn" onclick="openTab('adminvorlagen')" id="adminvorlagenTab">Vorlagen</button>
+                <button class="tab-btn" onclick="openTab('faecher')" id="faecherTab">Fächer</button>
+                <button class="tab-btn" onclick="openTab('checkpoints')" id="checkpointsTab">Checkpunkte</button>
+                <button class="tab-btn" onclick="openTab('pdfdokument')" id="pdfdokumentTab">PDF-Dokument</button>
             </div>
 
             <!-- News Tab -->
@@ -314,35 +316,37 @@
                 </div>
             </div>
 
-            <!-- Admin Vorlagen Tab (nur Admin) -->
-            <div id="adminvorlagen" class="tab-content">
-                <h2>System-Vorlagen bearbeiten</h2>
-                
-                <!-- Fächer verwalten -->
+            <!-- Fächer Tab (Admin) -->
+            <div id="faecher" class="tab-content">
+                <h2>Fächer verwalten</h2>
                 <div class="card">
                     <div id="faecherVerwaltung">
                         <!-- Fächer-Verwaltung wird hier angezeigt -->
                     </div>
                 </div>
-                
-                <!-- Bewertungs-Checkpoints verwalten -->
+            </div>
+
+            <!-- Checkpunkte Tab (Admin) -->
+            <div id="checkpoints" class="tab-content">
+                <h2>Bewertungs-Checkpunkte verwalten</h2>
                 <div class="card">
                     <div id="checkpointsVerwaltung">
                         <!-- Checkpoints-Verwaltung wird hier angezeigt -->
                     </div>
                 </div>
-                
-                <!-- Standardformulierungen für Stärken -->
                 <div class="card">
-                    <h3>Standardformulierungen für Stärken</h3>
+                    <h3>Formulierungen für Stärken-Sätze</h3>
                     <p><em>Verwenden Sie [NAME] als Platzhalter für den Schülernamen. Ohne [NAME] wird nur der Text verwendet.</em></p>
                     <div id="staerkenFormulierungen">
                         <!-- Formulierungen werden hier angezeigt -->
                     </div>
-                    <button class="btn btn-success" onclick="staerkenFormulierungenSpeichern()">Speichern</button>
+                    <button class="btn btn-success" onclick="staerkenFormulierungenSpeichern()">Formulierungen speichern</button>
                 </div>
-                
-                <!-- Briefvorlage -->
+            </div>
+
+            <!-- PDF-Dokument Tab (Admin) -->
+            <div id="pdfdokument" class="tab-content">
+                <h2>PDF-Dokument Einstellungen</h2>
                 <div class="card">
                     <h3>Briefvorlage</h3>
                     <p><em>Verwenden Sie [NAME] als Platzhalter für den Schülernamen.</em></p>
@@ -354,7 +358,27 @@
                         <label>Schlussformel:</label>
                         <textarea id="briefSchluss" rows="6" placeholder="Mit freundlichen Grüßen..." class="brief-textarea"></textarea>
                     </div>
-                    <button class="btn btn-success" onclick="briefvorlageSpeichern()">Speichern</button>
+                    <button class="btn btn-success" onclick="briefvorlageSpeichern()">Briefvorlage speichern</button>
+                </div>
+                <div class="card">
+                    <h3>Schule Einstellungen</h3>
+                    <div class="input-group">
+                        <label>Schulname:</label>
+                        <input type="text" id="schuleName" value="Realschule Bad Schönborn">
+                    </div>
+                    <div class="input-group">
+                        <label>Adresse:</label>
+                        <input type="text" id="schuleAdresse" value="Schulstraße 12 • 76669 Bad Schönborn">
+                    </div>
+                    <div class="input-group">
+                        <label>Telefon:</label>
+                        <input type="text" id="schuleTelefon" value="07253/12345">
+                    </div>
+                    <div class="input-group">
+                        <label>E-Mail:</label>
+                        <input type="email" id="schuleEmail" value="info@rs-badschoenborn.de">
+                    </div>
+                    <button class="btn btn-success" onclick="schuleEinstellungenSpeichern()">Schule-Daten speichern</button>
                 </div>
             </div>
 
@@ -428,9 +452,9 @@
             // Firebase Status anzeigen
             document.getElementById('firebaseStatus').innerHTML = '🔥 Firebase bereit';
             
-            // DIREKTE INITIALISIERUNG - Ohne firebase-init.js Konflikt
-            if (typeof initializeFirebaseApp === 'function') {
-                initializeFirebaseApp();
+            // Firebase initialisieren und dann App starten
+            if (typeof window.initializeFirebaseApp === 'function') {
+                window.initializeFirebaseApp();
             }
         } catch (error) {
             console.error('❌ KRITISCHER FEHLER bei Firebase-Initialisierung:', error);
@@ -444,7 +468,7 @@
         }
     </script>
 
-    <!-- Firebase App Scripts - KORREKTE REIHENFOLGE! -->
+    <!-- Firebase App Scripts - RICHTIGE REIHENFOLGE WICHTIG! -->
     <script src="firebase-main.js"></script>
     <script src="firebase-auth.js"></script>
     <script src="firebase-news.js"></script>
@@ -456,7 +480,7 @@
     <script src="firebase-datenverwaltung.js"></script>
     <script src="firebase-uebersicht.js"></script>
     <script src="firebase-pdf.js"></script>
-    <!-- ENTFERNT: firebase-init.js - verursacht Konflikte -->
+    <script src="firebase-init.js"></script>
 
     <style>
         .loading-spinner {
