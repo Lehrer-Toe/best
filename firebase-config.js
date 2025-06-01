@@ -1,7 +1,7 @@
 export const firebaseConfig = {
   apiKey: "AIzaSyDa24dH8TfAjEDzLPFjabY4gk3xBuFdFAw",
   authDomain: "best-rsbs.firebaseapp.com",
-  databaseURL: "https://best-rsbs-default-rtdb.firebaseio.com/",
+  databaseURL: "https://best-rsbs-default-rtdb.europe-west1.firebasedatabase.app/",
   projectId: "best-rsbs",
   storageBucket: "best-rsbs.appspot.com",
   messagingSenderId: "42086270793",
