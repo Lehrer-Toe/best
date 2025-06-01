@@ -18,10 +18,10 @@ function loadGruppen() {
     
     let html = '';
     gruppen.forEach((gruppe) => {
-        // Berechtigung prüfen - Admin oder beteiligte Lehrer können bearbeiten
+        // KORRIGIERTE BERECHTIGUNG: Nur Ersteller oder Admin kann bearbeiten
         const currentUserName = window.firebaseFunctions.getCurrentUserName();
-        const istBeteiligt = gruppe.schueler?.some(s => s.lehrer === currentUserName);
-        const kannBearbeiten = window.firebaseFunctions.isAdmin() || istBeteiligt;
+        const istErsteller = gruppe.ersteller === currentUserName;
+        const kannBearbeiten = window.firebaseFunctions.isAdmin() || istErsteller;
         
         html += `<div class="liste-item">
             <div>
@@ -53,7 +53,7 @@ function loadGruppen() {
     console.log('👥 Gruppen geladen:', gruppen.length);
 }
 
-// Lehrer- und Fach-Selects aktualisieren
+// Lehrer- und Fach-Selects aktualisieren - KORRIGIERT
 function updateSchuelerSelects() {
     console.log('👨‍🏫 Aktualisiere Lehrer- und Fach-Auswahl...');
     
@@ -66,13 +66,16 @@ function updateSchuelerSelects() {
         .map(([kuerzel, name]) => `<option value="${kuerzel}">${name}</option>`)
         .join('');
     
+    // NUR LEERE Fach-Selects aktualisieren (nicht die mit Werten)
     const fachSelects = document.querySelectorAll('.schueler-fach');
     fachSelects.forEach(select => {
-        select.innerHTML = '<option value="">Fach wählen...</option>' + fachOptions;
+        if (!select.value) { // Nur wenn noch kein Wert ausgewählt
+            select.innerHTML = '<option value="">Fach wählen...</option>' + fachOptions;
+        }
     });
 }
 
-// Lehrer für Selects laden
+// Lehrer für Selects laden - KORRIGIERT
 async function loadLehrerForSelects() {
     try {
         const usersRef = window.firebaseFunctions.getDatabaseRef('users');
@@ -88,9 +91,12 @@ async function loadLehrerForSelects() {
             });
         }
         
+        // NUR LEERE Lehrer-Selects aktualisieren (nicht die mit Werten)
         const lehrerSelects = document.querySelectorAll('.schueler-lehrer');
         lehrerSelects.forEach(select => {
-            select.innerHTML = '<option value="">Lehrer wählen...</option>' + lehrerOptions;
+            if (!select.value) { // Nur wenn noch kein Wert ausgewählt
+                select.innerHTML = '<option value="">Lehrer wählen...</option>' + lehrerOptions;
+            }
         });
         
     } catch (error) {
@@ -98,7 +104,7 @@ async function loadLehrerForSelects() {
     }
 }
 
-// Schüler-Zeile hinzufügen
+// Schüler-Zeile hinzufügen - KORRIGIERT
 function schuelerHinzufuegen() {
     const container = document.getElementById('schuelerListe');
     if (!container) return;
@@ -119,10 +125,46 @@ function schuelerHinzufuegen() {
     
     container.appendChild(newRow);
     
-    // Neue Selects mit Optionen füllen
-    updateSchuelerSelects();
+    // KORRIGIERT: Nur die neuen Selects mit Optionen füllen
+    fillNewSelectsWithOptions(newRow);
     
     console.log('➕ Schüler-Zeile hinzugefügt');
+}
+
+// NEUE FUNKTION: Nur neue Selects füllen
+async function fillNewSelectsWithOptions(row) {
+    try {
+        // Lehrer laden
+        const usersRef = window.firebaseFunctions.getDatabaseRef('users');
+        const snapshot = await window.firebaseDB.get(usersRef);
+        
+        let lehrerOptions = '<option value="">Lehrer wählen...</option>';
+        if (snapshot.exists()) {
+            const users = snapshot.val();
+            Object.values(users).forEach(user => {
+                if (user.role === 'lehrer') {
+                    lehrerOptions += `<option value="${user.name}">${user.name}</option>`;
+                }
+            });
+        }
+        
+        // Fächer laden
+        const faecher = window.firebaseFunctions.getAllFaecher();
+        const fachOptions = '<option value="">Fach wählen...</option>' + 
+            Object.entries(faecher)
+                .map(([kuerzel, name]) => `<option value="${kuerzel}">${name}</option>`)
+                .join('');
+        
+        // Nur die Selects in der neuen Zeile füllen
+        const lehrerSelect = row.querySelector('.schueler-lehrer');
+        const fachSelect = row.querySelector('.schueler-fach');
+        
+        if (lehrerSelect) lehrerSelect.innerHTML = lehrerOptions;
+        if (fachSelect) fachSelect.innerHTML = fachOptions;
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Füllen der neuen Selects:', error);
+    }
 }
 
 // Schüler-Zeile entfernen
@@ -216,7 +258,7 @@ async function gruppeErstellen() {
     }
 }
 
-// Gruppe bearbeiten
+// Gruppe bearbeiten - BERECHTIGUNG PRÜFEN
 async function gruppeBearbeiten(gruppenId) {
     console.log('👥 Bearbeite Gruppe:', gruppenId);
     
@@ -229,6 +271,16 @@ async function gruppeBearbeiten(gruppenId) {
         
         if (!gruppe) {
             alert('Gruppe nicht gefunden!');
+            return;
+        }
+        
+        // BERECHTIGUNG PRÜFEN: Nur Ersteller oder Admin
+        const currentUserName = window.firebaseFunctions.getCurrentUserName();
+        const istErsteller = gruppe.ersteller === currentUserName;
+        const istAdmin = window.firebaseFunctions.isAdmin();
+        
+        if (!istErsteller && !istAdmin) {
+            alert('Sie können nur eigene Gruppen bearbeiten!');
             return;
         }
         
