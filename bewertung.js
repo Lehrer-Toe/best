@@ -92,12 +92,19 @@ function loadBewertungen() {
 
 function loadVorlagenOptionsForSchueler(selectedVorlage) {
     let options = '';
+    
+    // Standard-Vorlage immer verfügbar
+    const isStandardSelected = selectedVorlage === 'Standard' ? 'selected' : '';
+    options += `<option value="Standard" ${isStandardSelected}>Standard</option>`;
+    
+    // Lehrer-spezifische Vorlagen
     if (vorlagen[currentUser.email]) {
         vorlagen[currentUser.email].forEach(vorlage => {
             const selected = vorlage.name === selectedVorlage ? 'selected' : '';
             options += `<option value="${vorlage.name}" ${selected}>${vorlage.name}</option>`;
         });
     }
+    
     return options;
 }
 
@@ -146,7 +153,15 @@ function bewertungStarten(schuelerId, schuelerName, thema) {
         return;
     }
     
-    const vorlageData = vorlagen[currentUser.email]?.find(v => v.name === vorlage);
+    let vorlageData = null;
+    
+    // Standard-Vorlage oder Lehrer-spezifische Vorlage
+    if (vorlage === 'Standard') {
+        vorlageData = vorlagen.standard[0]; // Standard-Vorlage aus den Vorlagen
+    } else if (vorlagen[currentUser.email]) {
+        vorlageData = vorlagen[currentUser.email].find(v => v.name === vorlage);
+    }
+    
     if (!vorlageData) {
         alert('Bewertungsvorlage nicht gefunden!');
         return;
