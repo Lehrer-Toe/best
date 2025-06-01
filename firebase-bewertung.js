@@ -20,7 +20,7 @@ function openBewertungTab(tabName) {
 }
 
 // Bewertungen laden und anzeigen
-function loadBewertungen() {
+async function loadBewertungen() {
     console.log('📊 Lade Bewertungen von Firebase...');
     
     if (!window.firebaseFunctions.requireAuth()) return;
@@ -59,6 +59,9 @@ function loadBewertungen() {
     // Bewertungen aus Cache holen
     const bewertungen = window.firebaseFunctions.getBewertungenFromCache();
     
+    // Vorlagen-Optionen laden
+    const vorlagenOptions = await loadVorlagenOptionsForAllSchueler();
+    
     let html = '';
     meineSchueler.forEach(schueler => {
         const bewertung = bewertungen.find(b => b.schuelerId === schueler.schuelerId);
@@ -68,6 +71,13 @@ function loadBewertungen() {
         const pdfVerfuegbar = bewertung && bewertung.endnote && bewertung.staerken && Object.keys(bewertung.staerken).length > 0;
         const pdfButtonClass = pdfVerfuegbar ? 'pdf-btn-enabled' : 'pdf-btn-disabled';
         const pdfButtonDisabled = pdfVerfuegbar ? '' : 'disabled';
+        
+        // Vorlagen-Select mit korrigierter Auswahl
+        const selectedVorlage = bewertung?.vorlage || '';
+        const vorlagenSelectOptions = vorlagenOptions.replace(
+            `value="${selectedVorlage}"`, 
+            `value="${selectedVorlage}" selected`
+        );
         
         html += `<div class="bewertung-liste-item" data-status="${status}" data-name="${schueler.name}">
             <div class="bewertung-header">
@@ -81,7 +91,7 @@ function loadBewertungen() {
                 <div class="bewertung-actions">
                     <select class="vorlage-select" id="vorlage-${schueler.schuelerId}">
                         <option value="">Bewertungsvorlage wählen...</option>
-                        ${await loadVorlagenOptionsForSchueler(bewertung?.vorlage)}
+                        ${vorlagenSelectOptions}
                     </select>
                     <button class="btn" onclick="bewertungStarten('${schueler.schuelerId}', '${schueler.name}', '${schueler.thema}')">
                         ${bewertung ? 'Bewertung bearbeiten' : 'Bewerten'}
@@ -103,8 +113,8 @@ function loadBewertungen() {
     console.log('📊 Bewertungen geladen:', meineSchueler.length, 'Schüler');
 }
 
-// Vorlagen-Optionen für Schüler laden
-async function loadVorlagenOptionsForSchueler(selectedVorlage) {
+// Vorlagen-Optionen für alle Schüler laden
+async function loadVorlagenOptionsForAllSchueler() {
     if (!window.firebaseFunctions.requireAuth()) return '';
     
     try {
@@ -118,8 +128,7 @@ async function loadVorlagenOptionsForSchueler(selectedVorlage) {
         if (snapshot.exists()) {
             const vorlagen = snapshot.val();
             Object.values(vorlagen).forEach(vorlage => {
-                const selected = vorlage.name === selectedVorlage ? 'selected' : '';
-                options += `<option value="${vorlage.name}" ${selected}>${vorlage.name}</option>`;
+                options += `<option value="${vorlage.name}">${vorlage.name}</option>`;
             });
         }
         
