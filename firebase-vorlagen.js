@@ -39,10 +39,14 @@ async function loadMeineVorlagen() {
                 const summe = vorlage.kategorien.reduce((acc, kat) => acc + kat.gewichtung, 0);
                 const farbe = summe === 100 ? '#27ae60' : '#e74c3c';
                 
+                // Prüfen ob es sich um die Standardvorlage handelt
+                const istStandardvorlage = vorlage.name === 'Standardbewertung' || vorlage.istStandard === true;
+                
                 html += `
                     <div class="liste-item">
                         <div>
-                            <strong>${vorlage.name}</strong><br>
+                            <strong>${vorlage.name}</strong>
+                            ${istStandardvorlage ? '<span class="standard-badge">Standard</span>' : ''}<br>
                             <small>Kategorien: ${vorlage.kategorien.length} | 
                             Gewichtung: <span style="color: ${farbe}">${summe}%</span></small><br>
                             <div style="margin-top: 0.5rem;">
@@ -50,8 +54,9 @@ async function loadMeineVorlagen() {
                             </div>
                         </div>
                         <div>
-                            <button class="btn" onclick="vorlageBearbeiten('${key}')">Bearbeiten</button>
-                            <button class="btn btn-danger" onclick="vorlageLoeschen('${key}')">Löschen</button>
+                            ${!istStandardvorlage ? `<button class="btn" onclick="vorlageBearbeiten('${key}')">Bearbeiten</button>` : ''}
+                            ${!istStandardvorlage ? `<button class="btn btn-danger" onclick="vorlageLoeschen('${key}')">Löschen</button>` : ''}
+                            ${istStandardvorlage ? '<small style="color: #666;">Standardvorlage kann nicht bearbeitet werden</small>' : ''}
                         </div>
                     </div>
                 `;
@@ -86,6 +91,12 @@ function neueVorlageErstellen() {
     
     if (!name) {
         alert('Bitte geben Sie einen Namen für die Vorlage ein!');
+        return;
+    }
+    
+    // Prüfen ob Name bereits existiert
+    if (name === 'Standardbewertung') {
+        alert('Der Name "Standardbewertung" ist für die Standardvorlage reserviert!');
         return;
     }
     
@@ -124,8 +135,16 @@ async function vorlageBearbeiten(vorlagenKey) {
             return;
         }
         
+        const vorlageData = snapshot.val();
+        
+        // Prüfen ob es sich um eine Standardvorlage handelt
+        if (vorlageData.name === 'Standardbewertung' || vorlageData.istStandard === true) {
+            alert('Die Standardvorlage kann nicht bearbeitet werden!');
+            return;
+        }
+        
         aktuelleVorlage = { 
-            ...snapshot.val(), 
+            ...vorlageData, 
             key: vorlagenKey 
         };
         aktuelleKategorien = [...aktuelleVorlage.kategorien];
@@ -384,6 +403,12 @@ async function vorlageLoeschen(vorlagenKey) {
         
         const vorlage = snapshot.val();
         
+        // Prüfen ob es sich um eine Standardvorlage handelt
+        if (vorlage.name === 'Standardbewertung' || vorlage.istStandard === true) {
+            alert('Die Standardvorlage kann nicht gelöscht werden!');
+            return;
+        }
+        
         if (confirm(`Vorlage "${vorlage.name}" wirklich löschen?\n\nHinweis: Bestehende Bewertungen mit dieser Vorlage bleiben erhalten.`)) {
             await window.firebaseDB.remove(vorlageRef);
             
@@ -455,12 +480,13 @@ async function createDefaultVorlagen() {
         // Standard-Vorlagen erstellen
         const standardVorlagen = [
             {
-                name: 'Standard Projekt',
+                name: 'Standardbewertung',
                 kategorien: [
                     { name: 'Reflexion', gewichtung: 30 },
                     { name: 'Inhalt', gewichtung: 40 },
                     { name: 'Präsentation', gewichtung: 30 }
-                ]
+                ],
+                istStandard: true // Kennzeichnung als Standardvorlage
             },
             {
                 name: 'Teamarbeit',
