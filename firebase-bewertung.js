@@ -244,7 +244,7 @@ async function showBewertungsRaster() {
         
         // Bewertungsraster aufbauen
         loadBewertungsTab(vorhandeneBewertung);
-        loadStaerkenTab(vorhandeneBewertung);
+        await loadStaerkenTab(vorhandeneBewertung); // ASYNC gemacht
         
         // Durchschnitt initial berechnen
         if (vorhandeneBewertung) {
@@ -299,59 +299,83 @@ function loadBewertungsTab(vorhandeneBewertung) {
     container.innerHTML = html;
 }
 
-// Stärken-Tab laden
-function loadStaerkenTab(vorhandeneBewertung) {
+// Stärken-Tab laden (KORRIGIERT - lädt direkt aus Firebase)
+async function loadStaerkenTab(vorhandeneBewertung) {
     const container = document.getElementById('staerkenCheckliste');
     
-    let html = '<h3>Stärken bewerten</h3>';
+    // Loading-Anzeige
+    container.innerHTML = '<h3>Stärken bewerten</h3><p>🔄 Lade Bewertungskriterien...</p>';
     
-    // Bewertungs-Checkpoints aus Cache holen
-    const bewertungsCheckpoints = window.firebaseFunctions.dataCache.bewertungsCheckpoints;
-    
-    if (!bewertungsCheckpoints || Object.keys(bewertungsCheckpoints).length === 0) {
-        html += '<p style="color: #e74c3c;">Bewertungskriterien werden geladen...</p>';
-        container.innerHTML = html;
-        return;
-    }
-    
-    Object.keys(bewertungsCheckpoints).forEach(kategorie => {
-        const aktivierte = vorhandeneBewertung?.staerken?.[kategorie] || [];
+    try {
+        // Bewertungs-Checkpoints direkt aus Firebase laden
+        let bewertungsCheckpoints = window.firebaseFunctions.dataCache.bewertungsCheckpoints;
         
-        html += `
-            <div class="staerken-kategorie">
-                <div class="staerken-kategorie-titel">
-                    ${getKategorieIcon(kategorie)} ${kategorie}
-                </div>
-                <div class="staerken-liste">
-        `;
+        // Falls nicht im Cache, direkt aus Firebase laden
+        if (!bewertungsCheckpoints || Object.keys(bewertungsCheckpoints).length === 0) {
+            console.log('📋 Lade Bewertungs-Checkpoints direkt aus Firebase...');
+            
+            const checkpointsRef = window.firebaseFunctions.getDatabaseRef('system/bewertungsCheckpoints');
+            const snapshot = await window.firebaseDB.get(checkpointsRef);
+            
+            if (snapshot.exists()) {
+                bewertungsCheckpoints = snapshot.val();
+                // Cache aktualisieren
+                window.firebaseFunctions.dataCache.bewertungsCheckpoints = bewertungsCheckpoints;
+                console.log('✅ Bewertungs-Checkpoints aus Firebase geladen');
+            } else {
+                console.warn('⚠️ Keine Bewertungs-Checkpoints in Firebase gefunden');
+                container.innerHTML = '<h3>Stärken bewerten</h3><p style="color: #e74c3c;">❌ Bewertungskriterien konnten nicht geladen werden.</p>';
+                return;
+            }
+        }
         
-        bewertungsCheckpoints[kategorie].forEach((text, index) => {
-            const checked = aktivierte.includes(index) ? 'checked' : '';
-            const itemClass = aktivierte.includes(index) ? 'checked' : '';
+        let html = '<h3>Stärken bewerten</h3>';
+        
+        Object.keys(bewertungsCheckpoints).forEach(kategorie => {
+            const aktivierte = vorhandeneBewertung?.staerken?.[kategorie] || [];
             
             html += `
-                <div class="staerken-item ${itemClass}">
-                    <input type="checkbox" class="staerken-checkbox" 
-                           ${checked}
-                           onchange="staerkeToggle('${kategorie}', ${index}, this)">
-                    <span class="staerken-text" onclick="toggleCheckbox('${kategorie}', ${index})">${text}</span>
-                </div>
+                <div class="staerken-kategorie">
+                    <div class="staerken-kategorie-titel">
+                        ${getKategorieIcon(kategorie)} ${kategorie}
+                    </div>
+                    <div class="staerken-liste">
             `;
+            
+            bewertungsCheckpoints[kategorie].forEach((text, index) => {
+                const checked = aktivierte.includes(index) ? 'checked' : '';
+                const itemClass = aktivierte.includes(index) ? 'checked' : '';
+                
+                html += `
+                    <div class="staerken-item ${itemClass}">
+                        <input type="checkbox" class="staerken-checkbox" 
+                               ${checked}
+                               onchange="staerkeToggle('${kategorie}', ${index}, this)">
+                        <span class="staerken-text" onclick="toggleCheckbox('${kategorie}', ${index})">${text}</span>
+                    </div>
+                `;
+            });
+            
+            html += '</div></div>';
         });
         
-        html += '</div></div>';
-    });
-    
-    html += `
-        <div class="freitext-bereich">
-            <label><strong>📝 Weitere Beobachtungen oder individuelle Stärken:</strong></label>
-            <textarea class="freitext-textarea" 
-                      placeholder="Hier können Sie weitere Beobachtungen eintragen..."
-                      onchange="freitextChanged(this)">${vorhandeneBewertung?.freitext || ''}</textarea>
-        </div>
-    `;
-    
-    container.innerHTML = html;
+        html += `
+            <div class="freitext-bereich">
+                <label><strong>📝 Weitere Beobachtungen oder individuelle Stärken:</strong></label>
+                <textarea class="freitext-textarea" 
+                          placeholder="Hier können Sie weitere Beobachtungen eintragen..."
+                          onchange="freitextChanged(this)">${vorhandeneBewertung?.freitext || ''}</textarea>
+            </div>
+        `;
+        
+        container.innerHTML = html;
+        
+        console.log('✅ Stärken-Tab geladen');
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Laden der Stärken-Checkpoints:', error);
+        container.innerHTML = '<h3>Stärken bewerten</h3><p style="color: #e74c3c;">❌ Fehler beim Laden der Bewertungskriterien.</p>';
+    }
 }
 
 // Kategorie-Icons
