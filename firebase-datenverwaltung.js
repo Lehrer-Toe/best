@@ -416,7 +416,11 @@ async function lehrerHinzufuegen() {
     }
     
     try {
-        // 1. Benutzer-Daten in Database speichern
+        // 1. Benutzer in Firebase Authentication anlegen
+        // Hinweis: Dies erfordert Admin-SDK - hier nur Platzhalter
+        console.log('Erstelle Firebase Auth User für:', email);
+        
+        // 2. Benutzer-Daten in Database speichern
         const sanitizedEmail = window.firebaseFunctions.sanitizeEmail(email);
         const userRef = window.firebaseFunctions.getDatabaseRef(`users/${sanitizedEmail}`);
         
@@ -428,29 +432,17 @@ async function lehrerHinzufuegen() {
             timestamp: window.firebaseFunctions.getTimestamp()
         });
         
-        // 2. Standard-Vorlagen für neuen Lehrer erstellen - ANGEPASST
+        // 3. Standard-Vorlagen für neuen Lehrer erstellen
         const vorlagenRef = window.firebaseFunctions.getDatabaseRef(`vorlagen/${sanitizedEmail}`);
         
-        // Standard-Vorlagen mit neuer "Standardbewertung"
+        // Standard-Vorlagen
         const standardVorlagen = {
-            'standardbewertung': {
-                name: 'Standardbewertung',
+            'standard-projekt': {
+                name: 'Standard Projekt',
                 kategorien: [
                     { name: 'Reflexion', gewichtung: 30 },
                     { name: 'Inhalt', gewichtung: 40 },
                     { name: 'Präsentation', gewichtung: 30 }
-                ],
-                erstellt: window.firebaseFunctions.formatGermanDate(),
-                timestamp: window.firebaseFunctions.getTimestamp(),
-                ersteller: 'System',
-                unveraenderlich: true
-            },
-            'teamarbeit': {
-                name: 'Teamarbeit',
-                kategorien: [
-                    { name: 'Reflexion', gewichtung: 30 },
-                    { name: 'Zusammenarbeit', gewichtung: 35 },
-                    { name: 'Ergebnis', gewichtung: 35 }
                 ],
                 erstellt: window.firebaseFunctions.formatGermanDate(),
                 timestamp: window.firebaseFunctions.getTimestamp(),
