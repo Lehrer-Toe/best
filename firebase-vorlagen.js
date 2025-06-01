@@ -39,8 +39,12 @@ async function loadMeineVorlagen() {
                 const summe = vorlage.kategorien.reduce((acc, kat) => acc + kat.gewichtung, 0);
                 const farbe = summe === 100 ? '#27ae60' : '#e74c3c';
                 
-                // Prüfen ob es sich um die Standardvorlage handelt
-                const istStandardvorlage = vorlage.name === 'Standardbewertung' || vorlage.istStandard === true;
+                // Erweiterte Prüfung ob es sich um die Standardvorlage handelt
+                const istStandardvorlage = vorlage.name === 'Standardbewertung' || 
+                                          vorlage.name === 'Standard Projekt' ||
+                                          vorlage.istStandard === true ||
+                                          key.includes('standard') ||
+                                          vorlage.ersteller === 'System';
                 
                 html += `
                     <div class="liste-item">
@@ -94,9 +98,9 @@ function neueVorlageErstellen() {
         return;
     }
     
-    // Prüfen ob Name bereits existiert
-    if (name === 'Standardbewertung') {
-        alert('Der Name "Standardbewertung" ist für die Standardvorlage reserviert!');
+    // Prüfen ob Name bereits existiert oder ein Standardname ist
+    if (name === 'Standardbewertung' || name === 'Standard Projekt') {
+        alert('Dieser Name ist für Standardvorlagen reserviert!');
         return;
     }
     
@@ -137,8 +141,14 @@ async function vorlageBearbeiten(vorlagenKey) {
         
         const vorlageData = snapshot.val();
         
-        // Prüfen ob es sich um eine Standardvorlage handelt
-        if (vorlageData.name === 'Standardbewertung' || vorlageData.istStandard === true) {
+        // Erweiterte Prüfung ob es sich um eine Standardvorlage handelt
+        const istStandardvorlage = vorlageData.name === 'Standardbewertung' || 
+                                  vorlageData.name === 'Standard Projekt' ||
+                                  vorlageData.istStandard === true ||
+                                  vorlagenKey.includes('standard') ||
+                                  vorlageData.ersteller === 'System';
+        
+        if (istStandardvorlage) {
             alert('Die Standardvorlage kann nicht bearbeitet werden!');
             return;
         }
@@ -403,8 +413,14 @@ async function vorlageLoeschen(vorlagenKey) {
         
         const vorlage = snapshot.val();
         
-        // Prüfen ob es sich um eine Standardvorlage handelt
-        if (vorlage.name === 'Standardbewertung' || vorlage.istStandard === true) {
+        // Erweiterte Prüfung ob es sich um eine Standardvorlage handelt
+        const istStandardvorlage = vorlage.name === 'Standardbewertung' || 
+                                  vorlage.name === 'Standard Projekt' ||
+                                  vorlage.istStandard === true ||
+                                  vorlagenKey.includes('standard') ||
+                                  vorlage.ersteller === 'System';
+        
+        if (istStandardvorlage) {
             alert('Die Standardvorlage kann nicht gelöscht werden!');
             return;
         }
