@@ -30,13 +30,13 @@ window.initializeFirebaseApp = async function() {
         updateLoadingProgress('Authentication initialisieren...', 40);
         await initializeAuthentication();
         
-        // Schritt 3: Database verbinden
-        updateLoadingProgress('Database verbinden...', 60);
-        await verifyDatabaseConnection();
+        // Schritt 3: Database vorbereiten (OHNE Permission-Test)
+        updateLoadingProgress('Database vorbereiten...', 60);
+        await prepareDatabaseConnection();
         
-        // Schritt 4: System-Daten laden
-        updateLoadingProgress('System-Daten laden...', 80);
-        await loadSystemData();
+        // Schritt 4: Grunddaten vorbereiten (OHNE Laden, da kein User angemeldet)
+        updateLoadingProgress('System vorbereiten...', 80);
+        await prepareSystemData();
         
         // Schritt 5: UI vorbereiten
         updateLoadingProgress('Benutzer-Interface vorbereiten...', 100);
@@ -79,24 +79,31 @@ async function initializeAuthentication() {
     console.log('✅ Firebase Authentication initialisiert');
 }
 
-// Database-Verbindung prüfen (KORRIGIERT)
-async function verifyDatabaseConnection() {
+// Database-Verbindung vorbereiten (OHNE Permission-Test)
+async function prepareDatabaseConnection() {
     try {
-        // Test-Read auf Firebase - verwende einen einfachen Pfad ohne Sonderzeichen
-        const testRef = window.firebaseDB.ref(window.database, 'system');
-        await window.firebaseDB.get(testRef);
+        // Nur prüfen ob Database-Objekt verfügbar ist
+        if (!window.database || !window.firebaseDB) {
+            throw new Error('Firebase Database Objekte nicht verfügbar');
+        }
         
-        console.log('✅ Firebase Database verbunden');
+        console.log('✅ Firebase Database vorbereitet');
         
     } catch (error) {
-        // Fallback: Versuche einen anderen Test-Pfad
-        try {
-            const fallbackRef = window.firebaseDB.ref(window.database, '/');
-            await window.firebaseDB.get(fallbackRef);
-            console.log('✅ Firebase Database verbunden (Fallback)');
-        } catch (fallbackError) {
-            throw new Error('Firebase Database nicht erreichbar: ' + error.message);
-        }
+        throw new Error('Firebase Database nicht verfügbar: ' + error.message);
+    }
+}
+
+// System-Daten vorbereiten (OHNE Laden)
+async function prepareSystemData() {
+    try {
+        // Nur Cache initialisieren, aber nicht laden
+        // Daten werden erst nach dem Login geladen
+        console.log('✅ System-Daten vorbereitet (werden nach Login geladen)');
+        
+    } catch (error) {
+        console.error('⚠️ Warnung bei System-Vorbereitung:', error);
+        // Nicht kritisch - weitermachen
     }
 }
 
@@ -242,9 +249,6 @@ function showInitError(error) {
             <button onclick="window.location.reload()" style="background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">
                 Seite neu laden
             </button>
-            <div style="margin-top: 10px; font-size: 0.8rem; color: #666;">
-                Hinweis: Bei anhaltenden Problemen überprüfen Sie Ihre Internetverbindung und Firebase-Konfiguration.
-            </div>
         `;
     }
 }
