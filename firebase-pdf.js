@@ -114,7 +114,7 @@ function ersetzePlatzhalter(text, schuelerName) {
         .replace(/\[Name\]/g, schuelerName);
 }
 
-// PDF in neuem Fenster anzeigen
+// PDF in neuem Fenster anzeigen - KORRIGIERT mit Briefkopf-Bild
 function displayPDF(content, schuelerName) {
     // Schuljahr und Schuldaten aus Config
     const config = window.firebaseFunctions.dataCache.config;
@@ -149,6 +149,14 @@ function displayPDF(content, schuelerName) {
                     border-bottom: 2px solid #333;
                     margin-bottom: 40px;
                     padding-bottom: 20px;
+                }
+                .briefkopf-bild {
+                    width: 100%;
+                    max-width: 600px;
+                    height: auto;
+                    margin-bottom: 20px;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
                 }
                 .briefkopf h1 {
                     color: #2c3e50;
@@ -271,20 +279,19 @@ function displayPDF(content, schuelerName) {
                     font-weight: bold;
                     color: #2c3e50;
                 }
-                .firebase-info {
-                    background: #f0f9ff;
-                    padding: 10px;
-                    border-radius: 5px;
-                    margin-bottom: 20px;
+                .bild-fehler {
+                    background: #f8f9fa;
+                    padding: 20px;
+                    border-radius: 8px;
+                    border: 2px dashed #ddd;
                     text-align: center;
-                    font-size: 12px;
-                    color: #667eea;
+                    color: #666;
+                    margin-bottom: 20px;
                 }
                 @media print {
                     .print-btn { display: none; }
                     body { padding: 20px; }
                     @page { margin: 2cm; }
-                    .firebase-info { display: none; }
                 }
             </style>
         </head>
@@ -292,7 +299,12 @@ function displayPDF(content, schuelerName) {
             <button class="print-btn" onclick="window.print()">🖨️ Drucken</button>
             
             <div class="briefkopf">
-                <div class="briefkopf-fallback">
+                <!-- Briefkopf-Bild -->
+                <img src="./briefkopf.png" alt="Briefkopf" class="briefkopf-bild" 
+                     onerror="this.style.display='none'; document.getElementById('briefkopf-fallback').style.display='block';">
+                
+                <!-- Fallback falls Bild nicht geladen werden kann -->
+                <div id="briefkopf-fallback" class="briefkopf-fallback" style="display: none;">
                     <div class="briefkopf-logo-fallback">
                         <span>🎺</span>
                     </div>
@@ -304,11 +316,8 @@ function displayPDF(content, schuelerName) {
                         </div>
                     </div>
                 </div>
+                
                 <h2>Zeig, was du kannst! - Projektbewertung</h2>
-            </div>
-            
-            <div class="firebase-info">
-                🔥 Erstellt mit Firebase Realtime Database • Automatisch synchronisiert
             </div>
             
             <div class="schuljahr-info">
@@ -334,8 +343,8 @@ function displayPDF(content, schuelerName) {
             
             <div class="footer-info">
                 Erstellt am ${new Date().toLocaleDateString('de-DE')} um ${new Date().toLocaleTimeString('de-DE')}<br>
-                <em>Generiert mit "Zeig, was du kannst!" • Firebase Edition</em><br>
-                <small>Benutzer: ${window.firebaseFunctions.getCurrentUserName()} • ID: ${window.authFunctions.getUserUid()?.substring(0, 8)}...</small>
+                <em>Generiert mit "Zeig, was du kannst!" Bewertungssystem</em><br>
+                <small>Benutzer: ${window.firebaseFunctions.getCurrentUserName()}</small>
             </div>
         </body>
         </html>
