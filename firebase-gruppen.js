@@ -4,7 +4,7 @@ console.log('👥 Firebase Gruppen-System geladen');
 // Globale Variablen für Gruppenbearbeitung
 let aktuelleGruppeEdit = null;
 
-// Gruppen laden und anzeigen
+// Gruppen laden und anzeigen (KORRIGIERT - nur eigene Gruppen)
 function loadGruppen() {
     console.log('👥 Lade Gruppen von Firebase...');
     
@@ -14,14 +14,22 @@ function loadGruppen() {
     if (!liste) return;
     
     // Gruppen aus Cache holen
-    const gruppen = window.firebaseFunctions.getGruppenFromCache();
+    const alleGruppen = window.firebaseFunctions.getGruppenFromCache();
+    const currentUserName = window.firebaseFunctions.getCurrentUserName();
+    
+    // Nur eigene Gruppen anzeigen (Admin sieht alle)
+    let gruppen;
+    if (window.firebaseFunctions.isAdmin()) {
+        gruppen = alleGruppen; // Admin sieht alle Gruppen
+    } else {
+        // Lehrer sieht nur selbst erstellte Gruppen
+        gruppen = alleGruppen.filter(gruppe => gruppe.ersteller === currentUserName);
+    }
     
     let html = '';
     gruppen.forEach((gruppe) => {
-        // KORRIGIERTE BERECHTIGUNG: Nur Ersteller oder Admin kann bearbeiten
-        const currentUserName = window.firebaseFunctions.getCurrentUserName();
-        const istErsteller = gruppe.ersteller === currentUserName;
-        const kannBearbeiten = window.firebaseFunctions.isAdmin() || istErsteller;
+        // Berechtigung prüfen - Ersteller kann immer bearbeiten, Admin auch
+        const kannBearbeiten = gruppe.ersteller === currentUserName || window.firebaseFunctions.isAdmin();
         
         html += `<div class="liste-item">
             <div>
@@ -40,20 +48,28 @@ function loadGruppen() {
             </div>
             <div>
                 ${kannBearbeiten ? `<button class="btn" onclick="gruppeBearbeiten('${gruppe.id}')">Bearbeiten</button>` : ''}
-                ${window.firebaseFunctions.isAdmin() ? `<button class="btn btn-danger" onclick="gruppeLoeschen('${gruppe.id}')">Löschen</button>` : ''}
+                ${kannBearbeiten ? `<button class="btn btn-danger" onclick="gruppeLoeschen('${gruppe.id}')">Löschen</button>` : ''}
             </div>
         </div>`;
     });
     
-    liste.innerHTML = html || '<div class="card"><p>Keine Gruppen vorhanden.</p></div>';
+    if (gruppen.length === 0) {
+        if (window.firebaseFunctions.isAdmin()) {
+            html = '<div class="card"><p>Keine Gruppen vorhanden.</p></div>';
+        } else {
+            html = '<div class="card"><p>Sie haben noch keine Gruppen erstellt.</p></div>';
+        }
+    }
+    
+    liste.innerHTML = html;
     
     // Lehrer- und Fach-Auswahl für neue Gruppen aktualisieren
     updateSchuelerSelects();
     
-    console.log('👥 Gruppen geladen:', gruppen.length);
+    console.log('👥 Gruppen geladen:', gruppen.length, 'eigene Gruppen');
 }
 
-// Lehrer- und Fach-Selects aktualisieren - KORRIGIERT
+// Lehrer- und Fach-Selects aktualisieren
 function updateSchuelerSelects() {
     console.log('👨‍🏫 Aktualisiere Lehrer- und Fach-Auswahl...');
     
@@ -66,16 +82,13 @@ function updateSchuelerSelects() {
         .map(([kuerzel, name]) => `<option value="${kuerzel}">${name}</option>`)
         .join('');
     
-    // NUR LEERE Fach-Selects aktualisieren (nicht die mit Werten)
     const fachSelects = document.querySelectorAll('.schueler-fach');
     fachSelects.forEach(select => {
-        if (!select.value) { // Nur wenn noch kein Wert ausgewählt
-            select.innerHTML = '<option value="">Fach wählen...</option>' + fachOptions;
-        }
+        select.innerHTML = '<option value="">Fach wählen...</option>' + fachOptions;
     });
 }
 
-// Lehrer für Selects laden - KORRIGIERT
+// Lehrer für Selects laden
 async function loadLehrerForSelects() {
     try {
         const usersRef = window.firebaseFunctions.getDatabaseRef('users');
@@ -91,12 +104,9 @@ async function loadLehrerForSelects() {
             });
         }
         
-        // NUR LEERE Lehrer-Selects aktualisieren (nicht die mit Werten)
         const lehrerSelects = document.querySelectorAll('.schueler-lehrer');
         lehrerSelects.forEach(select => {
-            if (!select.value) { // Nur wenn noch kein Wert ausgewählt
-                select.innerHTML = '<option value="">Lehrer wählen...</option>' + lehrerOptions;
-            }
+            select.innerHTML = '<option value="">Lehrer wählen...</option>' + lehrerOptions;
         });
         
     } catch (error) {
@@ -104,7 +114,7 @@ async function loadLehrerForSelects() {
     }
 }
 
-// Schüler-Zeile hinzufügen - KORRIGIERT
+// Schüler-Zeile hinzufügen
 function schuelerHinzufuegen() {
     const container = document.getElementById('schuelerListe');
     if (!container) return;
@@ -125,46 +135,10 @@ function schuelerHinzufuegen() {
     
     container.appendChild(newRow);
     
-    // KORRIGIERT: Nur die neuen Selects mit Optionen füllen
-    fillNewSelectsWithOptions(newRow);
+    // Neue Selects mit Optionen füllen
+    updateSchuelerSelects();
     
     console.log('➕ Schüler-Zeile hinzugefügt');
-}
-
-// NEUE FUNKTION: Nur neue Selects füllen
-async function fillNewSelectsWithOptions(row) {
-    try {
-        // Lehrer laden
-        const usersRef = window.firebaseFunctions.getDatabaseRef('users');
-        const snapshot = await window.firebaseDB.get(usersRef);
-        
-        let lehrerOptions = '<option value="">Lehrer wählen...</option>';
-        if (snapshot.exists()) {
-            const users = snapshot.val();
-            Object.values(users).forEach(user => {
-                if (user.role === 'lehrer') {
-                    lehrerOptions += `<option value="${user.name}">${user.name}</option>`;
-                }
-            });
-        }
-        
-        // Fächer laden
-        const faecher = window.firebaseFunctions.getAllFaecher();
-        const fachOptions = '<option value="">Fach wählen...</option>' + 
-            Object.entries(faecher)
-                .map(([kuerzel, name]) => `<option value="${kuerzel}">${name}</option>`)
-                .join('');
-        
-        // Nur die Selects in der neuen Zeile füllen
-        const lehrerSelect = row.querySelector('.schueler-lehrer');
-        const fachSelect = row.querySelector('.schueler-fach');
-        
-        if (lehrerSelect) lehrerSelect.innerHTML = lehrerOptions;
-        if (fachSelect) fachSelect.innerHTML = fachOptions;
-        
-    } catch (error) {
-        console.error('❌ Fehler beim Füllen der neuen Selects:', error);
-    }
 }
 
 // Schüler-Zeile entfernen
@@ -258,7 +232,7 @@ async function gruppeErstellen() {
     }
 }
 
-// Gruppe bearbeiten - BERECHTIGUNG PRÜFEN
+// Gruppe bearbeiten
 async function gruppeBearbeiten(gruppenId) {
     console.log('👥 Bearbeite Gruppe:', gruppenId);
     
@@ -274,12 +248,9 @@ async function gruppeBearbeiten(gruppenId) {
             return;
         }
         
-        // BERECHTIGUNG PRÜFEN: Nur Ersteller oder Admin
+        // Berechtigung prüfen
         const currentUserName = window.firebaseFunctions.getCurrentUserName();
-        const istErsteller = gruppe.ersteller === currentUserName;
-        const istAdmin = window.firebaseFunctions.isAdmin();
-        
-        if (!istErsteller && !istAdmin) {
+        if (gruppe.ersteller !== currentUserName && !window.firebaseFunctions.isAdmin()) {
             alert('Sie können nur eigene Gruppen bearbeiten!');
             return;
         }
@@ -385,6 +356,13 @@ async function gruppeEditSpeichern() {
     
     if (!window.firebaseFunctions.requireAuth() || !aktuelleGruppeEdit) return;
     
+    // Berechtigung prüfen
+    const currentUserName = window.firebaseFunctions.getCurrentUserName();
+    if (aktuelleGruppeEdit.ersteller !== currentUserName && !window.firebaseFunctions.isAdmin()) {
+        alert('Sie können nur eigene Gruppen bearbeiten!');
+        return;
+    }
+    
     try {
         // Daten aus Formular sammeln
         const themaInput = document.getElementById('editGruppenThema');
@@ -458,8 +436,6 @@ function gruppeEditAbbrechen() {
 
 // Gruppe löschen
 async function gruppeLoeschen(gruppenId) {
-    if (!window.firebaseFunctions.requireAdmin()) return;
-    
     try {
         // Gruppe aus Cache finden
         const gruppen = window.firebaseFunctions.getGruppenFromCache();
@@ -467,6 +443,13 @@ async function gruppeLoeschen(gruppenId) {
         
         if (!gruppe) {
             alert('Gruppe nicht gefunden!');
+            return;
+        }
+        
+        // Berechtigung prüfen
+        const currentUserName = window.firebaseFunctions.getCurrentUserName();
+        if (gruppe.ersteller !== currentUserName && !window.firebaseFunctions.isAdmin()) {
+            alert('Sie können nur eigene Gruppen löschen!');
             return;
         }
         
@@ -524,18 +507,16 @@ async function deleteGruppenBewertungen(gruppenId) {
     }
 }
 
-// Gruppen-Daten für andere Module bereitstellen
+// Gruppen-Daten für andere Module bereitstellen (KORRIGIERT - nur eigene Gruppen)
 function getGruppenForUser() {
-    const gruppen = window.firebaseFunctions.getGruppenFromCache();
+    const alleGruppen = window.firebaseFunctions.getGruppenFromCache();
     const currentUserName = window.firebaseFunctions.getCurrentUserName();
     
     if (window.firebaseFunctions.isAdmin()) {
-        return gruppen; // Admin sieht alle Gruppen
+        return alleGruppen; // Admin sieht alle Gruppen
     } else {
-        // Lehrer sieht nur Gruppen mit eigenen Schülern
-        return gruppen.filter(gruppe => 
-            gruppe.schueler && gruppe.schueler.some(s => s.lehrer === currentUserName)
-        );
+        // Lehrer sieht nur selbst erstellte Gruppen
+        return alleGruppen.filter(gruppe => gruppe.ersteller === currentUserName);
     }
 }
 
