@@ -52,6 +52,29 @@
           }
         ]
       }
+    ],
+    "standard": [
+      {
+        "name": "Standard",
+        "kategorien": [
+          {
+            "name": "Reflexion",
+            "gewichtung": 30
+          },
+          {
+            "name": "Vortrag",
+            "gewichtung": 30
+          },
+          {
+            "name": "Dokumentation",
+            "gewichtung": 10
+          },
+          {
+            "name": "Fachwissen",
+            "gewichtung": 30
+          }
+        ]
+      }
     ]
   }
 }
