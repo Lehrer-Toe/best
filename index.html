@@ -410,17 +410,8 @@
         import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js';
         import { getDatabase, ref, set, get, push, remove, onValue, off } from 'https://www.gstatic.com/firebasejs/9.15.0/firebase-database.js';
 
-        // Deine Firebase Konfiguration (ERSETZE DIESE WERTE!)
-        const firebaseConfig = {
-            apiKey: "DEIN_API_KEY",
-            authDomain: "DEIN_PROJECT_ID.firebaseapp.com",
-            databaseURL: "https://DEIN_PROJECT_ID-default-rtdb.firebaseio.com/",
-            projectId: "DEIN_PROJECT_ID",
-            storageBucket: "DEIN_PROJECT_ID.appspot.com",
-            messagingSenderId: "DEIN_SENDER_ID",
-            appId: "DEINE_APP_ID"
-        };
-
+        import { firebaseConfig } from './firebase-config.js';
+        
         // Firebase initialisieren
         window.firebaseApp = initializeApp(firebaseConfig);
         window.auth = getAuth(window.firebaseApp);
