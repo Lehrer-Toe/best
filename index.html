@@ -62,6 +62,8 @@
                 <button class="tab-btn" onclick="openTab('bewerten')" id="bewertenTab">Schüler bewerten</button>
                 <button class="tab-btn" onclick="openTab('vorlagen')" id="vorlagenTab">Bewertungsvorlagen</button>
                 <button class="tab-btn" onclick="openTab('uebersicht')" id="uebersichtTab">Übersicht</button>
+                <button class="tab-btn" onclick="openTab('faecher')" id="faecherTab">Fächer</button>
+                <button class="tab-btn" onclick="openTab('checkpoints')" id="checkpointsTab">Checkpoints</button>
                 <button class="tab-btn" onclick="openTab('adminvorlagen')" id="adminvorlagenTab">Vorlagen</button>
             </div>
 
@@ -192,6 +194,7 @@
                         <input type="text" id="schuljahr" value="2025/26" placeholder="z.B. 2025/26">
                         <button class="btn" onclick="schuljahrSpeichern()">Speichern</button>
                     </div>
+                    <p><small><strong>Wichtig:</strong> Bei einem Schuljahrwechsel werden alle aktuellen Bewertungen und Gruppen archiviert und gelöscht!</small></p>
                 </div>
                 <div class="card">
                     <h3>Datenexport</h3>
@@ -307,50 +310,6 @@
                 </div>
             </div>
 
-            <!-- Admin Vorlagen Tab (nur Admin) -->
-            <div id="adminvorlagen" class="tab-content">
-                <h2>System-Vorlagen bearbeiten</h2>
-                
-                <!-- Fächer verwalten -->
-                <div class="card">
-                    <div id="faecherVerwaltung">
-                        <!-- Fächer-Verwaltung wird hier angezeigt -->
-                    </div>
-                </div>
-                
-                <!-- Bewertungs-Checkpoints verwalten -->
-                <div class="card">
-                    <div id="checkpointsVerwaltung">
-                        <!-- Checkpoints-Verwaltung wird hier angezeigt -->
-                    </div>
-                </div>
-                
-                <!-- Standardformulierungen für Stärken -->
-                <div class="card">
-                    <h3>Standardformulierungen für Stärken</h3>
-                    <p><em>Verwenden Sie [NAME] als Platzhalter für den Schülernamen. Ohne [NAME] wird nur der Text verwendet.</em></p>
-                    <div id="staerkenFormulierungen">
-                        <!-- Formulierungen werden hier angezeigt -->
-                    </div>
-                    <button class="btn btn-success" onclick="staerkenFormulierungenSpeichern()">Speichern</button>
-                </div>
-                
-                <!-- Briefvorlage -->
-                <div class="card">
-                    <h3>Briefvorlage</h3>
-                    <p><em>Verwenden Sie [NAME] als Platzhalter für den Schülernamen.</em></p>
-                    <div class="input-group brief-input-group">
-                        <label>Anrede/Einleitung:</label>
-                        <textarea id="briefAnrede" rows="6" placeholder="Liebe/r [NAME]..." class="brief-textarea"></textarea>
-                    </div>
-                    <div class="input-group brief-input-group">
-                        <label>Schlussformel:</label>
-                        <textarea id="briefSchluss" rows="6" placeholder="Mit freundlichen Grüßen..." class="brief-textarea"></textarea>
-                    </div>
-                    <button class="btn btn-success" onclick="briefvorlageSpeichern()">Speichern</button>
-                </div>
-            </div>
-
             <!-- Übersicht Tab -->
             <div id="uebersicht" class="tab-content">
                 <h2>Meine Übersicht</h2>
@@ -393,6 +352,57 @@
                     <!-- Schüler werden hier angezeigt -->
                 </div>
             </div>
+
+            <!-- Fächer Tab (nur Admin) -->
+            <div id="faecher" class="tab-content">
+                <h2>Fächer verwalten</h2>
+                <div class="card">
+                    <div id="faecherVerwaltung">
+                        <!-- Fächer-Verwaltung wird hier angezeigt -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Checkpoints Tab (nur Admin) -->
+            <div id="checkpoints" class="tab-content">
+                <h2>Bewertungs-Checkpoints verwalten</h2>
+                <div class="card">
+                    <p><em>Hier können Sie die Bewertungskriterien und die zugehörigen Formulierungen für die PDF-Ausgabe bearbeiten.</em></p>
+                    <div id="checkpointsVerwaltung">
+                        <!-- Checkpoints-Verwaltung wird hier angezeigt -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin Vorlagen Tab (nur Admin) -->
+            <div id="adminvorlagen" class="tab-content">
+                <h2>System-Vorlagen bearbeiten</h2>
+                
+                <!-- Standardformulierungen für Stärken -->
+                <div class="card">
+                    <h3>Standardformulierungen für Stärken</h3>
+                    <p><em>Verwenden Sie [NAME] als Platzhalter für den Schülernamen. Ohne [NAME] wird nur der Text verwendet.</em></p>
+                    <div id="staerkenFormulierungen">
+                        <!-- Formulierungen werden hier angezeigt -->
+                    </div>
+                    <button class="btn btn-success" onclick="staerkenFormulierungenSpeichern()">Speichern</button>
+                </div>
+                
+                <!-- Briefvorlage -->
+                <div class="card">
+                    <h3>Briefvorlage</h3>
+                    <p><em>Verwenden Sie [NAME] als Platzhalter für den Schülernamen.</em></p>
+                    <div class="input-group brief-input-group">
+                        <label>Anrede/Einleitung:</label>
+                        <textarea id="briefAnrede" rows="6" placeholder="Liebe/r [NAME]..." class="brief-textarea"></textarea>
+                    </div>
+                    <div class="input-group brief-input-group">
+                        <label>Schlussformel:</label>
+                        <textarea id="briefSchluss" rows="6" placeholder="Mit freundlichen Grüßen..." class="brief-textarea"></textarea>
+                    </div>
+                    <button class="btn btn-success" onclick="briefvorlageSpeichern()">Speichern</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -403,6 +413,7 @@
     <script src="themen.js"></script>
     <script src="bewertung.js"></script>
     <script src="pdf.js"></script>
+    <script src="admin-vorlagen.js"></script>
 
     <style>
         .loading-spinner {
