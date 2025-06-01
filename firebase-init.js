@@ -79,17 +79,24 @@ async function initializeAuthentication() {
     console.log('✅ Firebase Authentication initialisiert');
 }
 
-// Database-Verbindung prüfen
+// Database-Verbindung prüfen (KORRIGIERT)
 async function verifyDatabaseConnection() {
     try {
-        // Test-Read auf Firebase
-        const testRef = window.firebaseDB.ref(window.database, '.info/connected');
+        // Test-Read auf Firebase - verwende einen einfachen Pfad ohne Sonderzeichen
+        const testRef = window.firebaseDB.ref(window.database, 'system');
         await window.firebaseDB.get(testRef);
         
         console.log('✅ Firebase Database verbunden');
         
     } catch (error) {
-        throw new Error('Firebase Database nicht erreichbar: ' + error.message);
+        // Fallback: Versuche einen anderen Test-Pfad
+        try {
+            const fallbackRef = window.firebaseDB.ref(window.database, '/');
+            await window.firebaseDB.get(fallbackRef);
+            console.log('✅ Firebase Database verbunden (Fallback)');
+        } catch (fallbackError) {
+            throw new Error('Firebase Database nicht erreichbar: ' + error.message);
+        }
     }
 }
 
@@ -235,6 +242,9 @@ function showInitError(error) {
             <button onclick="window.location.reload()" style="background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">
                 Seite neu laden
             </button>
+            <div style="margin-top: 10px; font-size: 0.8rem; color: #666;">
+                Hinweis: Bei anhaltenden Problemen überprüfen Sie Ihre Internetverbindung und Firebase-Konfiguration.
+            </div>
         `;
     }
 }
