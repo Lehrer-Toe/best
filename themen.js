@@ -1,6 +1,8 @@
 // Themen-System - NUR JSON-basiert, KEIN Firebase
 console.log('💡 Themen-System geladen - JSON-basiert');
 
+let aktuellesThemaEdit = null;
+
 function loadThemen() {
     console.log('💡 Lade Themen...');
     
@@ -18,7 +20,8 @@ function loadThemen() {
     let html = '';
     gefilterte.forEach((thema, index) => {
         const originalIndex = themen.indexOf(thema);
-        const kannLoeschen = thema.ersteller === (currentUser ? currentUser.name : 'System') || (currentUser && currentUser.role === 'admin');
+        const kannBearbeiten = thema.ersteller === (currentUser ? currentUser.name : 'System') || (currentUser && currentUser.role === 'admin');
+        const kannLoeschen = kannBearbeiten;
         
         // Fächer-Badges erstellen
         let faecherBadges = '';
@@ -31,18 +34,145 @@ function loadThemen() {
         html += `<div class="liste-item thema-item" onclick="themaAuswaehlen('${thema.name}')">
             <div>
                 <strong>${thema.name}</strong><br>
+                <small>Ersteller: ${thema.ersteller}</small><br>
                 <div style="margin-top: 5px;">
                     ${faecherBadges}
                 </div>
             </div>
-            ${kannLoeschen ? 
-                `<button class="btn btn-danger" onclick="event.stopPropagation(); themaLoeschen(${originalIndex})">Löschen</button>` : 
-                ''}
+            <div>
+                ${kannBearbeiten ? 
+                    `<button class="btn" onclick="event.stopPropagation(); themaBearbeiten(${originalIndex})">Bearbeiten</button>` : 
+                    ''}
+                ${kannLoeschen ? 
+                    `<button class="btn btn-danger" onclick="event.stopPropagation(); themaLoeschen(${originalIndex})">Löschen</button>` : 
+                    ''}
+            </div>
         </div>`;
     });
     liste.innerHTML = html || '<div class="card"><p>Keine Themen vorhanden.</p></div>';
     
     console.log('💡 Themen geladen:', gefilterte.length, 'von', themen.length);
+}
+
+function themaBearbeiten(index) {
+    console.log('✏️ Bearbeite Thema:', index);
+    
+    if (index < 0 || index >= themen.length) return;
+    
+    const thema = themen[index];
+    
+    // Prüfe Berechtigung
+    if (thema.ersteller !== (currentUser ? currentUser.name : 'System') && currentUser && currentUser.role !== 'admin') {
+        alert('Sie können nur eigene Themen bearbeiten!');
+        return;
+    }
+    
+    aktuellesThemaEdit = { index, thema: {...thema} };
+    ausgewaehlteFaecher = [...(thema.faecher || [])];
+    
+    zeigeFaecherBearbeitungsModal(thema.name);
+}
+
+function zeigeFaecherBearbeitungsModal(themaName) {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.id = 'themaBearbeitenModal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <h3>Thema "${themaName}" bearbeiten</h3>
+            
+            <div class="input-group">
+                <label>Themenname:</label>
+                <input type="text" id="editThemaName" value="${themaName}">
+            </div>
+            
+            <p>Klicken Sie auf die Fächer, die zu diesem Thema gehören:</p>
+            
+            <div id="editFaecherGrid" class="faecher-grid">
+                ${createFaecherButtons()}
+            </div>
+            
+            <div class="ausgewaehlte-faecher" id="editAusgewaehlteFaecherAnzeige">
+                <strong>Ausgewählte Fächer:</strong> <span id="editFaecherListe">Keine</span>
+            </div>
+            
+            <div class="modal-buttons">
+                <button class="btn btn-success" onclick="themaBearbeitungSpeichern()">Speichern</button>
+                <button class="btn btn-danger" onclick="themaBearbeitungAbbrechen()">Abbrechen</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Bereits ausgewählte Fächer markieren
+    setTimeout(() => {
+        ausgewaehlteFaecher.forEach(fach => {
+            const button = document.querySelector(`[data-fach="${fach}"]`);
+            if (button) {
+                button.classList.add('selected');
+            }
+        });
+        updateEditFaecherAnzeige();
+    }, 100);
+}
+
+function updateEditFaecherAnzeige() {
+    const anzeige = document.getElementById('editFaecherListe');
+    if (anzeige) {
+        if (ausgewaehlteFaecher.length === 0) {
+            anzeige.textContent = 'Keine';
+        } else {
+            anzeige.textContent = ausgewaehlteFaecher.map(f => getFachName(f)).join(', ');
+        }
+    }
+}
+
+function themaBearbeitungSpeichern() {
+    if (!aktuellesThemaEdit) return;
+    
+    const neuerName = document.getElementById('editThemaName').value.trim();
+    
+    if (!neuerName) {
+        alert('Bitte geben Sie einen Thema-Namen ein!');
+        return;
+    }
+    
+    // Prüfe ob Name bereits existiert (außer bei sich selbst)
+    const existierendesThema = themen.find((t, i) => t.name === neuerName && i !== aktuellesThemaEdit.index);
+    if (existierendesThema) {
+        alert('Ein Thema mit diesem Namen existiert bereits!');
+        return;
+    }
+    
+    if (ausgewaehlteFaecher.length === 0) {
+        alert('Bitte wählen Sie mindestens ein Fach aus!');
+        return;
+    }
+    
+    // Thema aktualisieren
+    themen[aktuellesThemaEdit.index] = {
+        ...aktuellesThemaEdit.thema,
+        name: neuerName,
+        faecher: [...ausgewaehlteFaecher]
+    };
+    
+    themaBearbeitungAbbrechen();
+    loadThemen();
+    
+    const faecherText = ausgewaehlteFaecher.map(f => getFachName(f)).join(', ');
+    addNews('Thema bearbeitet', `Das Thema "${neuerName}" wurde für die Fächer ${faecherText} aktualisiert.`);
+    
+    console.log('✅ Thema bearbeitet:', neuerName, 'für Fächer:', ausgewaehlteFaecher);
+}
+
+function themaBearbeitungAbbrechen() {
+    const modal = document.getElementById('themaBearbeitenModal');
+    if (modal) {
+        modal.remove();
+    }
+    aktuellesThemaEdit = null;
+    ausgewaehlteFaecher = [];
 }
 
 function getFachName(fachKuerzel) {
@@ -152,6 +282,9 @@ function updateFaecherAnzeige() {
             anzeige.textContent = ausgewaehlteFaecher.map(f => getFachName(f)).join(', ');
         }
     }
+    
+    // Auch für Edit-Modal
+    updateEditFaecherAnzeige();
 }
 
 function speichereThemaMitFaechern(themaName) {
