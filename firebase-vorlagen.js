@@ -39,10 +39,14 @@ async function loadMeineVorlagen() {
                 const summe = vorlage.kategorien.reduce((acc, kat) => acc + kat.gewichtung, 0);
                 const farbe = summe === 100 ? '#27ae60' : '#e74c3c';
                 
+                // Prüfen ob es die unveränderliche Standardbewertung ist
+                const istStandardbewertung = vorlage.name === 'Standardbewertung';
+                
                 html += `
                     <div class="liste-item">
                         <div>
-                            <strong>${vorlage.name}</strong><br>
+                            <strong>${vorlage.name}</strong>
+                            ${istStandardbewertung ? '<span style="color: #667eea; font-size: 0.8rem;">(System-Standard)</span>' : ''}<br>
                             <small>Kategorien: ${vorlage.kategorien.length} | 
                             Gewichtung: <span style="color: ${farbe}">${summe}%</span></small><br>
                             <div style="margin-top: 0.5rem;">
@@ -50,8 +54,9 @@ async function loadMeineVorlagen() {
                             </div>
                         </div>
                         <div>
-                            <button class="btn" onclick="vorlageBearbeiten('${key}')">Bearbeiten</button>
-                            <button class="btn btn-danger" onclick="vorlageLoeschen('${key}')">Löschen</button>
+                            ${!istStandardbewertung ? `<button class="btn" onclick="vorlageBearbeiten('${key}')">Bearbeiten</button>` : ''}
+                            ${!istStandardbewertung ? `<button class="btn btn-danger" onclick="vorlageLoeschen('${key}')">Löschen</button>` : ''}
+                            ${istStandardbewertung ? '<span style="color: #666; font-size: 0.8rem;">Unveränderlich</span>' : ''}
                         </div>
                     </div>
                 `;
@@ -86,6 +91,12 @@ function neueVorlageErstellen() {
     
     if (!name) {
         alert('Bitte geben Sie einen Namen für die Vorlage ein!');
+        return;
+    }
+    
+    // Prüfen ob Name "Standardbewertung" verwendet wird
+    if (name.toLowerCase() === 'standardbewertung') {
+        alert('Der Name "Standardbewertung" ist für die System-Vorlage reserviert!');
         return;
     }
     
@@ -124,8 +135,16 @@ async function vorlageBearbeiten(vorlagenKey) {
             return;
         }
         
+        const vorlageData = snapshot.val();
+        
+        // Prüfen ob es die Standardbewertung ist
+        if (vorlageData.name === 'Standardbewertung') {
+            alert('Die Standardbewertung kann nicht bearbeitet werden!');
+            return;
+        }
+        
         aktuelleVorlage = { 
-            ...snapshot.val(), 
+            ...vorlageData, 
             key: vorlagenKey 
         };
         aktuelleKategorien = [...aktuelleVorlage.kategorien];
@@ -384,6 +403,12 @@ async function vorlageLoeschen(vorlagenKey) {
         
         const vorlage = snapshot.val();
         
+        // Prüfen ob es die Standardbewertung ist
+        if (vorlage.name === 'Standardbewertung') {
+            alert('Die Standardbewertung kann nicht gelöscht werden!');
+            return;
+        }
+        
         if (confirm(`Vorlage "${vorlage.name}" wirklich löschen?\n\nHinweis: Bestehende Bewertungen mit dieser Vorlage bleiben erhalten.`)) {
             await window.firebaseDB.remove(vorlageRef);
             
@@ -452,15 +477,16 @@ async function createDefaultVorlagen() {
             return;
         }
         
-        // Standard-Vorlagen erstellen
+        // Standard-Vorlagen erstellen - GEÄNDERT: "Standardbewertung" statt "Standard Projekt"
         const standardVorlagen = [
             {
-                name: 'Standard Projekt',
+                name: 'Standardbewertung',
                 kategorien: [
                     { name: 'Reflexion', gewichtung: 30 },
                     { name: 'Inhalt', gewichtung: 40 },
                     { name: 'Präsentation', gewichtung: 30 }
-                ]
+                ],
+                unveraenderlich: true // Markierung für System-Vorlage
             },
             {
                 name: 'Teamarbeit',
@@ -478,7 +504,7 @@ async function createDefaultVorlagen() {
                 ...vorlageData,
                 erstellt: window.firebaseFunctions.formatGermanDate(),
                 timestamp: window.firebaseFunctions.getTimestamp(),
-                ersteller: window.firebaseFunctions.getCurrentUserName()
+                ersteller: 'System'
             });
         }
         
