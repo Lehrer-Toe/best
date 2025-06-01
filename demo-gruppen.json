@@ -1,0 +1,31 @@
+{
+  "gruppen": [
+    {
+      "thema": "Klimawandel und Nachhaltigkeit",
+      "schueler": [
+        {
+          "name": "Max Mustermann",
+          "lehrer": "Riffel",
+          "fach": "G"
+        },
+        {
+          "name": "Anna Schmidt",
+          "lehrer": "Kretz",
+          "fach": "SP"
+        },
+        {
+          "name": "Tom Weber",
+          "lehrer": "Riffel",
+          "fach": "G"
+        },
+        {
+          "name": "Lisa Müller",
+          "lehrer": "Töllner",
+          "fach": "M"
+        }
+      ],
+      "id": 1000,
+      "erstellt": "31.05.2025"
+    }
+  ]
+}

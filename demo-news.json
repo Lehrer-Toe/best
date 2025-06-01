@@ -1,0 +1,22 @@
+{
+  "news": [
+    {
+      "titel": "System bereit",
+      "text": "Das Bewertungssystem ist einsatzbereit. Lehrer können Gruppen erstellen und Schüler bewerten.",
+      "datum": "31.05.2025",
+      "wichtig": true,
+      "autor": "Administrator",
+      "ablauf": null,
+      "gelesen": false
+    },
+    {
+      "titel": "Willkommen",
+      "text": "Willkommen im Bewertungstool \"Zeig, was du kannst!\" für das Schuljahr 2025/26",
+      "datum": "31.05.2025",
+      "wichtig": false,
+      "autor": "System",
+      "ablauf": null,
+      "gelesen": false
+    }
+  ]
+}

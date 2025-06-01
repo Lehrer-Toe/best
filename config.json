@@ -1,0 +1,42 @@
+{
+  "systemConfig": {
+    "schuljahr": "2025/26",
+    "appName": "Zeig, was du kannst!",
+    "schule": {
+      "name": "Realschule Bad Schönborn",
+      "adresse": "Schulstraße 12 • 76669 Bad Schönborn",
+      "telefon": "07253/12345",
+      "email": "info@rs-badschoenborn.de"
+    }
+  },
+  "staerkenFormulierungen": {
+    "Fachliches Arbeiten_0": "Du arbeitest konzentriert und ausdauernd",
+    "Fachliches Arbeiten_1": "Du sammelst Informationen zielgerichtet",
+    "Fachliches Arbeiten_2": "Du setzt dein Wissen sinnvoll ein",
+    "Fachliches Arbeiten_3": "Du denkst kreativ und lösungsorientiert",
+    "Fachliches Arbeiten_4": "Du strukturierst deine Arbeit logisch und klar",
+    "Fachliches Arbeiten_5": "Du zeigst Verantwortungsbewusstsein beim Arbeiten",
+    "Zusammenarbeit_0": "Du arbeitest konstruktiv im Team",
+    "Zusammenarbeit_1": "Du übernimmst Verantwortung in der Gruppe",
+    "Zusammenarbeit_2": "Du hörst anderen zu und respektierst Meinungen",
+    "Zusammenarbeit_3": "Du unterstützt andere aktiv",
+    "Zusammenarbeit_4": "Du löst Konflikte fair und eigenständig",
+    "Kommunikation_0": "Du drückst dich klar und verständlich aus",
+    "Kommunikation_1": "Du hältst Blickkontakt und sprichst sicher",
+    "Kommunikation_2": "Du kannst Feedback geben und annehmen",
+    "Kommunikation_3": "Du nimmst aktiv an Gesprächen teil",
+    "Kommunikation_4": "Du kannst Inhalte gut präsentieren",
+    "Eigenständigkeit_0": "Du arbeitest selbstständig und zielgerichtet",
+    "Eigenständigkeit_1": "Du zeigst Eigeninitiative",
+    "Eigenständigkeit_2": "Du triffst Entscheidungen und stehst dazu",
+    "Eigenständigkeit_3": "Du erkennst Probleme und gehst sie an",
+    "Reflexionsfähigkeit_0": "Du kannst deine Stärken und Schwächen benennen",
+    "Reflexionsfähigkeit_1": "Du denkst über deinen Lernprozess nach",
+    "Reflexionsfähigkeit_2": "Du lernst aus Fehlern und verbesserst dich",
+    "Reflexionsfähigkeit_3": "Du beschreibst, was gut lief und was nicht",
+    "Persönlichkeitsentwicklung_0": "Du zeigst Mut, neue Wege zu gehen",
+    "Persönlichkeitsentwicklung_1": "Du bleibst auch bei Schwierigkeiten dran",
+    "Persönlichkeitsentwicklung_2": "Du entwickelst dich im Laufe des Projekts spürbar weiter",
+    "Persönlichkeitsentwicklung_3": "Du nutzt Rückmeldungen zur Verbesserung"
+  }
+}

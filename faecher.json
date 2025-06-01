@@ -1,0 +1,21 @@
+{
+  "faecher": {
+    "D": "Deutsch",
+    "M": "Mathematik",
+    "E": "Englisch",
+    "FR": "Französisch",
+    "T": "Technik",
+    "AES": "AES",
+    "G": "Geschichte",
+    "GK": "Gemeinschaftskunde",
+    "BIO": "Biologie",
+    "PH": "Physik",
+    "SP": "Sport",
+    "BK": "Bildende Kunst",
+    "IT": "Informatik",
+    "WBS": "WBS",
+    "REL": "Religion",
+    "ETH": "Ethik",
+    "ALL": "Allgemein"
+  }
+}

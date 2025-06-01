@@ -1,0 +1,57 @@
+{
+  "vorlagen": {
+    "riffel@schule.de": [
+      {
+        "name": "Geschichte Standard",
+        "kategorien": [
+          {
+            "name": "Reflexion",
+            "gewichtung": 30
+          },
+          {
+            "name": "Inhalt",
+            "gewichtung": 40
+          },
+          {
+            "name": "Präsentation",
+            "gewichtung": 30
+          }
+        ]
+      }
+    ],
+    "kretz@schule.de": [
+      {
+        "name": "Sport Handball",
+        "kategorien": [
+          {
+            "name": "Reflexion",
+            "gewichtung": 30
+          },
+          {
+            "name": "Technik",
+            "gewichtung": 35
+          },
+          {
+            "name": "Taktik",
+            "gewichtung": 35
+          }
+        ]
+      }
+    ],
+    "toellner@schule.de": [
+      {
+        "name": "Mathematik",
+        "kategorien": [
+          {
+            "name": "Reflexion",
+            "gewichtung": 30
+          },
+          {
+            "name": "Rechnung",
+            "gewichtung": 70
+          }
+        ]
+      }
+    ]
+  }
+}
