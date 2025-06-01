@@ -1,16 +1,16 @@
-// PDF-Generierung System - NUR JSON-basiert, KEIN Firebase
-console.log('📄 PDF-System geladen - JSON-basiert');
+// Firebase PDF-Generierung System
+console.log('📄 Firebase PDF System geladen');
 
+// PDF für Schüler erstellen
 function createPDF(schuelerId) {
     console.log('📄 Erstelle PDF für Schüler:', schuelerId);
     
-    // Prüfe ob alle notwendigen Daten geladen sind
-    if (!bewertungen || !briefvorlage || !staerkenFormulierungen) {
-        alert('System wird noch geladen. Bitte versuchen Sie es in einem Moment erneut.');
-        return;
-    }
-
+    if (!window.firebaseFunctions.requireAuth()) return;
+    
+    // Bewertung aus Cache finden
+    const bewertungen = window.firebaseFunctions.getBewertungenFromCache();
     const bewertung = bewertungen.find(b => b.schuelerId === schuelerId);
+    
     if (!bewertung || !bewertung.staerken) {
         alert('Keine vollständige Bewertung für PDF vorhanden.');
         return;
@@ -24,20 +24,24 @@ function createPDF(schuelerId) {
     console.log('✅ PDF erstellt für:', bewertung.schuelerName);
 }
 
+// PDF-Inhalt generieren
 function generatePDFContent(bewertung) {
-    // Prüfe ob Briefvorlage geladen ist
-    if (!briefvorlage || !briefvorlage.anrede || !briefvorlage.schluss) {
-        console.warn('Briefvorlage nicht vollständig geladen, verwende Fallback');
-        const fallbackBriefvorlage = {
-            anrede: 'Liebe/r [NAME],\n\nim Rahmen des Projekts "Zeig, was du kannst!" hast du folgende Stärken gezeigt:',
-            schluss: 'Wir gratulieren dir zu diesen Leistungen und freuen uns auf weitere erfolgreiche Projekte.\n\nMit freundlichen Grüßen\nDein Lehrerteam'
-        };
-        briefvorlage = fallbackBriefvorlage;
-    }
-
+    // Briefvorlage aus Cache holen
+    const briefvorlage = window.firebaseFunctions.dataCache.briefvorlage;
+    const staerkenFormulierungen = window.firebaseFunctions.dataCache.staerkenFormulierungen;
+    const bewertungsCheckpoints = window.firebaseFunctions.dataCache.bewertungsCheckpoints;
+    
+    // Fallback falls Briefvorlage nicht geladen
+    const defaultBriefvorlage = {
+        anrede: 'Liebe/r [NAME],\n\nim Rahmen des Projekts "Zeig, was du kannst!" hast du folgende Stärken gezeigt:',
+        schluss: 'Wir gratulieren dir zu diesen Leistungen und freuen uns auf weitere erfolgreiche Projekte.\n\nMit freundlichen Grüßen\nDein Lehrerteam'
+    };
+    
+    const vorlage = briefvorlage || defaultBriefvorlage;
+    
     // Platzhalter in Briefvorlage ersetzen
-    const anrede = ersetzePlatzhalter(briefvorlage.anrede, bewertung.schuelerName);
-    const schluss = ersetzePlatzhalter(briefvorlage.schluss, bewertung.schuelerName);
+    const anrede = ersetzePlatzhalter(vorlage.anrede, bewertung.schuelerName);
+    const schluss = ersetzePlatzhalter(vorlage.schluss, bewertung.schuelerName);
     
     let inhalt = anrede + '\n\n';
     
@@ -49,7 +53,7 @@ function generatePDFContent(bewertung) {
         if (aktivierte && aktivierte.length > 0) {
             aktivierte.forEach(index => {
                 const key = `${kategorie}_${index}`;
-                let formulierung = staerkenFormulierungen[key];
+                let formulierung = staerkenFormulierungen ? staerkenFormulierungen[key] : null;
                 
                 // Fallback falls Formulierung nicht existiert
                 if (!formulierung) {
@@ -92,13 +96,14 @@ function generatePDFContent(bewertung) {
     return {
         titel: `Bewertung ${bewertung.schuelerName}`,
         inhalt: inhalt,
-        datum: new Date().toLocaleDateString('de-DE'),
+        datum: window.firebaseFunctions.formatGermanDate(),
         schueler: bewertung.schuelerName,
         thema: bewertung.thema,
         lehrer: bewertung.lehrer
     };
 }
 
+// Platzhalter ersetzen
 function ersetzePlatzhalter(text, schuelerName) {
     if (!text) return '';
     
@@ -109,9 +114,17 @@ function ersetzePlatzhalter(text, schuelerName) {
         .replace(/\[Name\]/g, schuelerName);
 }
 
+// PDF in neuem Fenster anzeigen
 function displayPDF(content, schuelerName) {
-    // Schuljahr aus den geladenen Konfigurationsdaten
-    const aktuellesSchuljahr = schuljahr || '2025/26';
+    // Schuljahr und Schuldaten aus Config
+    const config = window.firebaseFunctions.dataCache.config;
+    const aktuellesSchuljahr = config?.schuljahr || '2025/26';
+    const schule = config?.schule || {
+        name: 'Realschule Bad Schönborn',
+        adresse: 'Schulstraße 12 • 76669 Bad Schönborn',
+        telefon: '07253/12345',
+        email: 'info@rs-badschoenborn.de'
+    };
     
     // Erstelle ein neues Fenster für die PDF-Vorschau
     const popup = window.open('', '_blank', 'width=800,height=1000');
@@ -136,11 +149,6 @@ function displayPDF(content, schuelerName) {
                     border-bottom: 2px solid #333;
                     margin-bottom: 40px;
                     padding-bottom: 20px;
-                }
-                .briefkopf img {
-                    max-width: 100%;
-                    height: auto;
-                    margin-bottom: 20px;
                 }
                 .briefkopf h1 {
                     color: #2c3e50;
@@ -263,10 +271,20 @@ function displayPDF(content, schuelerName) {
                     font-weight: bold;
                     color: #2c3e50;
                 }
+                .firebase-info {
+                    background: #f0f9ff;
+                    padding: 10px;
+                    border-radius: 5px;
+                    margin-bottom: 20px;
+                    text-align: center;
+                    font-size: 12px;
+                    color: #667eea;
+                }
                 @media print {
                     .print-btn { display: none; }
                     body { padding: 20px; }
                     @page { margin: 2cm; }
+                    .firebase-info { display: none; }
                 }
             </style>
         </head>
@@ -274,8 +292,23 @@ function displayPDF(content, schuelerName) {
             <button class="print-btn" onclick="window.print()">🖨️ Drucken</button>
             
             <div class="briefkopf">
-                ${createBriefkopfHTML()}
+                <div class="briefkopf-fallback">
+                    <div class="briefkopf-logo-fallback">
+                        <span>🎺</span>
+                    </div>
+                    <div class="briefkopf-text">
+                        <h1 style="margin: 0; color: #2c3e50;">${schule.name}</h1>
+                        <div class="briefkopf-info">
+                            ${schule.adresse}<br>
+                            Tel: ${schule.telefon} • ${schule.email}
+                        </div>
+                    </div>
+                </div>
                 <h2>Zeig, was du kannst! - Projektbewertung</h2>
+            </div>
+            
+            <div class="firebase-info">
+                🔥 Erstellt mit Firebase Realtime Database • Automatisch synchronisiert
             </div>
             
             <div class="schuljahr-info">
@@ -301,7 +334,8 @@ function displayPDF(content, schuelerName) {
             
             <div class="footer-info">
                 Erstellt am ${new Date().toLocaleDateString('de-DE')} um ${new Date().toLocaleTimeString('de-DE')}<br>
-                <em>Generiert mit "Zeig, was du kannst!" Bewertungssystem</em>
+                <em>Generiert mit "Zeig, was du kannst!" • Firebase Edition</em><br>
+                <small>Benutzer: ${window.firebaseFunctions.getCurrentUserName()} • ID: ${window.authFunctions.getUserUid()?.substring(0, 8)}...</small>
             </div>
         </body>
         </html>
@@ -311,26 +345,7 @@ function displayPDF(content, schuelerName) {
     popup.document.close();
 }
 
-function createBriefkopfHTML() {
-    // Versuche Briefkopf-Bild zu laden
-    return `
-        <img src="briefkopf.png" alt="Briefkopf" style="max-width: 100%; height: auto;" 
-             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-        <div class="briefkopf-fallback" style="display: none;">
-            <div class="briefkopf-logo-fallback">
-                <span>🎺</span>
-            </div>
-            <div class="briefkopf-text">
-                <h1 style="margin: 0; color: #2c3e50;">Realschule Bad Schönborn</h1>
-                <div class="briefkopf-info">
-                    Schulstraße 12 • 76669 Bad Schönborn<br>
-                    Tel: 07253/12345 • info@rs-badschoenborn.de
-                </div>
-            </div>
-        </div>
-    `;
-}
-
+// PDF-Inhalt formatieren
 function formatPDFContent(text, schuelerName) {
     // Text formatieren für bessere Darstellung
     const paragraphs = text.split('\n\n');
@@ -375,12 +390,13 @@ function formatPDFContent(text, schuelerName) {
     return formatted;
 }
 
-// Hilfsfunktion für PDF-Button-Status
+// PDF-Button Status prüfen
 function updatePDFButtonStatus(schuelerId) {
+    const bewertungen = window.firebaseFunctions.getBewertungenFromCache();
     const bewertung = bewertungen.find(b => b.schuelerId === schuelerId);
     const button = document.querySelector(`[onclick*="${schuelerId}"]`);
     
-    if (button && button.textContent === 'PDF') {
+    if (button && button.textContent.includes('PDF')) {
         const verfuegbar = bewertung && bewertung.endnote && bewertung.staerken && Object.keys(bewertung.staerken).length > 0;
         
         if (verfuegbar) {
@@ -393,7 +409,19 @@ function updatePDFButtonStatus(schuelerId) {
     }
 }
 
-// PDF-System Initialisierung
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('✅ PDF-System bereit');
-});
+// Alle PDF-Buttons aktualisieren
+function updateAllPDFButtons() {
+    const bewertungen = window.firebaseFunctions.getBewertungenFromCache();
+    bewertungen.forEach(bewertung => {
+        updatePDFButtonStatus(bewertung.schuelerId);
+    });
+}
+
+// Export für andere Module
+window.pdfFunctions = {
+    createPDF,
+    updatePDFButtonStatus,
+    updateAllPDFButtons
+};
+
+console.log('✅ Firebase PDF System bereit');
