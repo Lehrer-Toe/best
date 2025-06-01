@@ -485,15 +485,18 @@ body {
     box-shadow: 0 0 10px rgba(255,255,255,0.5);
 }
 
-/* Verbesserte Notenfarben - IMMER mit Farbe */
-.note-1-0, .note-1-5 { background: #27ae60; color: white; } /* Dunkelgrün */
-.note-2-0 { background: #2ecc71; color: white; } /* Grün */
-.note-2-5 { background: #f39c12; color: white; } /* Orange */
-.note-3-0 { background: #f1c40f; color: #333; } /* Gelb */
-.note-3-5 { background: #e67e22; color: white; } /* Orange */
-.note-4-0, .note-4-5 { background: #e74c3c; color: white; } /* Rot */
-.note-5-0, .note-5-5 { background: #c0392b; color: white; } /* Dunkelrot */
-.note-6-0 { background: #8b0000; color: white; } /* Sehr dunkelrot */
+/* KORRIGIERTE Notenfarben - alle mit klaren Farben */
+.note-1-0 { background: #2ecc71; color: white; } /* Hellgrün - sehr gut */
+.note-1-5 { background: #27ae60; color: white; } /* Grün - sehr gut */
+.note-2-0 { background: #f39c12; color: white; } /* Orange - gut */
+.note-2-5 { background: #e67e22; color: white; } /* Dunkler Orange - gut */
+.note-3-0 { background: #f1c40f; color: #333; } /* Gelb - befriedigend */
+.note-3-5 { background: #d68910; color: white; } /* Gelbbraun - befriedigend */
+.note-4-0 { background: #e74c3c; color: white; } /* Rot - ausreichend */
+.note-4-5 { background: #c0392b; color: white; } /* Dunkelrot - ausreichend */
+.note-5-0 { background: #8b0000; color: white; } /* Dunkelrot - mangelhaft */
+.note-5-5 { background: #6b0000; color: white; } /* Sehr dunkelrot - mangelhaft */
+.note-6-0 { background: #4a0000; color: white; } /* Schwarz-rot - ungenügend */
 
 .nicht-bewertet-btn {
     background: #95a5a6;
@@ -808,10 +811,10 @@ body {
 
 /* PDF Button States */
 .pdf-btn-disabled {
-    background: #bdc3c7;
-    color: #7f8c8d;
+    background: #bdc3c7 !important;
+    color: #7f8c8d !important;
     opacity: 0.5;
-    cursor: not-allowed;
+    cursor: not-allowed !important;
 }
 
 .pdf-btn-enabled {
