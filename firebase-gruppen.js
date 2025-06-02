@@ -4,7 +4,7 @@ console.log('👥 Firebase Gruppen-System geladen');
 // Globale Variablen für Gruppenbearbeitung
 let aktuelleGruppeEdit = null;
 
-// Gruppen laden und anzeigen (KORRIGIERT - nur eigene Gruppen)
+// Gruppen laden und anzeigen
 function loadGruppen() {
     console.log('👥 Lade Gruppen von Firebase...');
     
@@ -14,22 +14,17 @@ function loadGruppen() {
     if (!liste) return;
     
     // Gruppen aus Cache holen
-    const alleGruppen = window.firebaseFunctions.getGruppenFromCache();
-    const currentUserName = window.firebaseFunctions.getCurrentUserName();
+    const gruppen = window.firebaseFunctions.getGruppenFromCache();
     
-    // Nur eigene Gruppen anzeigen (Admin sieht alle)
-    let gruppen;
-    if (window.firebaseFunctions.isAdmin()) {
-        gruppen = alleGruppen; // Admin sieht alle Gruppen
-    } else {
-        // Lehrer sieht nur selbst erstellte Gruppen
-        gruppen = alleGruppen.filter(gruppe => gruppe.ersteller === currentUserName);
-    }
+    // Bewertungen für Statusanzeige laden
+    const alleBewertungen = getAllBewertungsdata();
     
     let html = '';
     gruppen.forEach((gruppe) => {
-        // Berechtigung prüfen - Ersteller kann immer bearbeiten, Admin auch
-        const kannBearbeiten = gruppe.ersteller === currentUserName || window.firebaseFunctions.isAdmin();
+        // Berechtigung prüfen - Admin oder beteiligte Lehrer können bearbeiten
+        const currentUserName = window.firebaseFunctions.getCurrentUserName();
+        const istBeteiligt = gruppe.schueler?.some(s => s.lehrer === currentUserName);
+        const kannBearbeiten = window.firebaseFunctions.isAdmin() || istBeteiligt;
         
         html += `<div class="liste-item">
             <div>
@@ -40,7 +35,16 @@ function loadGruppen() {
         if (gruppe.schueler && Array.isArray(gruppe.schueler)) {
             gruppe.schueler.forEach(schueler => {
                 const fachInfo = schueler.fach ? ` (${window.firebaseFunctions.getFachNameFromGlobal(schueler.fach)})` : '';
-                html += `${schueler.name} → ${schueler.lehrer}${fachInfo}<br>`;
+                
+                // Bewertungsstatus prüfen
+                const schuelerId = `${gruppe.id}-${schueler.name.replace(/\s/g, '-')}`;
+                const istBewertet = alleBewertungen.some(b => b.schuelerId === schuelerId);
+                const statusColor = istBewertet ? '#27ae60' : '#e74c3c'; // Grün oder Rot
+                const statusIcon = istBewertet ? '✅' : '⏳';
+                
+                html += `<div style="margin: 2px 0; padding: 3px 6px; background: ${statusColor}; color: white; border-radius: 3px; display: inline-block; margin-right: 5px; font-size: 0.85rem;">
+                    ${statusIcon} ${schueler.name} → ${schueler.lehrer}${fachInfo}
+                </div><br>`;
             });
         }
         
@@ -48,25 +52,41 @@ function loadGruppen() {
             </div>
             <div>
                 ${kannBearbeiten ? `<button class="btn" onclick="gruppeBearbeiten('${gruppe.id}')">Bearbeiten</button>` : ''}
-                ${kannBearbeiten ? `<button class="btn btn-danger" onclick="gruppeLoeschen('${gruppe.id}')">Löschen</button>` : ''}
+                ${window.firebaseFunctions.isAdmin() ? `<button class="btn btn-danger" onclick="gruppeLoeschen('${gruppe.id}')">Löschen</button>` : ''}
             </div>
         </div>`;
     });
     
-    if (gruppen.length === 0) {
-        if (window.firebaseFunctions.isAdmin()) {
-            html = '<div class="card"><p>Keine Gruppen vorhanden.</p></div>';
-        } else {
-            html = '<div class="card"><p>Sie haben noch keine Gruppen erstellt.</p></div>';
-        }
-    }
-    
-    liste.innerHTML = html;
+    liste.innerHTML = html || '<div class="card"><p>Keine Gruppen vorhanden.</p></div>';
     
     // Lehrer- und Fach-Auswahl für neue Gruppen aktualisieren
     updateSchuelerSelects();
     
-    console.log('👥 Gruppen geladen:', gruppen.length, 'eigene Gruppen');
+    console.log('👥 Gruppen geladen:', gruppen.length);
+}
+
+// Alle Bewertungsdaten sammeln (für Statusanzeige)
+function getAllBewertungsdata() {
+    try {
+        const alleBewertungen = [];
+        const bewertungsCache = window.firebaseFunctions.dataCache.bewertungen || {};
+        
+        // Durch alle Lehrer-Bewertungen gehen
+        Object.values(bewertungsCache).forEach(lehrerBewertungen => {
+            if (lehrerBewertungen && typeof lehrerBewertungen === 'object') {
+                Object.values(lehrerBewertungen).forEach(bewertung => {
+                    if (bewertung && bewertung.schuelerId) {
+                        alleBewertungen.push(bewertung);
+                    }
+                });
+            }
+        });
+        
+        return alleBewertungen;
+    } catch (error) {
+        console.error('❌ Fehler beim Laden der Bewertungsdaten:', error);
+        return [];
+    }
 }
 
 // Lehrer- und Fach-Selects aktualisieren
@@ -211,7 +231,8 @@ async function gruppeErstellen() {
                 await window.newsFunctions.createNewsForAction(
                     `Neue Bewertung für ${lehrerName}`, 
                     `Gruppe "${thema}" zugewiesen mit Schüler(n): ${schuelerDesLehrers.join(', ')}`,
-                    true
+                    true,
+                    lehrerName // Spezifischer Empfänger
                 );
             }
         }
@@ -245,13 +266,6 @@ async function gruppeBearbeiten(gruppenId) {
         
         if (!gruppe) {
             alert('Gruppe nicht gefunden!');
-            return;
-        }
-        
-        // Berechtigung prüfen
-        const currentUserName = window.firebaseFunctions.getCurrentUserName();
-        if (gruppe.ersteller !== currentUserName && !window.firebaseFunctions.isAdmin()) {
-            alert('Sie können nur eigene Gruppen bearbeiten!');
             return;
         }
         
@@ -356,13 +370,6 @@ async function gruppeEditSpeichern() {
     
     if (!window.firebaseFunctions.requireAuth() || !aktuelleGruppeEdit) return;
     
-    // Berechtigung prüfen
-    const currentUserName = window.firebaseFunctions.getCurrentUserName();
-    if (aktuelleGruppeEdit.ersteller !== currentUserName && !window.firebaseFunctions.isAdmin()) {
-        alert('Sie können nur eigene Gruppen bearbeiten!');
-        return;
-    }
-    
     try {
         // Daten aus Formular sammeln
         const themaInput = document.getElementById('editGruppenThema');
@@ -436,6 +443,8 @@ function gruppeEditAbbrechen() {
 
 // Gruppe löschen
 async function gruppeLoeschen(gruppenId) {
+    if (!window.firebaseFunctions.requireAdmin()) return;
+    
     try {
         // Gruppe aus Cache finden
         const gruppen = window.firebaseFunctions.getGruppenFromCache();
@@ -443,13 +452,6 @@ async function gruppeLoeschen(gruppenId) {
         
         if (!gruppe) {
             alert('Gruppe nicht gefunden!');
-            return;
-        }
-        
-        // Berechtigung prüfen
-        const currentUserName = window.firebaseFunctions.getCurrentUserName();
-        if (gruppe.ersteller !== currentUserName && !window.firebaseFunctions.isAdmin()) {
-            alert('Sie können nur eigene Gruppen löschen!');
             return;
         }
         
@@ -507,16 +509,18 @@ async function deleteGruppenBewertungen(gruppenId) {
     }
 }
 
-// Gruppen-Daten für andere Module bereitstellen (KORRIGIERT - nur eigene Gruppen)
+// Gruppen-Daten für andere Module bereitstellen
 function getGruppenForUser() {
-    const alleGruppen = window.firebaseFunctions.getGruppenFromCache();
+    const gruppen = window.firebaseFunctions.getGruppenFromCache();
     const currentUserName = window.firebaseFunctions.getCurrentUserName();
     
     if (window.firebaseFunctions.isAdmin()) {
-        return alleGruppen; // Admin sieht alle Gruppen
+        return gruppen; // Admin sieht alle Gruppen
     } else {
-        // Lehrer sieht nur selbst erstellte Gruppen
-        return alleGruppen.filter(gruppe => gruppe.ersteller === currentUserName);
+        // Lehrer sieht nur Gruppen mit eigenen Schülern
+        return gruppen.filter(gruppe => 
+            gruppe.schueler && gruppe.schueler.some(s => s.lehrer === currentUserName)
+        );
     }
 }
 
