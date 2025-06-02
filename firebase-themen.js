@@ -1,47 +1,68 @@
-// Firebase Themen System - Realtime Database
+// Firebase Themen System - Realtime Database - DEBUG VERSION
 console.log('💡 Firebase Themen System geladen');
 
 // Globale Variablen für Themen
 let ausgewaehlteFaecher = [];
 
-// Themen laden und anzeigen - FINALE LÖSUNG
+// Themen laden und anzeigen - ORIGINALE VERSION mit Debug
 function loadThemen() {
-    console.log('💡 Lade Themen von Firebase...');
+    console.log('💡 loadThemen() - Lade alle Themen...');
+    
+    if (!window.firebaseFunctions.requireAuth()) return;
+    
+    const filterSelect = document.getElementById('themenFachFilter');
+    const currentFilter = filterSelect ? filterSelect.value : '';
+    
+    console.log('🔍 Aktueller Filter beim Laden:', `"${currentFilter}"`);
+    
+    // Filter-Dropdown aktualisieren
+    updateThemenFachFilter();
+    
+    // Aktuellen Filter wiederherstellen
+    if (filterSelect && currentFilter !== undefined) {
+        filterSelect.value = currentFilter;
+        console.log('🔄 Filter wiederhergestellt auf:', `"${filterSelect.value}"`);
+    }
+    
+    // Mit aktuellem Filter laden
+    loadThemenWithFilter(currentFilter);
+}
+
+// Neue Funktion mit explizitem Filter-Parameter
+function loadThemenWithFilter(filterValue) {
+    console.log('💡 loadThemenWithFilter aufgerufen mit:', `"${filterValue}"`);
     
     if (!window.firebaseFunctions.requireAuth()) return;
     
     const liste = document.getElementById('themenListe');
     if (!liste) return;
     
-    // Zuerst Filter-Dropdown aktualisieren ohne den gewählten Wert zu verlieren
-    updateThemenFachFilterSafe();
-    
-    const filterSelect = document.getElementById('themenFachFilter');
-    const filter = filterSelect ? filterSelect.value : '';
-    
-    console.log('🔍 Aktueller Filter-Wert:', `"${filter}"`, 'Typ:', typeof filter);
-    
     // Themen aus Cache holen
     const allThemen = window.firebaseFunctions.getThemenFromCache();
-    console.log('📚 Gesamte Themen im Cache:', allThemen.length);
+    console.log('📚 Alle Themen im Cache:', allThemen.length);
     
-    // Themen nach Fach filtern - ROBUSTE LOGIK
+    // Debug: Zeige alle Themen mit ihren Fächern
+    allThemen.forEach((thema, index) => {
+        console.log(`Thema ${index + 1}: "${thema.name}" - Fächer:`, thema.faecher);
+    });
+    
+    // EINFACHSTE FILTER-LOGIK
     let gefilterte;
-    if (filter === '' || filter === null || filter === undefined) {
-        // Alle Themen anzeigen wenn kein Filter oder "Alle Fächer" gewählt
+    if (!filterValue || filterValue === '') {
+        // ALLE anzeigen
         gefilterte = allThemen;
-        console.log('📋 Zeige alle Themen (kein Filter)');
+        console.log('✅ Zeige ALLE Themen:', gefilterte.length);
     } else {
-        // Nach spezifischem Fach filtern
-        gefilterte = allThemen.filter(t => {
-            if (!t.faecher || !Array.isArray(t.faecher)) {
-                return false; // Themen ohne Fächer ausschließen
-            }
-            return t.faecher.includes(filter);
+        // Filtern
+        gefilterte = allThemen.filter(thema => {
+            const hatFach = thema.faecher && thema.faecher.includes(filterValue);
+            console.log(`- Prüfe "${thema.name}": Fächer=${JSON.stringify(thema.faecher)} → Enthält "${filterValue}": ${hatFach}`);
+            return hatFach;
         });
-        console.log('🔍 Filtere nach Fach:', filter, '- Gefunden:', gefilterte.length);
+        console.log('✅ Gefilterte Themen:', gefilterte.length);
     }
     
+    // HTML erstellen
     let html = '';
     gefilterte.forEach((thema) => {
         const kannLoeschen = thema.ersteller === window.firebaseFunctions.getCurrentUserName() || window.firebaseFunctions.isAdmin();
@@ -67,36 +88,13 @@ function loadThemen() {
                 ''}
         </div>`;
     });
+    
     liste.innerHTML = html || '<div class="card"><p>Keine Themen vorhanden.</p></div>';
     
-    console.log('💡 Themen angezeigt:', gefilterte.length, 'von', allThemen.length, 'gesamt');
+    console.log('💡 Anzeige aktualisiert - Themen sichtbar:', gefilterte.length);
 }
 
-// Fach-Filter Dropdown aktualisieren OHNE gewählten Wert zu verlieren
-function updateThemenFachFilterSafe() {
-    const filterSelect = document.getElementById('themenFachFilter');
-    if (!filterSelect) return;
-    
-    // Aktuell gewählten Wert merken
-    const currentValue = filterSelect.value;
-    
-    const alleFaecher = window.firebaseFunctions.getAllFaecher();
-    let html = '<option value="">Alle Fächer</option>';
-    
-    Object.entries(alleFaecher).forEach(([kuerzel, name]) => {
-        html += `<option value="${kuerzel}">${name}</option>`;
-    });
-    
-    // HTML setzen
-    filterSelect.innerHTML = html;
-    
-    // Gewählten Wert wiederherstellen
-    if (currentValue !== null && currentValue !== undefined) {
-        filterSelect.value = currentValue;
-    }
-}
-
-// Original updateThemenFachFilter für erste Initialisierung
+// Fach-Filter Dropdown aktualisieren
 function updateThemenFachFilter() {
     const filterSelect = document.getElementById('themenFachFilter');
     if (!filterSelect) return;
@@ -109,24 +107,30 @@ function updateThemenFachFilter() {
     });
     
     filterSelect.innerHTML = html;
-    
-    // Sicherstellen dass "Alle Fächer" gewählt ist
-    filterSelect.value = '';
-}
-
-// Themen filtern - KORRIGIERT
-function filterThemen() {
-    console.log('🔍 Filter-Event ausgelöst');
-    
-    // Kurz warten um sicherzustellen dass der neue Wert gesetzt ist
-    setTimeout(() => {
-        loadThemen();
-    }, 10);
+    console.log('🔄 Filter-Dropdown aktualisiert mit', Object.keys(alleFaecher).length, 'Fächern');
 }
 
 // Fachname aus Cache holen
 function getFachName(fachKuerzel) {
     return window.firebaseFunctions.getFachNameFromGlobal(fachKuerzel);
+}
+
+// Themen filtern - KOMPLETT NEUE DEBUG-VERSION
+function filterThemen() {
+    console.log('🔥 filterThemen() aufgerufen!');
+    
+    const filterSelect = document.getElementById('themenFachFilter');
+    if (!filterSelect) {
+        console.error('❌ Select-Element nicht gefunden!');
+        return;
+    }
+    
+    const selectedValue = filterSelect.value;
+    console.log('🔍 Gewählter Wert:', `"${selectedValue}"`, 'Index:', filterSelect.selectedIndex);
+    console.log('🔍 Alle Optionen:', Array.from(filterSelect.options).map(o => `"${o.value}": "${o.text}"`));
+    
+    // Direkt loadThemenWithFilter aufrufen
+    loadThemenWithFilter(selectedValue);
 }
 
 // Neues Thema hinzufügen
@@ -359,4 +363,4 @@ window.themenFunctions = {
     getFachName
 };
 
-console.log('✅ Firebase Themen System bereit');
+console.log('✅ Firebase Themen System bereit - DEBUG VERSION');
