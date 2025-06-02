@@ -4,7 +4,7 @@ console.log('💡 Firebase Themen System geladen');
 // Globale Variablen für Themen
 let ausgewaehlteFaecher = [];
 
-// Themen laden und anzeigen - FINALE KORREKTUR
+// Themen laden und anzeigen - FINALE LÖSUNG
 function loadThemen() {
     console.log('💡 Lade Themen von Firebase...');
     
@@ -13,24 +13,33 @@ function loadThemen() {
     const liste = document.getElementById('themenListe');
     if (!liste) return;
     
+    // Zuerst Filter-Dropdown aktualisieren ohne den gewählten Wert zu verlieren
+    updateThemenFachFilterSafe();
+    
     const filterSelect = document.getElementById('themenFachFilter');
     const filter = filterSelect ? filterSelect.value : '';
     
-    console.log('🔍 Aktueller Filter-Wert:', `"${filter}"`); // Debug-Ausgabe
+    console.log('🔍 Aktueller Filter-Wert:', `"${filter}"`, 'Typ:', typeof filter);
     
     // Themen aus Cache holen
     const allThemen = window.firebaseFunctions.getThemenFromCache();
+    console.log('📚 Gesamte Themen im Cache:', allThemen.length);
     
-    // Themen nach Fach filtern - KORRIGIERTE LOGIK
+    // Themen nach Fach filtern - ROBUSTE LOGIK
     let gefilterte;
-    if (!filter || filter === '' || filter === 'alle') {
-        // Alle Themen anzeigen
+    if (filter === '' || filter === null || filter === undefined) {
+        // Alle Themen anzeigen wenn kein Filter oder "Alle Fächer" gewählt
         gefilterte = allThemen;
-        console.log('📋 Zeige alle Themen');
+        console.log('📋 Zeige alle Themen (kein Filter)');
     } else {
         // Nach spezifischem Fach filtern
-        gefilterte = allThemen.filter(t => t.faecher && t.faecher.includes(filter));
-        console.log('🔍 Filtere nach Fach:', filter);
+        gefilterte = allThemen.filter(t => {
+            if (!t.faecher || !Array.isArray(t.faecher)) {
+                return false; // Themen ohne Fächer ausschließen
+            }
+            return t.faecher.includes(filter);
+        });
+        console.log('🔍 Filtere nach Fach:', filter, '- Gefunden:', gefilterte.length);
     }
     
     let html = '';
@@ -60,36 +69,64 @@ function loadThemen() {
     });
     liste.innerHTML = html || '<div class="card"><p>Keine Themen vorhanden.</p></div>';
     
-    // Filter-Dropdown mit Fächern füllen
-    updateThemenFachFilter();
-    
-    console.log('💡 Themen geladen:', gefilterte.length, 'von', allThemen.length, 'angezeigt');
+    console.log('💡 Themen angezeigt:', gefilterte.length, 'von', allThemen.length, 'gesamt');
 }
 
-// Fach-Filter Dropdown aktualisieren - KORRIGIERT
+// Fach-Filter Dropdown aktualisieren OHNE gewählten Wert zu verlieren
+function updateThemenFachFilterSafe() {
+    const filterSelect = document.getElementById('themenFachFilter');
+    if (!filterSelect) return;
+    
+    // Aktuell gewählten Wert merken
+    const currentValue = filterSelect.value;
+    
+    const alleFaecher = window.firebaseFunctions.getAllFaecher();
+    let html = '<option value="">Alle Fächer</option>';
+    
+    Object.entries(alleFaecher).forEach(([kuerzel, name]) => {
+        html += `<option value="${kuerzel}">${name}</option>`;
+    });
+    
+    // HTML setzen
+    filterSelect.innerHTML = html;
+    
+    // Gewählten Wert wiederherstellen
+    if (currentValue !== null && currentValue !== undefined) {
+        filterSelect.value = currentValue;
+    }
+}
+
+// Original updateThemenFachFilter für erste Initialisierung
 function updateThemenFachFilter() {
     const filterSelect = document.getElementById('themenFachFilter');
     if (!filterSelect) return;
     
     const alleFaecher = window.firebaseFunctions.getAllFaecher();
-    let html = '<option value="">Alle Fächer</option>'; // Leerer Wert für "Alle Fächer"
+    let html = '<option value="">Alle Fächer</option>';
     
     Object.entries(alleFaecher).forEach(([kuerzel, name]) => {
         html += `<option value="${kuerzel}">${name}</option>`;
     });
     
     filterSelect.innerHTML = html;
+    
+    // Sicherstellen dass "Alle Fächer" gewählt ist
+    filterSelect.value = '';
+}
+
+// Themen filtern - KORRIGIERT
+function filterThemen() {
+    console.log('🔍 Filter-Event ausgelöst');
+    
+    // Kurz warten um sicherzustellen dass der neue Wert gesetzt ist
+    setTimeout(() => {
+        loadThemen();
+    }, 10);
 }
 
 // Fachname aus Cache holen
 function getFachName(fachKuerzel) {
     return window.firebaseFunctions.getFachNameFromGlobal(fachKuerzel);
-}
-
-// Themen filtern - KORRIGIERTE Version
-function filterThemen() {
-    console.log('🔍 Filtere Themen...');
-    loadThemen(); // Einfach loadThemen() aufrufen, die macht bereits das Filtern
 }
 
 // Neues Thema hinzufügen
