@@ -4,7 +4,7 @@ console.log('💡 Firebase Themen System geladen');
 // Globale Variablen für Themen
 let ausgewaehlteFaecher = [];
 
-// Themen laden und anzeigen - KORRIGIERTE Version
+// Themen laden und anzeigen - FINALE KORREKTUR
 function loadThemen() {
     console.log('💡 Lade Themen von Firebase...');
     
@@ -13,18 +13,25 @@ function loadThemen() {
     const liste = document.getElementById('themenListe');
     if (!liste) return;
     
-    const filter = document.getElementById('themenFachFilter')?.value || '';
+    const filterSelect = document.getElementById('themenFachFilter');
+    const filter = filterSelect ? filterSelect.value : '';
+    
+    console.log('🔍 Aktueller Filter-Wert:', `"${filter}"`); // Debug-Ausgabe
     
     // Themen aus Cache holen
     const allThemen = window.firebaseFunctions.getThemenFromCache();
     
-    // Themen nach Fach filtern - KORRIGIERT
-    let gefilterte = allThemen;
-    if (filter && filter.trim() !== '') {
-        // Nur filtern wenn ein spezifisches Fach gewählt wurde
+    // Themen nach Fach filtern - KORRIGIERTE LOGIK
+    let gefilterte;
+    if (!filter || filter === '' || filter === 'alle') {
+        // Alle Themen anzeigen
+        gefilterte = allThemen;
+        console.log('📋 Zeige alle Themen');
+    } else {
+        // Nach spezifischem Fach filtern
         gefilterte = allThemen.filter(t => t.faecher && t.faecher.includes(filter));
+        console.log('🔍 Filtere nach Fach:', filter);
     }
-    // Wenn filter leer ist oder "Alle Fächer" gewählt wurde, werden alle Themen angezeigt
     
     let html = '';
     gefilterte.forEach((thema) => {
@@ -56,7 +63,7 @@ function loadThemen() {
     // Filter-Dropdown mit Fächern füllen
     updateThemenFachFilter();
     
-    console.log('💡 Themen geladen:', gefilterte.length, 'von', allThemen.length, 'Filter:', filter || 'Alle');
+    console.log('💡 Themen geladen:', gefilterte.length, 'von', allThemen.length, 'angezeigt');
 }
 
 // Fach-Filter Dropdown aktualisieren - KORRIGIERT
