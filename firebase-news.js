@@ -27,11 +27,14 @@ function loadNews() {
     // News aus Cache holen
     const allNews = window.firebaseFunctions.getNewsFromCache();
     
+    // News nach Relevanz filtern
+    const relevanteNews = filterNewsForUser(allNews);
+    
     // Abgelaufene News filtern und bereits als gelesen markierte entfernen
     const currentUserEmail = window.authFunctions.getUserEmail();
     const sanitizedEmail = window.firebaseFunctions.sanitizeEmail(currentUserEmail);
     
-    const aktuelleNews = allNews.filter(item => {
+    const aktuelleNews = relevanteNews.filter(item => {
         // Entferne gelesen markierte News dauerhaft
         if (item.gelesenVon && item.gelesenVon[sanitizedEmail]) {
             return false;
@@ -53,6 +56,14 @@ function loadNews() {
     aktuelleNews.forEach((item, index) => {
         const isAdmin = window.firebaseFunctions.isAdmin();
         
+        // Relevanz-Badge hinzufügen
+        let relevanzBadge = '';
+        if (item.empfaenger === 'alle') {
+            relevanzBadge = '<span style="background: #667eea; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.7rem; margin-left: 5px;">Für alle</span>';
+        } else if (item.empfaenger === window.firebaseFunctions.getCurrentUserName()) {
+            relevanzBadge = '<span style="background: #27ae60; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.7rem; margin-left: 5px;">Für Sie</span>';
+        }
+        
         html += `<div class="news-item ${item.wichtig ? 'wichtig' : ''}" id="news-${item.id || index}">
             <div class="news-gelesen-bereich">
                 <label style="font-size: 0.9rem; cursor: pointer;">
@@ -60,7 +71,7 @@ function loadNews() {
                     Gelesen
                 </label>
             </div>
-            <strong>${item.titel}</strong><br>
+            <strong>${item.titel}${relevanzBadge}</strong><br>
             ${item.text}<br>
             <small>${item.datum} ${item.autor ? '- ' + item.autor : ''}</small>
             ${isAdmin ? `<button class="btn btn-danger" style="float: right; margin-top: 10px;" onclick="newsLoeschen('${item.id || index}')">Löschen</button>` : ''}
@@ -68,7 +79,38 @@ function loadNews() {
     });
     newsList.innerHTML = html;
     
-    console.log('📰 News geladen:', aktuelleNews.length, 'aktuelle News');
+    console.log('📰 News geladen:', aktuelleNews.length, 'relevante News von', allNews.length, 'gesamt');
+}
+
+// News nach Benutzer-Relevanz filtern
+function filterNewsForUser(allNews) {
+    const currentUserName = window.firebaseFunctions.getCurrentUserName();
+    const isAdmin = window.firebaseFunctions.isAdmin();
+    
+    // Admin sieht alle News
+    if (isAdmin) {
+        return allNews;
+    }
+    
+    // Lehrer sehen nur relevante News
+    return allNews.filter(newsItem => {
+        // News für alle anzeigen
+        if (!newsItem.empfaenger || newsItem.empfaenger === 'alle') {
+            return true;
+        }
+        
+        // News die speziell für diesen Lehrer sind
+        if (newsItem.empfaenger === currentUserName) {
+            return true;
+        }
+        
+        // News vom Admin (auch ohne spezifischen Empfänger)
+        if (newsItem.autor === 'Admin' || newsItem.autor === 'System') {
+            return true;
+        }
+        
+        return false;
+    });
 }
 
 // Toggle Ablauf-Feld
@@ -97,7 +139,7 @@ async function adminNewsErstellen() {
     }
     
     try {
-        await addNews(titel, text, wichtig, window.firebaseFunctions.getCurrentUserName(), ablauf);
+        await addNews(titel, text, wichtig, window.firebaseFunctions.getCurrentUserName(), ablauf, 'alle');
         
         // Felder zurücksetzen
         document.getElementById('newsTitel').value = '';
@@ -115,8 +157,8 @@ async function adminNewsErstellen() {
     }
 }
 
-// News zu Firebase hinzufügen
-async function addNews(titel, text, wichtig = false, autor = null, ablauf = null) {
+// News zu Firebase hinzufügen - ERWEITERT um Empfänger
+async function addNews(titel, text, wichtig = false, autor = null, ablauf = null, empfaenger = 'alle') {
     if (!window.firebaseFunctions.requireAuth()) return;
     
     const newsRef = window.firebaseFunctions.getDatabaseRef('news');
@@ -131,12 +173,13 @@ async function addNews(titel, text, wichtig = false, autor = null, ablauf = null
         wichtig,
         autor: autor || window.firebaseFunctions.getCurrentUserName(),
         ablauf,
+        empfaenger, // NEU: Spezifischer Empfänger oder 'alle'
         gelesenVon: {} // Object für jeden User der es gelesen hat
     };
     
     try {
         await window.firebaseDB.set(newNewsRef, neueNews);
-        console.log('📰 News zu Firebase hinzugefügt:', titel);
+        console.log('📰 News zu Firebase hinzugefügt:', titel, 'für:', empfaenger);
         return newNewsRef.key;
     } catch (error) {
         console.error('❌ Fehler beim Hinzufügen der News:', error);
@@ -198,12 +241,12 @@ async function newsAlsGelesenMarkieren(newsId) {
     }
 }
 
-// News für andere Module (wird von anderen Modulen aufgerufen)
-async function createNewsForAction(titel, text, wichtig = false) {
+// News für andere Module (wird von anderen Modulen aufgerufen) - ERWEITERT
+async function createNewsForAction(titel, text, wichtig = false, empfaenger = 'alle') {
     if (!window.firebaseFunctions.requireAuth()) return;
     
     try {
-        return await addNews(titel, text, wichtig, window.firebaseFunctions.getCurrentUserName());
+        return await addNews(titel, text, wichtig, window.firebaseFunctions.getCurrentUserName(), null, empfaenger);
     } catch (error) {
         console.error('❌ Fehler beim Erstellen der Action-News:', error);
         // Fehler nicht an User weiterleiten, da es nur ein Nebeneffekt ist
