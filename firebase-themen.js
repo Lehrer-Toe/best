@@ -18,9 +18,9 @@ function loadThemen() {
     // Themen aus Cache holen
     const allThemen = window.firebaseFunctions.getThemenFromCache();
     
-    // Themen nach Fach filtern
+    // Themen nach Fach filtern - KORRIGIERT: Filter nur wenn nicht leer UND nicht "alle"
     let gefilterte = allThemen;
-    if (filter) {
+    if (filter && filter !== '' && filter !== 'alle') {
         gefilterte = allThemen.filter(t => t.faecher && t.faecher.includes(filter));
     }
     
@@ -57,13 +57,13 @@ function loadThemen() {
     console.log('💡 Themen geladen:', gefilterte.length, 'von', allThemen.length);
 }
 
-// Fach-Filter Dropdown aktualisieren
+// Fach-Filter Dropdown aktualisieren - KORRIGIERT
 function updateThemenFachFilter() {
     const filterSelect = document.getElementById('themenFachFilter');
     if (!filterSelect) return;
     
     const alleFaecher = window.firebaseFunctions.getAllFaecher();
-    let html = '<option value="">Alle Fächer</option>';
+    let html = '<option value="">Alle Fächer</option>'; // Leerer Wert für "Alle Fächer"
     
     Object.entries(alleFaecher).forEach(([kuerzel, name]) => {
         html += `<option value="${kuerzel}">${name}</option>`;
