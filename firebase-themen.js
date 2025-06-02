@@ -1,19 +1,15 @@
-// Firebase Themen System - Realtime Database - DEBUG VERSION
+// Firebase Themen System - Realtime Database
 console.log('💡 Firebase Themen System geladen');
 
 // Globale Variablen für Themen
 let ausgewaehlteFaecher = [];
 
-// Themen laden und anzeigen - ORIGINALE VERSION mit Debug
+// Themen laden und anzeigen
 function loadThemen() {
-    console.log('💡 loadThemen() - Lade alle Themen...');
-    
     if (!window.firebaseFunctions.requireAuth()) return;
     
     const filterSelect = document.getElementById('themenFachFilter');
     const currentFilter = filterSelect ? filterSelect.value : '';
-    
-    console.log('🔍 Aktueller Filter beim Laden:', `"${currentFilter}"`);
     
     // Filter-Dropdown aktualisieren
     updateThemenFachFilter();
@@ -21,17 +17,14 @@ function loadThemen() {
     // Aktuellen Filter wiederherstellen
     if (filterSelect && currentFilter !== undefined) {
         filterSelect.value = currentFilter;
-        console.log('🔄 Filter wiederhergestellt auf:', `"${filterSelect.value}"`);
     }
     
     // Mit aktuellem Filter laden
     loadThemenWithFilter(currentFilter);
 }
 
-// Neue Funktion mit explizitem Filter-Parameter
+// Themen mit spezifischem Filter laden
 function loadThemenWithFilter(filterValue) {
-    console.log('💡 loadThemenWithFilter aufgerufen mit:', `"${filterValue}"`);
-    
     if (!window.firebaseFunctions.requireAuth()) return;
     
     const liste = document.getElementById('themenListe');
@@ -39,27 +32,17 @@ function loadThemenWithFilter(filterValue) {
     
     // Themen aus Cache holen
     const allThemen = window.firebaseFunctions.getThemenFromCache();
-    console.log('📚 Alle Themen im Cache:', allThemen.length);
     
-    // Debug: Zeige alle Themen mit ihren Fächern
-    allThemen.forEach((thema, index) => {
-        console.log(`Thema ${index + 1}: "${thema.name}" - Fächer:`, thema.faecher);
-    });
-    
-    // EINFACHSTE FILTER-LOGIK
+    // Themen filtern
     let gefilterte;
     if (!filterValue || filterValue === '') {
-        // ALLE anzeigen
+        // Alle Themen anzeigen
         gefilterte = allThemen;
-        console.log('✅ Zeige ALLE Themen:', gefilterte.length);
     } else {
-        // Filtern
+        // Nach spezifischem Fach filtern
         gefilterte = allThemen.filter(thema => {
-            const hatFach = thema.faecher && thema.faecher.includes(filterValue);
-            console.log(`- Prüfe "${thema.name}": Fächer=${JSON.stringify(thema.faecher)} → Enthält "${filterValue}": ${hatFach}`);
-            return hatFach;
+            return thema.faecher && thema.faecher.includes(filterValue);
         });
-        console.log('✅ Gefilterte Themen:', gefilterte.length);
     }
     
     // HTML erstellen
@@ -90,8 +73,6 @@ function loadThemenWithFilter(filterValue) {
     });
     
     liste.innerHTML = html || '<div class="card"><p>Keine Themen vorhanden.</p></div>';
-    
-    console.log('💡 Anzeige aktualisiert - Themen sichtbar:', gefilterte.length);
 }
 
 // Fach-Filter Dropdown aktualisieren
@@ -107,7 +88,6 @@ function updateThemenFachFilter() {
     });
     
     filterSelect.innerHTML = html;
-    console.log('🔄 Filter-Dropdown aktualisiert mit', Object.keys(alleFaecher).length, 'Fächern');
 }
 
 // Fachname aus Cache holen
@@ -115,28 +95,17 @@ function getFachName(fachKuerzel) {
     return window.firebaseFunctions.getFachNameFromGlobal(fachKuerzel);
 }
 
-// Themen filtern - KOMPLETT NEUE DEBUG-VERSION
+// Themen filtern
 function filterThemen() {
-    console.log('🔥 filterThemen() aufgerufen!');
-    
     const filterSelect = document.getElementById('themenFachFilter');
-    if (!filterSelect) {
-        console.error('❌ Select-Element nicht gefunden!');
-        return;
-    }
+    if (!filterSelect) return;
     
     const selectedValue = filterSelect.value;
-    console.log('🔍 Gewählter Wert:', `"${selectedValue}"`, 'Index:', filterSelect.selectedIndex);
-    console.log('🔍 Alle Optionen:', Array.from(filterSelect.options).map(o => `"${o.value}": "${o.text}"`));
-    
-    // Direkt loadThemenWithFilter aufrufen
     loadThemenWithFilter(selectedValue);
 }
 
 // Neues Thema hinzufügen
 function themaHinzufuegen() {
-    console.log('💡 Neues Thema hinzufügen...');
-    
     if (!window.firebaseFunctions.requireAuth()) return;
     
     const input = document.getElementById('neuesThema');
@@ -291,8 +260,6 @@ function schließeFaecherModal() {
 
 // Thema auswählen (für Gruppen-Erstellung)
 function themaAuswaehlen(thema) {
-    console.log('💡 Thema ausgewählt:', thema);
-    
     const gruppenThemaInput = document.getElementById('gruppenThema');
     if (gruppenThemaInput) {
         gruppenThemaInput.value = thema;
@@ -363,4 +330,4 @@ window.themenFunctions = {
     getFachName
 };
 
-console.log('✅ Firebase Themen System bereit - DEBUG VERSION');
+console.log('✅ Firebase Themen System bereit');
