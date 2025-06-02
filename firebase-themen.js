@@ -79,9 +79,10 @@ function getFachName(fachKuerzel) {
     return window.firebaseFunctions.getFachNameFromGlobal(fachKuerzel);
 }
 
-// Themen filtern
+// Themen filtern - KORRIGIERTE Version
 function filterThemen() {
-    loadThemen();
+    console.log('🔍 Filtere Themen...');
+    loadThemen(); // Einfach loadThemen() aufrufen, die macht bereits das Filtern
 }
 
 // Neues Thema hinzufügen
