@@ -1,186 +1,86 @@
-// Firebase Authentication System
+// Firebase Authentication System - Robuste Version
 console.log('🔐 Firebase Authentication System geladen');
 
 // Globale Variablen
 let currentUser = null;
 let firebaseUser = null;
-
-// NEU: Automatischer Logout nach Inaktivität
-let inactivityTimer = null;
-let inactivityWarningTimer = null;
-const INACTIVITY_TIMEOUT = 20 * 60 * 1000; // 20 Minuten in Millisekunden
-const WARNING_TIMEOUT = 15 * 60 * 1000; // Warnung nach 15 Minuten
+let authInitialized = false;
+let loginInProgress = false;
 
 // Initialisiere Authentication
 function initializeAuth() {
     console.log('🔐 Initialisiere Firebase Authentication...');
     
-    // Auth State Listener
-    window.firebaseAuth.onAuthStateChanged(window.auth, (user) => {
-        if (user) {
-            console.log('✅ Firebase User angemeldet:', user.email);
-            firebaseUser = user;
-            handleAuthenticatedUser(user);
-        } else {
-            console.log('❌ Kein Firebase User angemeldet');
-            firebaseUser = null;
-            currentUser = null;
-            showLoginScreen();
-        }
-    });
-    
-    // Login Form Event Listener
-    const loginForm = document.getElementById('loginForm');
-    if (loginForm) {
-        loginForm.addEventListener('submit', handleLogin);
+    if (authInitialized) {
+        console.log('⚠️ Auth bereits initialisiert');
+        return;
     }
     
-    // NEU: Inaktivitäts-Tracker einrichten
-    setupInactivityTracker();
-    
-    console.log('✅ Firebase Authentication bereit');
-}
-
-// NEU: Inaktivitäts-Tracker einrichten
-function setupInactivityTracker() {
-    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
-    
-    const resetInactivityTimer = () => {
-        // Nur wenn User eingeloggt ist
-        if (!currentUser) return;
-        
-        // Timer zurücksetzen
-        if (inactivityTimer) {
-            clearTimeout(inactivityTimer);
-        }
-        if (inactivityWarningTimer) {
-            clearTimeout(inactivityWarningTimer);
-        }
-        
-        // Warnung nach 4 Minuten
-        inactivityWarningTimer = setTimeout(() => {
-            showInactivityWarning();
-        }, WARNING_TIMEOUT);
-        
-        // Automatischer Logout nach 5 Minuten
-        inactivityTimer = setTimeout(() => {
-            handleInactivityLogout();
-        }, INACTIVITY_TIMEOUT);
-    };
-    
-    // Event-Listener für alle Aktivitäten
-    events.forEach(event => {
-        document.addEventListener(event, resetInactivityTimer, true);
-    });
-    
-    console.log('⏰ Inaktivitäts-Tracker eingerichtet (5 Min)');
-}
-
-// NEU: Inaktivitäts-Warnung anzeigen
-function showInactivityWarning() {
-    if (!currentUser) return;
-    
-    const warningDiv = document.createElement('div');
-    warningDiv.id = 'inactivityWarning';
-    warningDiv.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: #f39c12;
-        color: white;
-        padding: 15px 20px;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        z-index: 10000;
-        font-weight: bold;
-        animation: slideIn 0.3s ease-out;
-    `;
-    warningDiv.innerHTML = `
-        ⚠️ Sie werden in 1 Minute automatisch abgemeldet!
-        <button onclick="dismissInactivityWarning()" style="margin-left: 10px; background: white; color: #f39c12; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">OK</button>
-    `;
-    
-    document.body.appendChild(warningDiv);
-    
-    // Animation hinzufügen
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-    `;
-    document.head.appendChild(style);
-    
-    console.log('⚠️ Inaktivitäts-Warnung angezeigt');
-}
-
-// NEU: Inaktivitäts-Warnung schließen
-window.dismissInactivityWarning = function() {
-    const warning = document.getElementById('inactivityWarning');
-    if (warning) {
-        warning.remove();
-    }
-};
-
-// NEU: Automatischer Logout wegen Inaktivität
-async function handleInactivityLogout() {
-    if (!currentUser) return;
-    
-    console.log('⏰ Automatischer Logout wegen Inaktivität');
-    
-    // Warnung entfernen falls noch da
-    const warning = document.getElementById('inactivityWarning');
-    if (warning) {
-        warning.remove();
-    }
-    
-    // Sanfter Logout ohne Fehlermeldung
     try {
-        await window.firebaseAuth.signOut(window.auth);
-        
-        // Freundliche Nachricht anzeigen
-        const logoutMessage = document.createElement('div');
-        logoutMessage.style.cssText = `
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: #667eea;
-            color: white;
-            padding: 20px 30px;
-            border-radius: 10px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-            z-index: 10001;
-            text-align: center;
-            font-size: 16px;
-        `;
-        logoutMessage.innerHTML = `
-            <div style="margin-bottom: 10px;">🔒</div>
-            <div>Sie wurden automatisch abgemeldet</div>
-            <div style="font-size: 14px; margin-top: 10px; opacity: 0.8;">Aus Sicherheitsgründen nach 5 Minuten Inaktivität</div>
-        `;
-        
-        document.body.appendChild(logoutMessage);
-        
-        // Nachricht nach 3 Sekunden entfernen
-        setTimeout(() => {
-            if (logoutMessage) {
-                logoutMessage.remove();
+        // Auth State Listener mit verbesserter Fehlerbehandlung
+        window.firebaseAuth.onAuthStateChanged(window.auth, (user) => {
+            console.log('🔄 Auth State Changed:', user ? user.email : 'null');
+            
+            if (user) {
+                console.log('✅ Firebase User angemeldet:', user.email);
+                firebaseUser = user;
+                
+                // Verhindere mehrfache Ausführung
+                if (!loginInProgress) {
+                    handleAuthenticatedUser(user);
+                }
+            } else {
+                console.log('❌ Kein Firebase User angemeldet');
+                firebaseUser = null;
+                currentUser = null;
+                
+                // Nur zur Login-Seite wenn nicht gerade ein Login läuft
+                if (!loginInProgress) {
+                    showLoginScreen();
+                }
             }
-        }, 3000);
+        }, (error) => {
+            console.error('❌ Auth State Change Error:', error);
+            showError('Fehler bei der Authentifizierung: ' + error.message);
+        });
+        
+        // Login Form Event Listener mit verbesserter Behandlung
+        const loginForm = document.getElementById('loginForm');
+        if (loginForm) {
+            // Entferne vorherige Listener
+            loginForm.removeEventListener('submit', handleLogin);
+            loginForm.addEventListener('submit', handleLogin);
+            
+            // Enter-Key Support für bessere Browser-Kompatibilität
+            loginForm.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleLogin(e);
+                }
+            });
+        }
+        
+        authInitialized = true;
+        console.log('✅ Firebase Authentication bereit');
         
     } catch (error) {
-        console.error('❌ Fehler beim automatischen Logout:', error);
+        console.error('❌ Kritischer Fehler bei Auth-Initialisierung:', error);
+        showError('Authentication konnte nicht initialisiert werden: ' + error.message);
     }
 }
 
-// Login Handler
+// Login Handler - Verbessert für Browser-Kompatibilität
 async function handleLogin(e) {
     e.preventDefault();
     
-    const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value;
+    // Verhindere mehrfache Login-Versuche
+    if (loginInProgress) {
+        console.log('⚠️ Login bereits in Bearbeitung');
+        return;
+    }
+    
+    const email = document.getElementById('email')?.value?.trim();
+    const password = document.getElementById('password')?.value;
     
     if (!email || !password) {
         showError('Bitte E-Mail und Passwort eingeben!');
@@ -188,16 +88,43 @@ async function handleLogin(e) {
     }
     
     console.log('🔐 Login-Versuch für:', email);
+    loginInProgress = true;
+    
+    // UI während Login sperren
+    const loginBtn = document.querySelector('.login-btn');
+    const originalText = loginBtn?.textContent;
+    if (loginBtn) {
+        loginBtn.disabled = true;
+        loginBtn.textContent = 'Anmeldung läuft...';
+    }
+    
+    // Fehler-Nachricht verstecken
+    hideError();
     
     try {
-        // Firebase Authentication
-        const userCredential = await window.firebaseAuth.signInWithEmailAndPassword(window.auth, email, password);
+        // Firebase Authentication mit Timeout
+        console.log('🔥 Starte Firebase Authentication...');
+        
+        const loginPromise = window.firebaseAuth.signInWithEmailAndPassword(window.auth, email, password);
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Login-Timeout nach 15 Sekunden')), 15000);
+        });
+        
+        const userCredential = await Promise.race([loginPromise, timeoutPromise]);
         console.log('✅ Firebase Login erfolgreich:', userCredential.user.email);
         
-        // Keine weitere Aktion nötig - onAuthStateChanged wird automatisch ausgelöst
+        // Warte kurz auf Auth State Change (Browser-spezifisch)
+        await waitForAuthStateChange(userCredential.user, 5000);
         
     } catch (error) {
         console.error('❌ Firebase Login Fehler:', error);
+        loginInProgress = false;
+        
+        // UI wieder entsperren
+        if (loginBtn) {
+            loginBtn.disabled = false;
+            loginBtn.textContent = originalText;
+        }
         
         let errorMessage = 'Login fehlgeschlagen!';
         switch (error.code) {
@@ -216,25 +143,57 @@ async function handleLogin(e) {
             case 'auth/too-many-requests':
                 errorMessage = 'Zu viele Anmeldeversuche. Bitte später erneut versuchen!';
                 break;
+            case 'auth/network-request-failed':
+                errorMessage = 'Netzwerkfehler. Prüfen Sie Ihre Internetverbindung!';
+                break;
             default:
-                errorMessage = `Fehler: ${error.message}`;
+                if (error.message.includes('Timeout')) {
+                    errorMessage = 'Anmeldung dauert zu lange. Bitte erneut versuchen!';
+                } else {
+                    errorMessage = `Fehler: ${error.message}`;
+                }
         }
         
         showError(errorMessage);
     }
 }
 
-// Authentifizierter User Handler
+// Warte auf Auth State Change (für Browser-Kompatibilität)
+function waitForAuthStateChange(expectedUser, timeoutMs = 5000) {
+    return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+            reject(new Error('Auth State Change Timeout'));
+        }, timeoutMs);
+        
+        const checkAuth = () => {
+            if (firebaseUser && firebaseUser.uid === expectedUser.uid) {
+                clearTimeout(timeout);
+                resolve();
+            } else {
+                // Kurz warten und nochmal prüfen
+                setTimeout(checkAuth, 100);
+            }
+        };
+        
+        checkAuth();
+    });
+}
+
+// Authentifizierter User Handler - Verbessert
 async function handleAuthenticatedUser(firebaseUser) {
     console.log('👤 Lade Benutzerdaten für:', firebaseUser.email);
     
     try {
-        // Benutzerdaten aus Firebase laden
-        const userDataRef = window.firebaseDB.ref(window.database, `users/${sanitizeEmail(firebaseUser.email)}`);
-        const snapshot = await window.firebaseDB.get(userDataRef);
+        // Doppelte Ausführung verhindern
+        if (currentUser && currentUser.uid === firebaseUser.uid) {
+            console.log('👤 Benutzer bereits geladen');
+            return;
+        }
         
-        if (snapshot.exists()) {
-            const userData = snapshot.val();
+        // Benutzerdaten aus Firebase laden mit Retry-Mechanismus
+        const userData = await loadUserDataWithRetry(firebaseUser.email, 3);
+        
+        if (userData) {
             currentUser = {
                 email: firebaseUser.email,
                 uid: firebaseUser.uid,
@@ -242,7 +201,12 @@ async function handleAuthenticatedUser(firebaseUser) {
             };
             
             console.log('✅ Benutzerdaten geladen:', currentUser.name, 'Rolle:', currentUser.role);
-            showApp();
+            
+            // UI mit Verzögerung für Browser-Kompatibilität
+            setTimeout(() => {
+                showApp();
+                loginInProgress = false;
+            }, 100);
             
         } else {
             console.warn('⚠️ Benutzerdaten nicht in Firebase gefunden');
@@ -257,40 +221,83 @@ async function handleAuthenticatedUser(firebaseUser) {
     }
 }
 
-// Login Screen anzeigen
-function showLoginScreen() {
-    document.getElementById('loadingScreen').style.display = 'none';
-    document.getElementById('loginScreen').style.display = 'flex';
-    document.getElementById('appContainer').style.display = 'none';
-    
-    // Felder leeren
-    document.getElementById('email').value = '';
-    document.getElementById('password').value = '';
-    hideError();
-    
-    // Timer stoppen
-    if (inactivityTimer) {
-        clearTimeout(inactivityTimer);
-        inactivityTimer = null;
+// Benutzerdaten laden mit Retry-Mechanismus
+async function loadUserDataWithRetry(email, maxRetries = 3) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            console.log(`📂 Lade Benutzerdaten (Versuch ${attempt}/${maxRetries})`);
+            
+            const userDataRef = window.firebaseDB.ref(window.database, `users/${sanitizeEmail(email)}`);
+            const snapshot = await window.firebaseDB.get(userDataRef);
+            
+            if (snapshot.exists()) {
+                return snapshot.val();
+            } else {
+                console.warn(`⚠️ Benutzerdaten nicht gefunden (Versuch ${attempt})`);
+                return null;
+            }
+            
+        } catch (error) {
+            console.error(`❌ Fehler beim Laden der Benutzerdaten (Versuch ${attempt}):`, error);
+            
+            if (attempt === maxRetries) {
+                throw error;
+            }
+            
+            // Kurz warten vor nächstem Versuch
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        }
     }
-    if (inactivityWarningTimer) {
-        clearTimeout(inactivityWarningTimer);
-        inactivityWarningTimer = null;
-    }
+    
+    return null;
 }
 
-// App anzeigen (nach erfolgreichem Login)
+// Login Screen anzeigen
+function showLoginScreen() {
+    console.log('🏠 Zeige Login Screen');
+    
+    const loadingScreen = document.getElementById('loadingScreen');
+    const loginScreen = document.getElementById('loginScreen');
+    const appContainer = document.getElementById('appContainer');
+    
+    if (loadingScreen) loadingScreen.style.display = 'none';
+    if (loginScreen) loginScreen.style.display = 'flex';
+    if (appContainer) appContainer.style.display = 'none';
+    
+    // Felder leeren
+    const emailField = document.getElementById('email');
+    const passwordField = document.getElementById('password');
+    if (emailField) emailField.value = '';
+    if (passwordField) passwordField.value = '';
+    
+    // Login-Button entsperren
+    const loginBtn = document.querySelector('.login-btn');
+    if (loginBtn) {
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Anmelden';
+    }
+    
+    hideError();
+    loginInProgress = false;
+}
+
+// App anzeigen (nach erfolgreichem Login) - Verbessert
 function showApp() {
     if (!currentUser) {
         console.error('❌ Kein currentUser beim showApp()');
+        showLoginScreen();
         return;
     }
     
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('appContainer').style.display = 'block';
-    document.getElementById('currentUser').textContent = `${currentUser.name} (${currentUser.role})`;
+    console.log('🎉 Zeige App für:', currentUser.name, 'Rolle:', currentUser.role);
     
-    console.log('👤 App angezeigt für:', currentUser.name, 'Rolle:', currentUser.role);
+    const loginScreen = document.getElementById('loginScreen');
+    const appContainer = document.getElementById('appContainer');
+    const currentUserSpan = document.getElementById('currentUser');
+    
+    if (loginScreen) loginScreen.style.display = 'none';
+    if (appContainer) appContainer.style.display = 'block';
+    if (currentUserSpan) currentUserSpan.textContent = `${currentUser.name} (${currentUser.role})`;
     
     // KOMPLETT ALLE Tabs verstecken und Buttons deaktivieren
     const allTabs = [
@@ -312,30 +319,32 @@ function showApp() {
     });
     
     // News-Tab standardmäßig aktivieren für alle
-    document.getElementById('newsTab').style.display = 'block';
-    document.getElementById('news').classList.add('active');
+    const newsTab = document.getElementById('newsTab');
+    const newsContent = document.getElementById('news');
+    if (newsTab) newsTab.style.display = 'block';
+    if (newsContent) newsContent.classList.add('active');
     
     // Tabs je nach Rolle anzeigen
     if (currentUser.role === 'admin') {
-        document.getElementById('newsTab').style.display = 'block';
-        document.getElementById('lehrerTab').style.display = 'block';
-        document.getElementById('datenTab').style.display = 'block';
-        document.getElementById('adminvorlagenTab').style.display = 'block';
+        const adminTabs = ['newsTab', 'lehrerTab', 'datenTab', 'adminvorlagenTab'];
+        adminTabs.forEach(tabId => {
+            const tab = document.getElementById(tabId);
+            if (tab) tab.style.display = 'block';
+        });
         
         // Ersten sichtbaren Tab aktivieren
-        document.getElementById('newsTab').classList.add('active');
+        if (newsTab) newsTab.classList.add('active');
         console.log('👑 Admin-Interface aktiviert');
         
     } else if (currentUser.role === 'lehrer') {
-        document.getElementById('newsTab').style.display = 'block';
-        document.getElementById('themenTab').style.display = 'block';
-        document.getElementById('gruppenTab').style.display = 'block';
-        document.getElementById('bewertenTab').style.display = 'block';
-        document.getElementById('vorlagenTab').style.display = 'block';
-        document.getElementById('uebersichtTab').style.display = 'block';
+        const lehrerTabs = ['newsTab', 'themenTab', 'gruppenTab', 'bewertenTab', 'vorlagenTab', 'uebersichtTab'];
+        lehrerTabs.forEach(tabId => {
+            const tab = document.getElementById(tabId);
+            if (tab) tab.style.display = 'block';
+        });
         
         // Ersten sichtbaren Tab aktivieren
-        document.getElementById('newsTab').classList.add('active');
+        if (newsTab) newsTab.classList.add('active');
         console.log('👨‍🏫 Lehrer-Interface aktiviert');
         
     } else {
@@ -344,33 +353,31 @@ function showApp() {
         return;
     }
     
-    // App nach Login initialisieren
-    if (typeof initializeAppAfterLogin === 'function') {
-        initializeAppAfterLogin();
-    }
+    // App nach Login initialisieren mit Verzögerung
+    setTimeout(() => {
+        if (typeof initializeAppAfterLogin === 'function') {
+            try {
+                initializeAppAfterLogin();
+            } catch (error) {
+                console.error('❌ Fehler bei App-Initialisierung:', error);
+            }
+        }
+    }, 200);
 }
 
-// Logout
+// Logout - Verbessert
 async function firebaseLogout() {
     console.log('👋 Benutzer meldet sich ab:', currentUser ? currentUser.name : 'unbekannt');
     
     try {
+        loginInProgress = true;
+        
         await window.firebaseAuth.signOut(window.auth);
         console.log('✅ Firebase Logout erfolgreich');
         
         // Cleanup
         currentUser = null;
         firebaseUser = null;
-        
-        // Timer stoppen
-        if (inactivityTimer) {
-            clearTimeout(inactivityTimer);
-            inactivityTimer = null;
-        }
-        if (inactivityWarningTimer) {
-            clearTimeout(inactivityWarningTimer);
-            inactivityWarningTimer = null;
-        }
         
         // UI zurücksetzen
         hideAllTabs();
@@ -379,6 +386,8 @@ async function firebaseLogout() {
     } catch (error) {
         console.error('❌ Fehler beim Logout:', error);
         showError('Fehler beim Abmelden!');
+    } finally {
+        loginInProgress = false;
     }
 }
 
@@ -403,7 +412,7 @@ function hideAllTabs() {
     });
 }
 
-// Error/Success Messages
+// Error/Success Messages - Verbessert
 function showError(message) {
     const errorDiv = document.getElementById('errorMessage');
     if (errorDiv) {
@@ -411,6 +420,13 @@ function showError(message) {
         errorDiv.style.display = 'block';
         errorDiv.style.background = '#fdf2f2';
         errorDiv.style.color = '#e74c3c';
+        
+        // Auto-hide nach 10 Sekunden
+        setTimeout(() => {
+            if (errorDiv.textContent === message) {
+                hideError();
+            }
+        }, 10000);
     }
     console.warn('⚠️ Error angezeigt:', message);
 }
@@ -422,6 +438,13 @@ function showSuccess(message) {
         errorDiv.style.display = 'block';
         errorDiv.style.background = '#f0f9ff';
         errorDiv.style.color = '#27ae60';
+        
+        // Auto-hide nach 5 Sekunden
+        setTimeout(() => {
+            if (errorDiv.textContent === message) {
+                hideError();
+            }
+        }, 5000);
     }
     console.log('✅ Success angezeigt:', message);
 }
@@ -507,6 +530,32 @@ function updateFirebaseStatus() {
     }
 }
 
+// Browser-spezifische Workarounds
+function applyBrowserWorkarounds() {
+    // Chrome-spezifische Korrekturen
+    if (navigator.userAgent.includes('Chrome')) {
+        console.log('🌐 Chrome-Browser erkannt - wende Workarounds an');
+        
+        // Chrome hat manchmal Probleme mit schnellen Auth State Changes
+        window.CHROME_AUTH_DELAY = 200;
+    }
+    
+    // Firefox-spezifische Korrekturen
+    if (navigator.userAgent.includes('Firefox')) {
+        console.log('🦊 Firefox-Browser erkannt');
+    }
+    
+    // Safari-spezifische Korrekturen
+    if (navigator.userAgent.includes('Safari') && !navigator.userAgent.includes('Chrome')) {
+        console.log('🧭 Safari-Browser erkannt');
+    }
+}
+
+// Initialisierung mit Browser-Workarounds
+document.addEventListener('DOMContentLoaded', () => {
+    applyBrowserWorkarounds();
+});
+
 // Export für andere Module
 window.authFunctions = {
     requireAuth,
@@ -520,4 +569,4 @@ window.authFunctions = {
     updateFirebaseStatus
 };
 
-console.log('✅ Firebase Authentication System bereit');
+console.log('✅ Firebase Authentication System bereit - Robuste Version');
