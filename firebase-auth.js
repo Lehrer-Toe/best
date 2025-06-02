@@ -5,6 +5,12 @@ console.log('🔐 Firebase Authentication System geladen');
 let currentUser = null;
 let firebaseUser = null;
 
+// NEU: Automatischer Logout nach Inaktivität
+let inactivityTimer = null;
+let inactivityWarningTimer = null;
+const INACTIVITY_TIMEOUT = 20 * 60 * 1000; // 20 Minuten in Millisekunden
+const WARNING_TIMEOUT = 15 * 60 * 1000; // Warnung nach 15 Minuten
+
 // Initialisiere Authentication
 function initializeAuth() {
     console.log('🔐 Initialisiere Firebase Authentication...');
@@ -29,7 +35,144 @@ function initializeAuth() {
         loginForm.addEventListener('submit', handleLogin);
     }
     
+    // NEU: Inaktivitäts-Tracker einrichten
+    setupInactivityTracker();
+    
     console.log('✅ Firebase Authentication bereit');
+}
+
+// NEU: Inaktivitäts-Tracker einrichten
+function setupInactivityTracker() {
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+    
+    const resetInactivityTimer = () => {
+        // Nur wenn User eingeloggt ist
+        if (!currentUser) return;
+        
+        // Timer zurücksetzen
+        if (inactivityTimer) {
+            clearTimeout(inactivityTimer);
+        }
+        if (inactivityWarningTimer) {
+            clearTimeout(inactivityWarningTimer);
+        }
+        
+        // Warnung nach 4 Minuten
+        inactivityWarningTimer = setTimeout(() => {
+            showInactivityWarning();
+        }, WARNING_TIMEOUT);
+        
+        // Automatischer Logout nach 5 Minuten
+        inactivityTimer = setTimeout(() => {
+            handleInactivityLogout();
+        }, INACTIVITY_TIMEOUT);
+    };
+    
+    // Event-Listener für alle Aktivitäten
+    events.forEach(event => {
+        document.addEventListener(event, resetInactivityTimer, true);
+    });
+    
+    console.log('⏰ Inaktivitäts-Tracker eingerichtet (5 Min)');
+}
+
+// NEU: Inaktivitäts-Warnung anzeigen
+function showInactivityWarning() {
+    if (!currentUser) return;
+    
+    const warningDiv = document.createElement('div');
+    warningDiv.id = 'inactivityWarning';
+    warningDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #f39c12;
+        color: white;
+        padding: 15px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        z-index: 10000;
+        font-weight: bold;
+        animation: slideIn 0.3s ease-out;
+    `;
+    warningDiv.innerHTML = `
+        ⚠️ Sie werden in 1 Minute automatisch abgemeldet!
+        <button onclick="dismissInactivityWarning()" style="margin-left: 10px; background: white; color: #f39c12; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">OK</button>
+    `;
+    
+    document.body.appendChild(warningDiv);
+    
+    // Animation hinzufügen
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+    `;
+    document.head.appendChild(style);
+    
+    console.log('⚠️ Inaktivitäts-Warnung angezeigt');
+}
+
+// NEU: Inaktivitäts-Warnung schließen
+window.dismissInactivityWarning = function() {
+    const warning = document.getElementById('inactivityWarning');
+    if (warning) {
+        warning.remove();
+    }
+};
+
+// NEU: Automatischer Logout wegen Inaktivität
+async function handleInactivityLogout() {
+    if (!currentUser) return;
+    
+    console.log('⏰ Automatischer Logout wegen Inaktivität');
+    
+    // Warnung entfernen falls noch da
+    const warning = document.getElementById('inactivityWarning');
+    if (warning) {
+        warning.remove();
+    }
+    
+    // Sanfter Logout ohne Fehlermeldung
+    try {
+        await window.firebaseAuth.signOut(window.auth);
+        
+        // Freundliche Nachricht anzeigen
+        const logoutMessage = document.createElement('div');
+        logoutMessage.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #667eea;
+            color: white;
+            padding: 20px 30px;
+            border-radius: 10px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            z-index: 10001;
+            text-align: center;
+            font-size: 16px;
+        `;
+        logoutMessage.innerHTML = `
+            <div style="margin-bottom: 10px;">🔒</div>
+            <div>Sie wurden automatisch abgemeldet</div>
+            <div style="font-size: 14px; margin-top: 10px; opacity: 0.8;">Aus Sicherheitsgründen nach 5 Minuten Inaktivität</div>
+        `;
+        
+        document.body.appendChild(logoutMessage);
+        
+        // Nachricht nach 3 Sekunden entfernen
+        setTimeout(() => {
+            if (logoutMessage) {
+                logoutMessage.remove();
+            }
+        }, 3000);
+        
+    } catch (error) {
+        console.error('❌ Fehler beim automatischen Logout:', error);
+    }
 }
 
 // Login Handler
@@ -124,6 +267,16 @@ function showLoginScreen() {
     document.getElementById('email').value = '';
     document.getElementById('password').value = '';
     hideError();
+    
+    // Timer stoppen
+    if (inactivityTimer) {
+        clearTimeout(inactivityTimer);
+        inactivityTimer = null;
+    }
+    if (inactivityWarningTimer) {
+        clearTimeout(inactivityWarningTimer);
+        inactivityWarningTimer = null;
+    }
 }
 
 // App anzeigen (nach erfolgreichem Login)
@@ -208,6 +361,16 @@ async function firebaseLogout() {
         // Cleanup
         currentUser = null;
         firebaseUser = null;
+        
+        // Timer stoppen
+        if (inactivityTimer) {
+            clearTimeout(inactivityTimer);
+            inactivityTimer = null;
+        }
+        if (inactivityWarningTimer) {
+            clearTimeout(inactivityWarningTimer);
+            inactivityWarningTimer = null;
+        }
         
         // UI zurücksetzen
         hideAllTabs();
