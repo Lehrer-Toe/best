@@ -497,18 +497,29 @@ body {
     box-shadow: 0 0 10px rgba(255,255,255,0.5);
 }
 
-/* KORRIGIERTE Notenfarben - mit höherer Spezifität */
-.note-btn.note-1-0 { background: #2ecc71 !important; color: white !important; } /* Hellgrün - sehr gut */
+/* KORRIGIERTE Notenfarben - alle Varianten abgedeckt */
+/* Note 1.0 - wird als "note-1" generiert */
+.note-btn.note-1, .note-btn.note-1-0 { background: #2ecc71 !important; color: white !important; } /* Hellgrün - sehr gut */
 .note-btn.note-1-5 { background: #27ae60 !important; color: white !important; } /* Grün - sehr gut */
-.note-btn.note-2-0 { background: #f39c12 !important; color: white !important; } /* Orange - gut */
+
+/* Note 2.0 - wird als "note-2" generiert */
+.note-btn.note-2, .note-btn.note-2-0 { background: #f39c12 !important; color: white !important; } /* Orange - gut */
 .note-btn.note-2-5 { background: #e67e22 !important; color: white !important; } /* Dunkler Orange - gut */
-.note-btn.note-3-0 { background: #f1c40f !important; color: #333 !important; }   /* Gelb - befriedigend */
+
+/* Note 3.0 - wird als "note-3" generiert */
+.note-btn.note-3, .note-btn.note-3-0 { background: #f1c40f !important; color: #333 !important; } /* Gelb - befriedigend */
 .note-btn.note-3-5 { background: #d68910 !important; color: white !important; } /* Gelbbraun - befriedigend */
-.note-btn.note-4-0 { background: #e74c3c !important; color: white !important; } /* Rot - ausreichend */
+
+/* Note 4.0 - wird als "note-4" generiert */
+.note-btn.note-4, .note-btn.note-4-0 { background: #e74c3c !important; color: white !important; } /* Rot - ausreichend */
 .note-btn.note-4-5 { background: #c0392b !important; color: white !important; } /* Dunkelrot - ausreichend */
-.note-btn.note-5-0 { background: #8b0000 !important; color: white !important; } /* Dunkelrot - mangelhaft */
+
+/* Note 5.0 - wird als "note-5" generiert */
+.note-btn.note-5, .note-btn.note-5-0 { background: #8b0000 !important; color: white !important; } /* Dunkelrot - mangelhaft */
 .note-btn.note-5-5 { background: #6b0000 !important; color: white !important; } /* Sehr dunkelrot - mangelhaft */
-.note-btn.note-6-0 { background: #4a0000 !important; color: white !important; } /* Schwarz-rot - ungenügend */
+
+/* Note 6.0 - wird als "note-6" generiert */
+.note-btn.note-6, .note-btn.note-6-0 { background: #4a0000 !important; color: white !important; } /* Schwarz-rot - ungenügend */
 
 .nicht-bewertet-btn {
     background: #95a5a6;
