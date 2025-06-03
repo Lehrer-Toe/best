@@ -498,17 +498,35 @@ body {
 }
 
 /* KORRIGIERTE Notenfarben - alle mit klaren Farben */
-.note-1-0 { background: #2ecc71; color: white; } /* Hellgrün - sehr gut */
-.note-1-5 { background: #27ae60; color: white; } /* Grün - sehr gut */
-.note-2-0 { background: #f39c12; color: white; } /* Orange - gut */
-.note-2-5 { background: #e67e22; color: white; } /* Dunkler Orange - gut */
-.note-3-0 { background: #f1c40f; color: #333; } /* Gelb - befriedigend */
-.note-3-5 { background: #d68910; color: white; } /* Gelbbraun - befriedigend */
-.note-4-0 { background: #e74c3c; color: white; } /* Rot - ausreichend */
-.note-4-5 { background: #c0392b; color: white; } /* Dunkelrot - ausreichend */
-.note-5-0 { background: #8b0000; color: white; } /* Dunkelrot - mangelhaft */
-.note-5-5 { background: #6b0000; color: white; } /* Sehr dunkelrot - mangelhaft */
-.note-6-0 { background: #4a0000; color: white; } /* Schwarz-rot - ungenügend */
+.note-1-0,
+.note-1-5 {
+    background: #4caf50; /* Grün */
+    color: white;
+}
+.note-2-0,
+.note-2-5 {
+    background: #2e7d32; /* Dunkelgrün */
+    color: white;
+}
+.note-3-0,
+.note-3-5 {
+    background: #ff9800; /* Orange */
+    color: white;
+}
+.note-4-0,
+.note-4-5 {
+    background: #ef6c00; /* Dunkelorange */
+    color: white;
+}
+.note-5-0,
+.note-5-5 {
+    background: #e53935; /* Rot */
+    color: white;
+}
+.note-6-0 {
+    background: #b71c1c; /* Tiefrot */
+    color: white;
+}
 
 .nicht-bewertet-btn {
     background: #95a5a6;
