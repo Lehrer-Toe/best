@@ -430,16 +430,23 @@ function cleanupListeners() {
 // === HILFSFUNKTIONEN ===
 
 // Tab Navigation
-function openTab(tabName) {
+function openTab(tabName, evt) {
     const contents = document.querySelectorAll('.tab-content');
     const buttons = document.querySelectorAll('.tab-btn');
-    
+
     contents.forEach(content => content.classList.remove('active'));
     buttons.forEach(button => button.classList.remove('active'));
-    
-    document.getElementById(tabName).classList.add('active');
-    if (event && event.target) {
-        event.target.classList.add('active');
+
+    const targetContent = document.getElementById(tabName);
+    if (targetContent) {
+        targetContent.classList.add('active');
+    }
+
+    if (evt && evt.target) {
+        evt.target.classList.add('active');
+    } else {
+        const fallbackBtn = document.querySelector(`.tab-btn[onclick*="openTab('${tabName}')"]`);
+        if (fallbackBtn) fallbackBtn.classList.add('active');
     }
     
     console.log('📑 Tab gewechselt zu:', tabName);

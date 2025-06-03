@@ -148,7 +148,7 @@ function setupTabNavigation() {
             e.preventDefault();
             const tabName = this.getAttribute('onclick')?.match(/openTab\('([^']+)'\)/)?.[1];
             if (tabName) {
-                openTab(tabName);
+                openTab(tabName, e);
             }
         });
     });
