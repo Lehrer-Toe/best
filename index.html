@@ -55,7 +55,8 @@
             <div class="tab-nav">
                 <button class="tab-btn active" onclick="openTab('news', event)" id="newsTab">News</button>
                 <button class="tab-btn" onclick="openTab('themen', event)" id="themenTab">Themen</button>
-                <button class="tab-btn" onclick="openTab('gruppen', event)" id="gruppenTab">Gruppen erstellen</button>
+                <button class="tab-btn" onclick="openTab('gruppen', event)" id="gruppenTab">Gruppen verwalten</button>
+                <button class="tab-btn" onclick="openTab('klassen', event)" id="klassenTab">Klassen verwalten</button>
                 <button class="tab-btn" onclick="openTab('lehrer', event)" id="lehrerTab">Lehrer verwalten</button>
                 <button class="tab-btn" onclick="openTab('daten', event)" id="datenTab">Datenverwaltung</button>
                 <button class="tab-btn" onclick="openTab('bewerten', event)" id="bewertenTab">Schüler bewerten</button>
@@ -89,6 +90,29 @@
                 </div>
             </div>
 
+            <!-- Klassen verwalten Tab -->
+            <div id="klassen" class="tab-content">
+                <h2>Klassen verwalten</h2>
+                <div class="card">
+                    <h3>Neue Klasse anlegen</h3>
+                    <div class="input-group">
+                        <input type="text" id="klassenName" placeholder="Bezeichnung z.B. 7a">
+                        <button class="btn" onclick="klasseAnlegen()">Klasse anlegen</button>
+                    </div>
+                    <div class="input-group">
+                        <label>Schülerliste hochladen:</label>
+                        <select id="klasseAuswahlUpload" class="klasse-auswahl"></select>
+                        <input type="file" id="schuelerDatei" accept=".csv,.txt,.xlsx">
+                        <select id="namenReihenfolge">
+                            <option value="vorname">Vorname zuerst</option>
+                            <option value="nachname">Nachname zuerst</option>
+                        </select>
+                        <button class="btn" onclick="schuelerDateiHochladen()">Importieren</button>
+                    </div>
+                </div>
+                <div class="liste" id="klassenListe"></div>
+            </div>
+
             <!-- Themen Tab -->
             <div id="themen" class="tab-content">
                 <h2>Themenvorschläge</h2>
@@ -115,12 +139,17 @@
 
             <!-- Gruppen Tab -->
             <div id="gruppen" class="tab-content">
-                <h2>Gruppen erstellen</h2>
+                <h2>Gruppen verwalten</h2>
                 <div class="card">
                     <h3>Neue Gruppe anlegen</h3>
                     <div class="input-group">
-                        <input type="text" id="gruppenThema" placeholder="Thema (oder aus Liste wählen)">
+                        <input type="text" id="gruppenThema" placeholder="Thema" list="themaDatalist">
+                        <datalist id="themaDatalist"></datalist>
                         <button class="btn" onclick="gruppeErstellen()">Gruppe erstellen</button>
+                    </div>
+                    <div class="input-group">
+                        <label>Klasse:</label>
+                        <select id="gruppenKlasse" class="klasse-auswahl" onchange="klasseFuerGruppeGewaehlt(this.value)"></select>
                     </div>
                     <div style="margin-top: 1rem;">
                         <h4>Schüler hinzufügen:</h4>
@@ -139,10 +168,19 @@
                         <button class="btn" onclick="schuelerHinzufuegen()">Weiteren Schüler hinzufügen</button>
                     </div>
                 </div>
+                <div class="filter-section">
+                    <div class="filter-group">
+                        <label>Sortierung:</label>
+                        <select id="gruppenSortierung" onchange="loadGruppen()">
+                            <option value="thema">Thema A-Z</option>
+                            <option value="erstellt">Erstellungsdatum</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="liste" id="gruppenListe">
                     <!-- Gruppen werden hier angezeigt -->
                 </div>
-                
+
                 <!-- Gruppen bearbeiten Modal -->
                 <div id="gruppenEditModal" class="modal hidden">
                     <div class="modal-content">
@@ -440,6 +478,7 @@
     <script src="firebase-news.js"></script>
     <script src="firebase-themen.js"></script>
     <script src="firebase-gruppen.js"></script>
+    <script src="firebase-klassen.js"></script>
     <script src="firebase-bewertung.js"></script>
     <script src="firebase-vorlagen.js"></script>
     <script src="firebase-admin.js"></script>

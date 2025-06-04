@@ -8,6 +8,7 @@ let dataCache = {
     bewertungsCheckpoints: {},
     themen: {},
     gruppen: {},
+    klassen: {},
     bewertungen: {},
     vorlagen: {},
     news: {},
@@ -52,6 +53,7 @@ function initializeDataCache() {
         bewertungsCheckpoints: {},
         themen: {},
         gruppen: {},
+        klassen: {},
         bewertungen: {},
         vorlagen: {},
         news: {},
@@ -391,6 +393,18 @@ function setupRealtimeListeners() {
                 }
             }
         });
+
+        // Klassen Listener
+        const klassenRef = window.firebaseDB.ref(window.database, 'klassen');
+        activeListeners.klassen = window.firebaseDB.onValue(klassenRef, (snapshot) => {
+            if (snapshot.exists()) {
+                dataCache.klassen = snapshot.val();
+                console.log('🔄 Klassen Update erhalten');
+                if (window.klassenFunctions && typeof window.klassenFunctions.loadKlassen === 'function') {
+                    window.klassenFunctions.loadKlassen();
+                }
+            }
+        });
         
         // Bewertungen Listener (nur für den aktuellen Lehrer)
         if (currentUser && currentUser.role === 'lehrer') {
@@ -456,6 +470,7 @@ function openTab(tabName, evt) {
         if (tabName === 'news') loadNews();
         if (tabName === 'themen') loadThemen();
         if (tabName === 'gruppen') loadGruppen();
+        if (tabName === 'klassen' && window.klassenFunctions) window.klassenFunctions.loadKlassen();
         if (tabName === 'lehrer') loadLehrer();
         if (tabName === 'daten') loadDatenverwaltung();
         if (tabName === 'bewerten') loadBewertungen();
@@ -511,6 +526,11 @@ function getGruppenFromCache() {
     return Object.values(dataCache.gruppen || {});
 }
 
+// Klassen aus Cache
+function getKlassenFromCache() {
+    return Object.values(dataCache.klassen || {});
+}
+
 // Bewertungen aus Cache (für aktuellen Lehrer)
 function getBewertungenFromCache() {
     if (!currentUser) return [];
@@ -552,6 +572,7 @@ window.firebaseFunctions = {
     getNewsFromCache,
     getThemenFromCache,
     getGruppenFromCache,
+    getKlassenFromCache,
     getBewertungenFromCache,
     getAllFaecher,
     getFachNameFromGlobal,
