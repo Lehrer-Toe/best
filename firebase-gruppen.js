@@ -14,7 +14,14 @@ function loadGruppen() {
     if (!liste) return;
     
     // Gruppen aus Cache holen
-    const gruppen = window.firebaseFunctions.getGruppenFromCache();
+    let gruppen = window.firebaseFunctions.getGruppenFromCache();
+
+    const sort = document.getElementById('gruppenSortierung')?.value || 'thema';
+    if (sort === 'thema') {
+        gruppen = gruppen.sort((a,b) => a.thema.localeCompare(b.thema));
+    } else {
+        gruppen = gruppen.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+    }
     
     // Bewertungen für Statusanzeige laden
     const alleBewertungen = getAllBewertungsdata();
@@ -61,6 +68,10 @@ function loadGruppen() {
     
     // Lehrer- und Fach-Auswahl für neue Gruppen aktualisieren
     updateSchuelerSelects();
+    if (window.klassenFunctions) {
+        window.klassenFunctions.updateKlassenSelect();
+    }
+    updateThemaDatalist();
     
     console.log('👥 Gruppen geladen:', gruppen.length);
 }
@@ -106,6 +117,41 @@ function updateSchuelerSelects() {
     fachSelects.forEach(select => {
         select.innerHTML = '<option value="">Fach wählen...</option>' + fachOptions;
     });
+}
+
+// Themen-Datalist aktualisieren
+function updateThemaDatalist() {
+    const datalist = document.getElementById('themaDatalist');
+    if (!datalist) return;
+    const themen = window.firebaseFunctions.getThemenFromCache();
+    datalist.innerHTML = themen.map(t => `<option value="${t.name}"></option>`).join('');
+}
+
+// Klasse wählen und Schülerliste füllen
+function klasseFuerGruppeGewaehlt(id) {
+    const liste = document.getElementById('schuelerListe');
+    if (!liste) return;
+    liste.innerHTML = '';
+    if (!id) {
+        schuelerHinzufuegen();
+        return;
+    }
+    const schueler = window.klassenFunctions ? window.klassenFunctions.getSchuelerForKlasse(id) : [];
+    if (schueler.length === 0) {
+        schuelerHinzufuegen();
+    } else {
+        schueler.forEach(s => {
+            const row = document.createElement('div');
+            row.className = 'input-group schueler-row';
+            row.innerHTML = `
+                <input type="text" value="${s.vorname} ${s.nachname}" class="schueler-name">
+                <select class="schueler-lehrer"><option value="">Lehrer wählen...</option></select>
+                <select class="schueler-fach"><option value="">Fach wählen...</option></select>
+                <button type="button" class="btn btn-danger" onclick="schuelerEntfernen(this)">Entfernen</button>`;
+            liste.appendChild(row);
+        });
+    }
+    updateSchuelerSelects();
 }
 
 // Lehrer für Selects laden
@@ -527,7 +573,9 @@ function getGruppenForUser() {
 // Export für andere Module
 window.gruppenFunctions = {
     getGruppenForUser,
-    updateSchuelerSelects
+    updateSchuelerSelects,
+    updateThemaDatalist,
+    klasseFuerGruppeGewaehlt
 };
 
 console.log('✅ Firebase Gruppen-System bereit');
