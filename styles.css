@@ -344,43 +344,6 @@ body {
     font-weight: 600;
 }
 
-/* Schuljahr-Badge für Klassen */
-.schuljahr-badge {
-    display: inline-block;
-    background: #9b59b6;
-    color: white;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-size: 0.7rem;
-    margin-left: 10px;
-    font-weight: 600;
-}
-
-/* Bewertungs-Status Badges für Gruppen */
-.bewertungs-status-badge {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-size: 0.7rem;
-    margin-left: 10px;
-    font-weight: 600;
-}
-
-.bewertungs-status-badge.vollstaendig-bewertet {
-    background: #27ae60;
-    color: white;
-}
-
-.bewertungs-status-badge.teilweise-bewertet {
-    background: #f39c12;
-    color: white;
-}
-
-.bewertungs-status-badge.nicht-bewertet {
-    background: #e74c3c;
-    color: white;
-}
-
 /* Fach-Badge - Erweiterte Styles */
 .fach-badge {
     display: inline-block;
@@ -449,182 +412,92 @@ body {
     border-left: 4px solid #667eea;
 }
 
-/* Themen-Auswahl Grid */
-.themen-auswahl-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 15px;
-    margin: 20px 0;
-    max-height: 400px;
-    overflow-y: auto;
-}
-
-.thema-auswahl-item {
+/* NEU: Vorhandene Schüler Auswahl */
+.vorhandene-schueler-bereich {
     background: #f8f9fa;
-    border: 2px solid #e1e8ed;
-    padding: 15px;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-
-.thema-auswahl-item:hover {
-    background: #e3f2fd;
-    border-color: #667eea;
-    transform: translateY(-2px);
-}
-
-.thema-auswahl-bereich {
-    position: relative;
-    display: flex;
-    gap: 10px;
-    align-items: center;
-}
-
-/* Klassenverwaltung Styles */
-.klasse-item {
-    background: #f8f9fa;
-    border-left: 4px solid #9b59b6;
-}
-
-.klasse-schueler-liste {
-    max-height: 300px;
-    overflow-y: auto;
-    border: 1px solid #e1e8ed;
-    border-radius: 5px;
-    background: white;
-}
-
-.klasse-schueler-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 15px;
-    border-bottom: 1px solid #f0f0f0;
-}
-
-.klasse-schueler-item:last-child {
-    border-bottom: none;
-}
-
-.klasse-schueler-item:nth-child(odd) {
-    background: #f9f9f9;
-}
-
-.schueler-info {
-    font-weight: 600;
-    color: #2c3e50;
-}
-
-.schueler-datum {
-    color: #666;
-    font-size: 0.8rem;
-}
-
-/* Upload-Bereiche */
-.upload-bereich {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    margin-top: 15px;
-    padding: 15px;
-    background: #e8f4fd;
-    border-radius: 8px;
+    padding: 1.5rem;
+    border-radius: 10px;
+    margin-bottom: 1.5rem;
     border-left: 4px solid #667eea;
 }
 
-.upload-vorschau {
-    margin-top: 20px;
-    padding: 20px;
-    background: white;
-    border-radius: 10px;
-    border: 2px solid #27ae60;
+.vorhandene-schueler-bereich h4 {
+    color: #2c3e50;
+    margin-bottom: 1rem;
 }
 
-.vorschau-liste {
+.schueler-auswahl-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 10px;
     max-height: 300px;
     overflow-y: auto;
-    margin: 15px 0;
-}
-
-.vorschau-schueler-item {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    padding: 8px 0;
-    border-bottom: 1px solid #f0f0f0;
-}
-
-.vorschau-schueler-item:last-child {
-    border-bottom: none;
-}
-
-.schueler-nummer {
-    background: #667eea;
-    color: white;
-    padding: 2px 8px;
-    border-radius: 50%;
-    font-size: 0.8rem;
-    font-weight: bold;
-    min-width: 25px;
-    text-align: center;
-}
-
-.schueler-name {
-    font-weight: 600;
-    color: #2c3e50;
-}
-
-.original-text {
-    color: #666;
-    font-style: italic;
-}
-
-/* Schüler-Auswahl für Gruppen */
-.schueler-auswahl-item {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 15px;
-    align-items: center;
-    padding: 15px;
-    background: #f8f9fa;
+    border: 1px solid #e1e8ed;
     border-radius: 8px;
-    margin-bottom: 10px;
-    border: 2px solid transparent;
+    padding: 10px;
+    background: white;
+}
+
+.schueler-auswahl-item {
+    border: 1px solid #e1e8ed;
+    border-radius: 8px;
     transition: all 0.3s;
+    background: white;
 }
 
 .schueler-auswahl-item:hover {
     border-color: #667eea;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
 }
 
-.schueler-checkbox-label {
+.schueler-auswahl-label {
+    display: block;
+    padding: 12px;
+    cursor: pointer;
+    width: 100%;
+    margin: 0;
+}
+
+.schueler-auswahl-checkbox {
+    margin-right: 10px;
+    width: 16px;
+    height: 16px;
+}
+
+.schueler-info {
     display: flex;
-    align-items: center;
-    gap: 10px;
-    cursor: pointer;
-    font-weight: 600;
+    flex-direction: column;
+    gap: 2px;
 }
 
-.schueler-checkbox {
-    width: 18px;
-    height: 18px;
-    cursor: pointer;
+.schueler-info strong {
+    color: #2c3e50;
+    font-size: 0.9rem;
 }
 
-.schueler-lehrer-select,
-.schueler-fach-select {
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    background: white;
+.schueler-klasse {
+    background: #667eea;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    display: inline-block;
+    margin-top: 3px;
+    align-self: flex-start;
 }
 
-.schueler-lehrer-select:disabled,
-.schueler-fach-select:disabled {
-    background: #f5f5f5;
-    color: #999;
-    cursor: not-allowed;
+.schueler-info small {
+    color: #666;
+    font-size: 0.8rem;
+    margin-top: 2px;
+}
+
+.schueler-auswahl-checkbox:checked + .schueler-info {
+    color: #27ae60;
+}
+
+.schueler-auswahl-checkbox:checked + .schueler-info strong {
+    color: #27ae60;
 }
 
 /* Bewertungsraster Styles */
@@ -824,11 +697,6 @@ body {
     background: #e3f2fd;
 }
 
-/* Spezielle Styles für Gruppen-Items */
-.gruppe-item {
-    border-left: 4px solid #667eea;
-}
-
 /* Bewertungsliste spezifisch */
 .bewertung-liste-item {
     padding: 1.5rem;
@@ -1009,47 +877,36 @@ body {
     flex-wrap: wrap;
 }
 
-/* Große Modals für komplexere Inhalte */
-.modal-content.large {
-    max-width: 800px;
-    width: 95%;
-}
-
-.modal-content.extra-large {
-    max-width: 1000px;
-    width: 95%;
-}
-
-/* Edit Schüler Liste - Erweitert */
+/* Edit Schüler Liste - Erweitert für Klassen */
 .edit-schueler-item {
     background: #f8f9fa;
     padding: 1rem;
     border-radius: 5px;
     margin-bottom: 10px;
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr auto;
+    grid-template-columns: 1fr 1fr 1fr 1fr auto;
     gap: 10px;
     align-items: center;
 }
 
-.edit-schueler-name, .edit-schueler-lehrer, .edit-schueler-fach {
-    min-width: 120px;
+.edit-schueler-name, .edit-schueler-klasse, .edit-schueler-lehrer, .edit-schueler-fach {
+    min-width: 100px;
 }
 
-/* Schüler-Row mit Fach */
+/* Schüler-Row mit Klasse - ERWEITERT */
 .schueler-row {
     background: #f8f9fa;
     padding: 10px;
     border-radius: 5px;
     margin-bottom: 10px;
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr auto;
+    grid-template-columns: 1fr 1fr 1fr 1fr auto;
     gap: 10px;
     align-items: center;
 }
 
-.schueler-name, .schueler-lehrer, .schueler-fach {
-    min-width: 150px;
+.schueler-name, .schueler-klasse, .schueler-lehrer, .schueler-fach {
+    min-width: 120px;
 }
 
 /* PDF Button States */
@@ -1350,17 +1207,8 @@ body {
         grid-template-columns: 1fr;
     }
 
-    .themen-auswahl-grid {
-        grid-template-columns: 1fr;
-    }
-
     .schueler-row, .edit-schueler-item {
         grid-template-columns: 1fr;
-    }
-
-    .schueler-auswahl-item {
-        grid-template-columns: 1fr;
-        gap: 10px;
     }
 
     .fach-item {
@@ -1380,24 +1228,13 @@ body {
         padding: 10px;
     }
 
-    .upload-bereich {
-        flex-direction: column;
-        align-items: stretch;
+    .schueler-auswahl-grid {
+        grid-template-columns: 1fr;
+        max-height: 250px;
     }
 
-    .klasse-schueler-item {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
-    }
-
-    .filter-group {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .filter-group label {
-        margin-bottom: 5px;
+    .vorhandene-schueler-bereich {
+        padding: 1rem;
     }
 }
 
@@ -1443,59 +1280,4 @@ textarea {
 
 .hidden {
     display: none !important;
-}
-
-/* Themen-spezifische Styles */
-.thema-item {
-    cursor: pointer;
-    transition: all 0.3s;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.thema-item:hover {
-    background: #e3f2fd !important;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-}
-
-.thema-item > div:first-child {
-    flex: 1;
-    cursor: pointer;
-}
-
-.thema-item > div:last-child {
-    flex-shrink: 0;
-}
-
-/* Tooltip für Themen-Auswahl */
-.thema-item::before {
-    content: "Klicken Sie hier, um eine Gruppe mit diesem Thema zu erstellen";
-    position: absolute;
-    background: #2c3e50;
-    color: white;
-    padding: 8px 12px;
-    border-radius: 4px;
-    font-size: 0.8rem;
-    white-space: nowrap;
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.3s;
-    z-index: 1000;
-    top: -40px;
-    left: 50%;
-    transform: translateX(-50%);
-    pointer-events: none;
-}
-
-.thema-item:hover::before {
-    opacity: 1;
-    visibility: visible;
-}
-
-/* Kleine Animation für besseres Feedback */
-.thema-item:active {
-    transform: translateY(0);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
