@@ -58,17 +58,20 @@ function loadThemenWithFilter(filterValue) {
             ).join(' ');
         }
         
-        html += `<div class="liste-item thema-item" onclick="themaAuswaehlen('${thema.name}')">
+        html += `<div class="liste-item thema-item" onclick="themaAuswaehlen('${thema.name}')" style="cursor: pointer;">
             <div>
                 <strong>${thema.name}</strong><br>
                 <div style="margin-top: 5px;">
                     ${faecherBadges}
                 </div>
-                <small>Erstellt von: ${thema.ersteller} am ${thema.erstellt}</small>
+                <small>Erstellt von: ${thema.ersteller} am ${thema.erstellt}</small><br>
+                <small style="color: #667eea; font-style: italic;">💡 Klicken Sie hier, um dieses Thema für eine Gruppe zu verwenden</small>
             </div>
-            ${kannLoeschen ? 
-                `<button class="btn btn-danger" onclick="event.stopPropagation(); themaLoeschen('${thema.id || thema.name}')">Löschen</button>` : 
-                ''}
+            <div onclick="event.stopPropagation();">
+                ${kannLoeschen ? 
+                    `<button class="btn btn-danger" onclick="event.stopPropagation(); themaLoeschen('${thema.id || thema.name}')">Löschen</button>` : 
+                    ''}
+            </div>
         </div>`;
     });
     
@@ -258,20 +261,40 @@ function schließeFaecherModal() {
     ausgewaehlteFaecher = [];
 }
 
-// Thema auswählen (für Gruppen-Erstellung)
+// Thema auswählen (für Gruppen-Erstellung) - ÜBERARBEITET für Modal-Unterstützung
 function themaAuswaehlen(thema) {
+    // Prüfen ob wir im Gruppen-Bereich sind und Modal verwenden sollen
+    if (document.getElementById('themenAuswahlModal') && !document.getElementById('themenAuswahlModal').classList.contains('hidden')) {
+        // Modal-Modus: Thema in das Gruppen-Modal eintragen
+        const gruppenThemaInput = document.getElementById('gruppenThemaInput');
+        if (gruppenThemaInput) {
+            gruppenThemaInput.value = thema;
+        }
+        
+        // Themen-Auswahl Modal schließen (Funktion aus firebase-gruppen.js)
+        if (typeof themenAuswahlModalSchliessen === 'function') {
+            themenAuswahlModalSchliessen();
+        }
+        
+        console.log('📝 Thema für Gruppe ausgewählt:', thema);
+        return;
+    }
+    
+    // Klassischer Modus: Thema in Gruppen-Tab übertragen und Tab wechseln
     const gruppenThemaInput = document.getElementById('gruppenThema');
     if (gruppenThemaInput) {
         gruppenThemaInput.value = thema;
     }
     
-    // Wechsle zu Gruppen-Tab
+    // Wechsle zu Gruppen-Tab (falls nicht im Modal-Modus)
     openTab('gruppen');
     
     const gruppenButton = document.querySelector('[onclick="openTab(\'gruppen\')"]');
     if (gruppenButton) {
         gruppenButton.classList.add('active');
     }
+    
+    console.log('📝 Thema ausgewählt und zu Gruppen gewechselt:', thema);
 }
 
 // Thema löschen
