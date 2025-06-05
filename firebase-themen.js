@@ -58,15 +58,15 @@ function loadThemenWithFilter(filterValue) {
             ).join(' ');
         }
         
-        html += `<div class="liste-item thema-item" onclick="themaAuswaehlen('${thema.name}')" style="cursor: pointer;">
-            <div>
+        html += `<div class="liste-item thema-item">
+            <div onclick="themaAuswaehlen('${thema.name.replace(/'/g, '\\\'')}')" style="cursor: pointer; flex: 1;">
                 <strong>${thema.name}</strong><br>
                 <div style="margin-top: 5px;">
                     ${faecherBadges}
                 </div>
                 <small>Erstellt von: ${thema.ersteller} am ${thema.erstellt}</small>
             </div>
-            <div onclick="event.stopPropagation();">
+            <div style="flex-shrink: 0;">
                 ${kannLoeschen ? 
                     `<button class="btn btn-danger" onclick="themaLoeschen('${thema.id || thema.name}')">Löschen</button>` : 
                     ''}
@@ -260,76 +260,53 @@ function schließeFaecherModal() {
     ausgewaehlteFaecher = [];
 }
 
-// Thema auswählen (für Gruppen-Erstellung) - KORRIGIERT
+// Thema auswählen (für Gruppen-Erstellung) - VEREINFACHT
 function themaAuswaehlen(thema) {
     console.log('💡 Thema ausgewählt:', thema);
     
-    // Thema in Gruppen-Input setzen
-    const gruppenThemaInput = document.getElementById('gruppenThema');
-    if (gruppenThemaInput) {
-        gruppenThemaInput.value = thema;
-        console.log('✅ Thema in Gruppen-Feld gesetzt:', thema);
-    }
-    
-    // Zu Gruppen-Tab wechseln
-    try {
-        // Direkt openTab aufrufen (global verfügbar)
-        if (typeof openTab === 'function') {
-            openTab('gruppen');
-            console.log('✅ Zu Gruppen-Tab gewechselt');
-        } else if (typeof window.openTab === 'function') {
-            window.openTab('gruppen');
-            console.log('✅ Zu Gruppen-Tab gewechselt (window)');
-        } else {
-            console.warn('⚠️ openTab Funktion nicht gefunden, wechsle manuell zu Tab');
-            // Manueller Tab-Wechsel als Fallback
-            manualTabSwitch('gruppen');
-        }
-    } catch (error) {
-        console.error('❌ Fehler beim Tab-Wechsel:', error);
-        // Fallback: Manueller Tab-Wechsel
-        manualTabSwitch('gruppen');
-    }
-}
-
-// Manueller Tab-Wechsel als Fallback
-function manualTabSwitch(tabName) {
+    // Direkte DOM-Manipulation für Tab-Wechsel
     try {
         // Alle Tab-Contents deaktivieren
-        const contents = document.querySelectorAll('.tab-content');
-        contents.forEach(content => content.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.remove('active');
+        });
         
         // Alle Tab-Buttons deaktivieren
-        const buttons = document.querySelectorAll('.tab-btn');
-        buttons.forEach(button => button.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(button => {
+            button.classList.remove('active');
+        });
         
-        // Gewünschten Tab aktivieren
-        const targetTab = document.getElementById(tabName);
-        if (targetTab) {
-            targetTab.classList.add('active');
+        // Gruppen-Tab aktivieren
+        const gruppenTab = document.getElementById('gruppen');
+        const gruppenButton = document.getElementById('gruppenTab');
+        
+        if (gruppenTab) {
+            gruppenTab.classList.add('active');
+        }
+        if (gruppenButton) {
+            gruppenButton.classList.add('active');
         }
         
-        // Entsprechenden Button aktivieren
-        const targetButton = document.querySelector(`[onclick*="${tabName}"]`);
-        if (targetButton) {
-            targetButton.classList.add('active');
-        } else {
-            // Alternative: Button über ID finden
-            const buttonByTabName = document.getElementById(tabName + 'Tab');
-            if (buttonByTabName) {
-                buttonByTabName.classList.add('active');
+        // Thema in Input setzen (mit kleiner Verzögerung)
+        setTimeout(() => {
+            const gruppenThemaInput = document.getElementById('gruppenThema');
+            if (gruppenThemaInput) {
+                gruppenThemaInput.value = thema;
+                gruppenThemaInput.focus();
+                console.log('✅ Thema gesetzt:', thema);
             }
-        }
+            
+            // Gruppen laden
+            if (typeof loadGruppen === 'function') {
+                loadGruppen();
+            }
+        }, 100);
         
-        // Gruppen laden wenn zu Gruppen gewechselt wird
-        if (tabName === 'gruppen' && typeof loadGruppen === 'function') {
-            loadGruppen();
-        }
-        
-        console.log('✅ Manueller Tab-Wechsel zu:', tabName);
+        console.log('✅ Zu Gruppen-Tab gewechselt');
         
     } catch (error) {
-        console.error('❌ Fehler beim manuellen Tab-Wechsel:', error);
+        console.error('❌ Fehler beim Tab-Wechsel:', error);
+        alert('Fehler beim Wechseln zum Gruppen-Tab. Bitte manuell wechseln.');
     }
 }
 
@@ -383,10 +360,21 @@ function getThemenForDropdown() {
     }));
 }
 
+// === GLOBALE FUNKTIONEN VERFÜGBAR MACHEN ===
+// Alle wichtigen Funktionen global verfügbar machen
+window.loadThemen = loadThemen;
+window.themaHinzufuegen = themaHinzufuegen;
+window.themaAuswaehlen = themaAuswaehlen;
+window.themaLoeschen = themaLoeschen;
+window.filterThemen = filterThemen;
+window.toggleFach = toggleFach;
+window.speichereThemaMitFaechern = speichereThemaMitFaechern;
+window.schließeFaecherModal = schließeFaecherModal;
+
 // Export für andere Module
 window.themenFunctions = {
     getThemenForDropdown,
     getFachName
 };
 
-console.log('✅ Firebase Themen System bereit');
+console.log('✅ Firebase Themen System bereit - Funktionen global verfügbar');
