@@ -64,12 +64,11 @@ function loadThemenWithFilter(filterValue) {
                 <div style="margin-top: 5px;">
                     ${faecherBadges}
                 </div>
-                <small>Erstellt von: ${thema.ersteller} am ${thema.erstellt}</small><br>
-                <small style="color: #667eea; font-style: italic;">💡 Klicken Sie hier, um dieses Thema für eine Gruppe zu verwenden</small>
+                <small>Erstellt von: ${thema.ersteller} am ${thema.erstellt}</small>
             </div>
             <div onclick="event.stopPropagation();">
                 ${kannLoeschen ? 
-                    `<button class="btn btn-danger" onclick="event.stopPropagation(); themaLoeschen('${thema.id || thema.name}')">Löschen</button>` : 
+                    `<button class="btn btn-danger" onclick="themaLoeschen('${thema.id || thema.name}')">Löschen</button>` : 
                     ''}
             </div>
         </div>`;
@@ -261,40 +260,77 @@ function schließeFaecherModal() {
     ausgewaehlteFaecher = [];
 }
 
-// Thema auswählen (für Gruppen-Erstellung) - ÜBERARBEITET für Modal-Unterstützung
+// Thema auswählen (für Gruppen-Erstellung) - KORRIGIERT
 function themaAuswaehlen(thema) {
-    // Prüfen ob wir im Gruppen-Bereich sind und Modal verwenden sollen
-    if (document.getElementById('themenAuswahlModal') && !document.getElementById('themenAuswahlModal').classList.contains('hidden')) {
-        // Modal-Modus: Thema in das Gruppen-Modal eintragen
-        const gruppenThemaInput = document.getElementById('gruppenThemaInput');
-        if (gruppenThemaInput) {
-            gruppenThemaInput.value = thema;
-        }
-        
-        // Themen-Auswahl Modal schließen (Funktion aus firebase-gruppen.js)
-        if (typeof themenAuswahlModalSchliessen === 'function') {
-            themenAuswahlModalSchliessen();
-        }
-        
-        console.log('📝 Thema für Gruppe ausgewählt:', thema);
-        return;
-    }
+    console.log('💡 Thema ausgewählt:', thema);
     
-    // Klassischer Modus: Thema in Gruppen-Tab übertragen und Tab wechseln
+    // Thema in Gruppen-Input setzen
     const gruppenThemaInput = document.getElementById('gruppenThema');
     if (gruppenThemaInput) {
         gruppenThemaInput.value = thema;
+        console.log('✅ Thema in Gruppen-Feld gesetzt:', thema);
     }
     
-    // Wechsle zu Gruppen-Tab (falls nicht im Modal-Modus)
-    openTab('gruppen');
-    
-    const gruppenButton = document.querySelector('[onclick="openTab(\'gruppen\')"]');
-    if (gruppenButton) {
-        gruppenButton.classList.add('active');
+    // Zu Gruppen-Tab wechseln
+    try {
+        // Direkt openTab aufrufen (global verfügbar)
+        if (typeof openTab === 'function') {
+            openTab('gruppen');
+            console.log('✅ Zu Gruppen-Tab gewechselt');
+        } else if (typeof window.openTab === 'function') {
+            window.openTab('gruppen');
+            console.log('✅ Zu Gruppen-Tab gewechselt (window)');
+        } else {
+            console.warn('⚠️ openTab Funktion nicht gefunden, wechsle manuell zu Tab');
+            // Manueller Tab-Wechsel als Fallback
+            manualTabSwitch('gruppen');
+        }
+    } catch (error) {
+        console.error('❌ Fehler beim Tab-Wechsel:', error);
+        // Fallback: Manueller Tab-Wechsel
+        manualTabSwitch('gruppen');
     }
-    
-    console.log('📝 Thema ausgewählt und zu Gruppen gewechselt:', thema);
+}
+
+// Manueller Tab-Wechsel als Fallback
+function manualTabSwitch(tabName) {
+    try {
+        // Alle Tab-Contents deaktivieren
+        const contents = document.querySelectorAll('.tab-content');
+        contents.forEach(content => content.classList.remove('active'));
+        
+        // Alle Tab-Buttons deaktivieren
+        const buttons = document.querySelectorAll('.tab-btn');
+        buttons.forEach(button => button.classList.remove('active'));
+        
+        // Gewünschten Tab aktivieren
+        const targetTab = document.getElementById(tabName);
+        if (targetTab) {
+            targetTab.classList.add('active');
+        }
+        
+        // Entsprechenden Button aktivieren
+        const targetButton = document.querySelector(`[onclick*="${tabName}"]`);
+        if (targetButton) {
+            targetButton.classList.add('active');
+        } else {
+            // Alternative: Button über ID finden
+            const buttonByTabName = document.getElementById(tabName + 'Tab');
+            if (buttonByTabName) {
+                buttonByTabName.classList.add('active');
+            }
+        }
+        
+        // Gruppen laden wenn zu Gruppen gewechselt wird
+        if (tabName === 'gruppen' && typeof loadGruppen === 'function') {
+            loadGruppen();
+        }
+        
+        console.log('✅ Manueller Tab-Wechsel zu:', tabName);
+        
+    } catch (error) {
+        console.error('❌ Fehler beim manuellen Tab-Wechsel:', error);
+    }
 }
 
 // Thema löschen
