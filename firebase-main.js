@@ -1,5 +1,5 @@
-// Firebase Hauptsystem - Realtime Database
-console.log('🚀 Firebase Main System geladen');
+// Firebase Hauptsystem - Realtime Database (Erweitert um Klassen)
+console.log('🚀 Firebase Main System geladen (Erweitert)');
 
 // Globale Daten-Cache für bessere Performance
 let dataCache = {
@@ -13,7 +13,8 @@ let dataCache = {
     news: {},
     config: {},
     briefvorlage: {},
-    staerkenFormulierungen: {}
+    staerkenFormulierungen: {},
+    klassen: {} // NEU: Cache für Klassen
 };
 
 // Realtime Listeners für automatische Updates
@@ -57,7 +58,8 @@ function initializeDataCache() {
         news: {},
         config: {},
         briefvorlage: {},
-        staerkenFormulierungen: {}
+        staerkenFormulierungen: {},
+        klassen: {} // NEU: Cache für Klassen
     };
     
     console.log('✅ Daten-Cache initialisiert');
@@ -73,6 +75,9 @@ async function loadSystemData() {
         
         // Fächer laden
         await loadFaecher();
+        
+        // Klassen laden (NEU)
+        await loadKlassen();
         
         // Bewertungs-Checkpoints laden
         await loadBewertungsCheckpoints();
@@ -217,6 +222,26 @@ async function loadFaecher() {
             "E": "Englisch",
             "ALL": "Allgemein"
         };
+    }
+}
+
+// Klassen laden (NEU)
+async function loadKlassen() {
+    try {
+        const klassenRef = window.firebaseDB.ref(window.database, 'system/klassen');
+        const snapshot = await window.firebaseDB.get(klassenRef);
+        
+        if (snapshot.exists()) {
+            dataCache.klassen = snapshot.val();
+            console.log('✅ Klassen geladen:', Object.keys(dataCache.klassen).length);
+        } else {
+            // Leerer Cache - keine Default-Klassen erstellen
+            dataCache.klassen = {};
+            console.log('✅ Klassen-Cache initialisiert (leer)');
+        }
+    } catch (error) {
+        console.error('❌ Fehler beim Laden der Klassen:', error);
+        dataCache.klassen = {};
     }
 }
 
@@ -392,6 +417,19 @@ function setupRealtimeListeners() {
             }
         });
         
+        // Klassen Listener (NEU)
+        const klassenRef = window.firebaseDB.ref(window.database, 'system/klassen');
+        activeListeners.klassen = window.firebaseDB.onValue(klassenRef, (snapshot) => {
+            if (snapshot.exists()) {
+                dataCache.klassen = snapshot.val();
+                console.log('🔄 Klassen Update erhalten');
+                // Klassen-abhängige UI-Elemente aktualisieren
+                if (typeof updateKlassenFilter === 'function') {
+                    updateKlassenFilter();
+                }
+            }
+        });
+        
         // Bewertungen Listener (nur für den aktuellen Lehrer)
         if (currentUser && currentUser.role === 'lehrer') {
             const bewertungenRef = window.firebaseDB.ref(window.database, `bewertungen/${sanitizeEmail(currentUser.email)}`);
@@ -504,6 +542,11 @@ function getGruppenFromCache() {
     return Object.values(dataCache.gruppen || {});
 }
 
+// Klassen aus Cache (NEU)
+function getKlassenFromCache() {
+    return dataCache.klassen || {};
+}
+
 // Bewertungen aus Cache (für aktuellen Lehrer)
 function getBewertungenFromCache() {
     if (!currentUser) return [];
@@ -545,6 +588,7 @@ window.firebaseFunctions = {
     getNewsFromCache,
     getThemenFromCache,
     getGruppenFromCache,
+    getKlassenFromCache, // NEU
     getBewertungenFromCache,
     getAllFaecher,
     getFachNameFromGlobal,
@@ -568,40 +612,9 @@ window.firebaseFunctions = {
     dataCache
 };
 
-// NEU: Globale Funktionen für HTML verfügbar machen
-window.neueGruppeAnlegen = function() {
-    if (typeof neueGruppeAnlegen === 'function') {
-        neueGruppeAnlegen();
-    }
-};
-
-window.gruppenErstellerSchließen = function() {
-    if (typeof gruppenErstellerSchließen === 'function') {
-        gruppenErstellerSchließen();
-    }
-};
-
-window.filterVorhandeneSchueler = function() {
-    if (typeof filterVorhandeneSchueler === 'function') {
-        filterVorhandeneSchueler();
-    }
-};
-
-window.gewählteSchuelerHinzufuegen = function() {
-    if (typeof gewählteSchuelerHinzufuegen === 'function') {
-        gewählteSchuelerHinzufuegen();
-    }
-};
-
-window.alleNewsAlsGelesenMarkieren = function() {
-    if (typeof alleNewsAlsGelesenMarkieren === 'function') {
-        alleNewsAlsGelesenMarkieren();
-    }
-};
-
 // Window Event Listeners
 window.addEventListener('beforeunload', () => {
     cleanupListeners();
 });
 
-console.log('✅ Firebase Main System bereit');
+console.log('✅ Firebase Main System bereit (Erweitert um Klassen)');
