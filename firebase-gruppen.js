@@ -4,7 +4,7 @@ console.log('👥 Firebase Gruppen-System geladen');
 // Globale Variablen für Gruppenbearbeitung
 let aktuelleGruppeEdit = null;
 
-// Gruppen laden und anzeigen - KORRIGIERT: Nur relevante Gruppen für Lehrer
+// Gruppen laden und anzeigen
 function loadGruppen() {
     console.log('👥 Lade Gruppen von Firebase...');
     
@@ -14,36 +14,17 @@ function loadGruppen() {
     if (!liste) return;
     
     // Gruppen aus Cache holen
-    const alleGruppen = window.firebaseFunctions.getGruppenFromCache();
-    
-    // KORRIGIERT: Filter für aktuellen Lehrer anwenden
-    const currentUserName = window.firebaseFunctions.getCurrentUserName();
-    const relevanteGruppen = alleGruppen.filter(gruppe => {
-        // Admin sieht alle Gruppen
-        if (window.firebaseFunctions.isAdmin()) {
-            return true;
-        }
-        
-        // Lehrer sieht nur Gruppen wo er:
-        // 1. Der Ersteller ist ODER
-        // 2. Als Fachlehrer eingetragen ist
-        const istErsteller = gruppe.ersteller === currentUserName;
-        const istBeteiligt = gruppe.schueler && gruppe.schueler.some(s => s.lehrer === currentUserName);
-        
-        return istErsteller || istBeteiligt;
-    });
-    
-    console.log('🔍 Gefilterte Gruppen:', relevanteGruppen.length, 'von', alleGruppen.length, 'für', currentUserName);
+    const gruppen = window.firebaseFunctions.getGruppenFromCache();
     
     // Bewertungen für Statusanzeige laden
     const alleBewertungen = getAllBewertungsdata();
     
     let html = '';
-    relevanteGruppen.forEach((gruppe) => {
+    gruppen.forEach((gruppe) => {
         // Berechtigung prüfen - Admin oder beteiligte Lehrer können bearbeiten
+        const currentUserName = window.firebaseFunctions.getCurrentUserName();
         const istBeteiligt = gruppe.schueler?.some(s => s.lehrer === currentUserName);
-        const istErsteller = gruppe.ersteller === currentUserName;
-        const kannBearbeiten = window.firebaseFunctions.isAdmin() || istBeteiligt || istErsteller;
+        const kannBearbeiten = window.firebaseFunctions.isAdmin() || istBeteiligt;
         
         html += `<div class="liste-item">
             <div>
@@ -61,11 +42,7 @@ function loadGruppen() {
                 const statusColor = istBewertet ? '#27ae60' : '#e74c3c'; // Grün oder Rot
                 const statusIcon = istBewertet ? '✅' : '⏳';
                 
-                // Hervorhebung wenn der aktuelle Lehrer der Fachlehrer ist
-                const istMeinSchueler = schueler.lehrer === currentUserName;
-                const highlight = istMeinSchueler ? 'font-weight: bold; border: 2px solid #fff;' : '';
-                
-                html += `<div style="margin: 2px 0; padding: 3px 6px; background: ${statusColor}; color: white; border-radius: 3px; display: inline-block; margin-right: 5px; font-size: 0.85rem; ${highlight}">
+                html += `<div style="margin: 2px 0; padding: 3px 6px; background: ${statusColor}; color: white; border-radius: 3px; display: inline-block; margin-right: 5px; font-size: 0.85rem;">
                     ${statusIcon} ${schueler.name} → ${schueler.lehrer}${fachInfo}
                 </div><br>`;
             });
@@ -80,16 +57,12 @@ function loadGruppen() {
         </div>`;
     });
     
-    if (relevanteGruppen.length === 0) {
-        html = '<div class="card"><p>Keine Gruppen vorhanden oder Sie sind keiner Gruppe zugeordnet.</p></div>';
-    }
-    
-    liste.innerHTML = html;
+    liste.innerHTML = html || '<div class="card"><p>Keine Gruppen vorhanden.</p></div>';
     
     // Lehrer- und Fach-Auswahl für neue Gruppen aktualisieren
     updateSchuelerSelects();
     
-    console.log('👥 Gruppen geladen:', relevanteGruppen.length, 'relevante Gruppen');
+    console.log('👥 Gruppen geladen:', gruppen.length);
 }
 
 // Alle Bewertungsdaten sammeln (für Statusanzeige)
@@ -113,40 +86,6 @@ function getAllBewertungsdata() {
     } catch (error) {
         console.error('❌ Fehler beim Laden der Bewertungsdaten:', error);
         return [];
-    }
-}
-
-// LÖSUNG 1: Funktion zum Öffnen/Anzeigen des Gruppenersteller-Bereichs
-function neueGruppeAnlegenDialog() {
-    console.log('🆕 Öffne Gruppenerstellungs-Dialog...');
-    
-    // Scroll zum Ersteller-Bereich
-    const erstellerCard = document.querySelector('#gruppen .card');
-    if (erstellerCard) {
-        erstellerCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        
-        // Visual Highlighting
-        erstellerCard.style.background = '#e8f5e8';
-        erstellerCard.style.border = '3px solid #27ae60';
-        erstellerCard.style.transition = 'all 0.3s ease';
-        
-        // Fokus auf Thema-Eingabe
-        const themaInput = document.getElementById('gruppenThema');
-        if (themaInput) {
-            setTimeout(() => {
-                themaInput.focus();
-                themaInput.style.background = '#fff3cd';
-            }, 500);
-        }
-        
-        // Highlighting nach 3 Sekunden entfernen
-        setTimeout(() => {
-            erstellerCard.style.background = '';
-            erstellerCard.style.border = '';
-            if (themaInput) {
-                themaInput.style.background = '';
-            }
-        }, 3000);
     }
 }
 
@@ -240,7 +179,7 @@ function schuelerEntfernen(button) {
     }
 }
 
-// Neue Gruppe erstellen
+// KORRIGIERT: Neue Gruppe erstellen
 async function gruppeErstellen() {
     console.log('👥 Erstelle neue Gruppe...');
     
@@ -635,17 +574,15 @@ window.gruppeEditSpeichern = gruppeEditSpeichern;
 window.gruppeEditAbbrechen = gruppeEditAbbrechen;
 window.neuerSchuelerInEdit = neuerSchuelerInEdit;
 window.editSchuelerEntfernen = editSchuelerEntfernen;
-window.neueGruppeAnlegenDialog = neueGruppeAnlegenDialog; // NEU: Lösung 1
 
 // Export für andere Module
 window.gruppenFunctions = {
     getGruppenForUser,
     updateSchuelerSelects,
-    loadGruppen,
+    loadGruppen, // Wichtig: auch loadGruppen exportieren
     gruppeErstellen,
     schuelerHinzufuegen,
-    schuelerEntfernen,
-    neueGruppeAnlegenDialog // NEU: Export für andere Module
+    schuelerEntfernen
 };
 
 console.log('✅ Firebase Gruppen-System bereit - Alle Funktionen global verfügbar');
