@@ -58,19 +58,20 @@ function loadThemenWithFilter(filterValue) {
             ).join(' ');
         }
         
-        html += `<div class="liste-item thema-item">
-            <div onclick="themaAuswaehlen('${thema.name.replace(/'/g, '\\\'')}')" style="cursor: pointer; flex: 1;">
+        html += `<div class="liste-item thema-item" onclick="themaAuswaehlenUndGruppeErstellen('${thema.name}')">
+            <div>
                 <strong>${thema.name}</strong><br>
                 <div style="margin-top: 5px;">
                     ${faecherBadges}
                 </div>
                 <small>Erstellt von: ${thema.ersteller} am ${thema.erstellt}</small>
+                <div style="margin-top: 5px; font-size: 0.8rem; color: #667eea;">
+                    👆 Klicken um Gruppe zu erstellen
+                </div>
             </div>
-            <div style="flex-shrink: 0;">
-                ${kannLoeschen ? 
-                    `<button class="btn btn-danger" onclick="themaLoeschen('${thema.id || thema.name}')">Löschen</button>` : 
-                    ''}
-            </div>
+            ${kannLoeschen ? 
+                `<button class="btn btn-danger" onclick="event.stopPropagation(); themaLoeschen('${thema.id || thema.name}')">Löschen</button>` : 
+                ''}
         </div>`;
     });
     
@@ -260,54 +261,41 @@ function schließeFaecherModal() {
     ausgewaehlteFaecher = [];
 }
 
-// Thema auswählen (für Gruppen-Erstellung) - VEREINFACHT
-function themaAuswaehlen(thema) {
-    console.log('💡 Thema ausgewählt:', thema);
+// KORRIGIERT: Thema auswählen und direkt Gruppe erstellen
+function themaAuswaehlenUndGruppeErstellen(thema) {
+    console.log('💡 Thema ausgewählt für Gruppe:', thema);
     
-    // Direkte DOM-Manipulation für Tab-Wechsel
-    try {
-        // Alle Tab-Contents deaktivieren
-        document.querySelectorAll('.tab-content').forEach(content => {
-            content.classList.remove('active');
-        });
-        
-        // Alle Tab-Buttons deaktivieren
-        document.querySelectorAll('.tab-btn').forEach(button => {
-            button.classList.remove('active');
-        });
-        
-        // Gruppen-Tab aktivieren
-        const gruppenTab = document.getElementById('gruppen');
-        const gruppenButton = document.getElementById('gruppenTab');
-        
-        if (gruppenTab) {
-            gruppenTab.classList.add('active');
-        }
-        if (gruppenButton) {
-            gruppenButton.classList.add('active');
+    // Wechsle zum Gruppen-Tab
+    openTab('gruppen');
+    
+    // Setze das Thema ins Eingabefeld
+    setTimeout(() => {
+        const gruppenThemaInput = document.getElementById('gruppenThema');
+        if (gruppenThemaInput) {
+            gruppenThemaInput.value = thema;
+            gruppenThemaInput.focus();
         }
         
-        // Thema in Input setzen (mit kleiner Verzögerung)
-        setTimeout(() => {
-            const gruppenThemaInput = document.getElementById('gruppenThema');
-            if (gruppenThemaInput) {
-                gruppenThemaInput.value = thema;
-                gruppenThemaInput.focus();
-                console.log('✅ Thema gesetzt:', thema);
-            }
-            
-            // Gruppen laden
-            if (typeof loadGruppen === 'function') {
-                loadGruppen();
-            }
-        }, 100);
+        // Scroll zum Eingabebereich
+        const gruppenCard = document.querySelector('#gruppen .card');
+        if (gruppenCard) {
+            gruppenCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
         
-        console.log('✅ Zu Gruppen-Tab gewechselt');
+        // Visual Feedback
+        if (gruppenThemaInput) {
+            gruppenThemaInput.style.background = '#e8f5e8';
+            setTimeout(() => {
+                gruppenThemaInput.style.background = '';
+            }, 2000);
+        }
         
-    } catch (error) {
-        console.error('❌ Fehler beim Tab-Wechsel:', error);
-        alert('Fehler beim Wechseln zum Gruppen-Tab. Bitte manuell wechseln.');
-    }
+    }, 100);
+}
+
+// Alte Funktion für Rückwärtskompatibilität
+function themaAuswaehlen(thema) {
+    themaAuswaehlenUndGruppeErstellen(thema);
 }
 
 // Thema löschen
@@ -360,21 +348,12 @@ function getThemenForDropdown() {
     }));
 }
 
-// === GLOBALE FUNKTIONEN VERFÜGBAR MACHEN ===
-// Alle wichtigen Funktionen global verfügbar machen
-window.loadThemen = loadThemen;
-window.themaHinzufuegen = themaHinzufuegen;
-window.themaAuswaehlen = themaAuswaehlen;
-window.themaLoeschen = themaLoeschen;
-window.filterThemen = filterThemen;
-window.toggleFach = toggleFach;
-window.speichereThemaMitFaechern = speichereThemaMitFaechern;
-window.schließeFaecherModal = schließeFaecherModal;
-
 // Export für andere Module
 window.themenFunctions = {
     getThemenForDropdown,
-    getFachName
+    getFachName,
+    themaAuswaehlenUndGruppeErstellen, // NEU: Export der neuen Funktion
+    themaAuswaehlen // Rückwärtskompatibilität
 };
 
-console.log('✅ Firebase Themen System bereit - Funktionen global verfügbar');
+console.log('✅ Firebase Themen System bereit');
