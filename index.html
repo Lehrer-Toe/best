@@ -55,8 +55,7 @@
             <div class="tab-nav">
                 <button class="tab-btn active" onclick="openTab('news')" id="newsTab">News</button>
                 <button class="tab-btn" onclick="openTab('themen')" id="themenTab">Themen</button>
-                <button class="tab-btn" onclick="openTab('gruppen')" id="gruppenTab">Gruppen verwalten</button>
-                <button class="tab-btn" onclick="openTab('klassen')" id="klassenTab">Klassen verwalten</button>
+                <button class="tab-btn" onclick="openTab('gruppen')" id="gruppenTab">Gruppen erstellen</button>
                 <button class="tab-btn" onclick="openTab('lehrer')" id="lehrerTab">Lehrer verwalten</button>
                 <button class="tab-btn" onclick="openTab('daten')" id="datenTab">Datenverwaltung</button>
                 <button class="tab-btn" onclick="openTab('bewerten')" id="bewertenTab">Schüler bewerten</button>
@@ -114,88 +113,44 @@
                 </div>
             </div>
 
-            <!-- Gruppen verwalten Tab (geändert) -->
+            <!-- Gruppen Tab - KORRIGIERT -->
             <div id="gruppen" class="tab-content">
-                <h2>Gruppen verwalten</h2>
-                
-                <!-- Filter und Sortierung -->
-                <div class="filter-section">
-                    <div class="filter-group">
-                        <label>Sortierung:</label>
-                        <select id="gruppenSortierung" onchange="filterGruppen()">
-                            <option value="thema-az">Thema A-Z</option>
-                            <option value="thema-za">Thema Z-A</option>
-                            <option value="datum-neu">Neuste zuerst</option>
-                            <option value="datum-alt">Älteste zuerst</option>
-                            <option value="groesse-auf">Gruppengröße aufsteigend</option>
-                            <option value="groesse-ab">Gruppengröße absteigend</option>
-                        </select>
-                        
-                        <label>Status:</label>
-                        <select id="gruppenStatusFilter" onchange="filterGruppen()">
-                            <option value="alle">Alle Gruppen</option>
-                            <option value="vollstaendig-bewertet">Vollständig bewertet</option>
-                            <option value="teilweise-bewertet">Teilweise bewertet</option>
-                            <option value="nicht-bewertet">Nicht bewertet</option>
-                        </select>
-                        
-                        <button class="btn btn-success" onclick="neueGruppeAnlegen()">Neue Gruppe anlegen</button>
+                <h2>Gruppen erstellen</h2>
+                <div class="card">
+                    <h3>Neue Gruppe anlegen</h3>
+                    <div class="input-group">
+                        <input type="text" id="gruppenThema" placeholder="Thema (oder aus Liste wählen)">
+                        <button class="btn" onclick="gruppeErstellen()">Gruppe erstellen</button>
+                    </div>
+                    <div style="margin-top: 1rem;">
+                        <h4>Schüler hinzufügen:</h4>
+                        <div id="schuelerListe">
+                            <div class="input-group schueler-row">
+                                <input type="text" placeholder="Schülername" class="schueler-name">
+                                <select class="schueler-lehrer">
+                                    <option value="">Lehrer wählen...</option>
+                                </select>
+                                <select class="schueler-fach">
+                                    <option value="">Fach wählen...</option>
+                                </select>
+                                <button type="button" class="btn btn-danger" onclick="schuelerEntfernen(this)">Entfernen</button>
+                            </div>
+                        </div>
+                        <button class="btn" onclick="schuelerHinzufuegen()">Weiteren Schüler hinzufügen</button>
                     </div>
                 </div>
-
+                
+                <!-- LÖSUNG 1: Button zum Öffnen der Gruppenerstellung -->
+                <div class="card" style="text-align: center; background: #e8f5e8; border-left: 4px solid #27ae60;">
+                    <h3>💡 Neue Gruppe anlegen</h3>
+                    <p>Klicken Sie hier, um eine neue Gruppe zu erstellen</p>
+                    <button class="btn btn-success" onclick="neueGruppeAnlegenDialog()" style="font-size: 1.1rem; padding: 12px 24px;">
+                        🆕 Neue Gruppe anlegen
+                    </button>
+                </div>
+                
                 <div class="liste" id="gruppenListe">
                     <!-- Gruppen werden hier angezeigt -->
-                </div>
-                
-                <!-- Neue Gruppe anlegen Modal -->
-                <div id="neueGruppeModal" class="modal hidden">
-                    <div class="modal-content">
-                        <h3>Neue Gruppe anlegen</h3>
-                        
-                        <div class="input-group">
-                            <label>Thema auswählen:</label>
-                            <div class="thema-auswahl-bereich">
-                                <input type="text" id="gruppenThemaInput" placeholder="Thema suchen oder direkt eingeben..." readonly onclick="oeffneThemenAuswahl()">
-                                <button class="btn" onclick="oeffneThemenAuswahl()">Thema auswählen</button>
-                            </div>
-                        </div>
-                        
-                        <div class="input-group">
-                            <label>Klasse auswählen:</label>
-                            <select id="gruppenKlasseSelect" onchange="ladeSchuelerFuerGruppe()">
-                                <option value="">Klasse auswählen...</option>
-                                <!-- Klassen werden dynamisch geladen -->
-                            </select>
-                        </div>
-                        
-                        <div id="schuelerAuswahlBereich" class="hidden">
-                            <h4>Schüler auswählen und Lehrer zuweisen:</h4>
-                            <div id="schuelerAuswahlListe">
-                                <!-- Schüler werden hier angezeigt -->
-                            </div>
-                        </div>
-                        
-                        <div class="modal-buttons">
-                            <button class="btn btn-success" onclick="gruppeErstellenAusModal()">Gruppe erstellen</button>
-                            <button class="btn btn-danger" onclick="neueGruppeModalSchliessen()">Abbrechen</button>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Themen-Auswahl Modal -->
-                <div id="themenAuswahlModal" class="modal hidden">
-                    <div class="modal-content">
-                        <h3>Thema auswählen</h3>
-                        <div class="input-group">
-                            <input type="text" id="themenSuche" placeholder="Thema suchen..." onkeyup="filterThemenAuswahl()">
-                        </div>
-                        <div id="themenAuswahlListe" class="themen-auswahl-grid">
-                            <!-- Themen werden hier angezeigt -->
-                        </div>
-                        <div class="modal-buttons">
-                            <button class="btn btn-danger" onclick="themenAuswahlModalSchliessen()">Abbrechen</button>
-                        </div>
-                    </div>
                 </div>
                 
                 <!-- Gruppen bearbeiten Modal -->
@@ -214,106 +169,6 @@
                         <div class="modal-buttons">
                             <button class="btn btn-success" onclick="gruppeEditSpeichern()">Speichern</button>
                             <button class="btn btn-danger" onclick="gruppeEditAbbrechen()">Abbrechen</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Klassen verwalten Tab (NEU) -->
-            <div id="klassen" class="tab-content">
-                <h2>Klassen verwalten</h2>
-                
-                <div class="card">
-                    <h3>Neue Klasse anlegen</h3>
-                    <div class="input-group">
-                        <input type="text" id="klassenName" placeholder="Klassenname (z.B. 9a, 10b)">
-                        <select id="klassenSchuljahr">
-                            <!-- Schuljahre werden dynamisch geladen -->
-                        </select>
-                        <button class="btn btn-success" onclick="klasseAnlegen()">Klasse anlegen</button>
-                    </div>
-                </div>
-                
-                <div class="card">
-                    <h3>Schülerdaten hochladen</h3>
-                    <p><strong>Unterstützte Formate:</strong> CSV, XLSX, TXT (eine Zeile pro Schüler)</p>
-                    <p><strong>Format:</strong> Vorname Nachname oder Nachname, Vorname</p>
-                    
-                    <div class="input-group">
-                        <select id="uploadKlasseSelect">
-                            <option value="">Klasse für Upload auswählen...</option>
-                            <!-- Klassen werden dynamisch geladen -->
-                        </select>
-                        <select id="uploadFormat">
-                            <option value="vorname-nachname">Vorname Nachname</option>
-                            <option value="nachname-vorname">Nachname, Vorname</option>
-                        </select>
-                    </div>
-                    
-                    <div class="upload-bereich">
-                        <input type="file" id="schuelerDateiUpload" accept=".csv,.xlsx,.txt" onchange="schuelerDateiGewaehlt()">
-                        <button class="btn" onclick="schuelerDateiHochladen()" id="uploadButton" disabled>Schüler hochladen</button>
-                    </div>
-                    
-                    <div id="uploadVorschau" class="upload-vorschau hidden">
-                        <h4>Vorschau der Daten:</h4>
-                        <div id="uploadVorschauInhalt"></div>
-                        <div class="modal-buttons">
-                            <button class="btn btn-success" onclick="schuelerDatenBestaetigen()">Daten übernehmen</button>
-                            <button class="btn btn-danger" onclick="uploadVorschauSchliessen()">Abbrechen</button>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="filter-section">
-                    <div class="filter-group">
-                        <label>Klasse filtern:</label>
-                        <select id="klassenFilter" onchange="filterKlassen()">
-                            <option value="">Alle Klassen</option>
-                            <!-- Klassen werden dynamisch geladen -->
-                        </select>
-                        
-                        <label>Schuljahr:</label>
-                        <select id="schuljahrFilter" onchange="filterKlassen()">
-                            <option value="">Alle Schuljahre</option>
-                            <!-- Schuljahre werden dynamisch geladen -->
-                        </select>
-                    </div>
-                </div>
-                
-                <div id="klassenListe">
-                    <!-- Klassen werden hier angezeigt -->
-                </div>
-                
-                <!-- Klasse bearbeiten Modal -->
-                <div id="klasseEditModal" class="modal hidden">
-                    <div class="modal-content">
-                        <h3>Klasse bearbeiten</h3>
-                        <div class="input-group">
-                            <label>Klassenname:</label>
-                            <input type="text" id="editKlassenName">
-                        </div>
-                        <div class="input-group">
-                            <label>Schuljahr:</label>
-                            <select id="editKlassenSchuljahr">
-                                <!-- Schuljahre werden dynamisch geladen -->
-                            </select>
-                        </div>
-                        
-                        <h4>Schüler in der Klasse:</h4>
-                        <div class="input-group">
-                            <input type="text" id="neuerSchuelerVorname" placeholder="Vorname">
-                            <input type="text" id="neuerSchuelerNachname" placeholder="Nachname">
-                            <button class="btn btn-success" onclick="schuelerZurKlasseHinzufuegen()">Schüler hinzufügen</button>
-                        </div>
-                        
-                        <div id="klasseSchuelerListe" class="klasse-schueler-liste">
-                            <!-- Schüler werden hier angezeigt -->
-                        </div>
-                        
-                        <div class="modal-buttons">
-                            <button class="btn btn-success" onclick="klasseEditSpeichern()">Speichern</button>
-                            <button class="btn btn-danger" onclick="klasseEditAbbrechen()">Abbrechen</button>
                         </div>
                     </div>
                 </div>
@@ -361,7 +216,6 @@
                         <button class="btn btn-success" onclick="datenExportieren('alle')">Alle Daten exportieren</button>
                         <button class="btn btn-success" onclick="datenExportieren('bewertungen')">Nur Bewertungen exportieren</button>
                         <button class="btn btn-success" onclick="datenExportieren('gruppen')">Nur Gruppen exportieren</button>
-                        <button class="btn btn-success" onclick="datenExportieren('klassen')">Nur Klassen exportieren</button>
                     </div>
                 </div>
                 <div class="card">
@@ -369,7 +223,6 @@
                     <div class="input-group">
                         <button class="btn btn-danger" onclick="datenLoeschen('bewertungen')">Alle Bewertungen löschen</button>
                         <button class="btn btn-danger" onclick="datenLoeschen('gruppen')">Alle Gruppen löschen</button>
-                        <button class="btn btn-danger" onclick="datenLoeschen('klassen')">Alle Klassen löschen</button>
                         <button class="btn btn-danger" onclick="datenLoeschen('news')">Alle News löschen</button>
                         <button class="btn btn-danger" onclick="datenLoeschen('alle')" style="background: #c0392b;">ALLE DATEN LÖSCHEN</button>
                     </div>
@@ -596,7 +449,6 @@
     <script src="firebase-auth.js"></script>
     <script src="firebase-news.js"></script>
     <script src="firebase-themen.js"></script>
-    <script src="firebase-klassen.js"></script>
     <script src="firebase-gruppen.js"></script>
     <script src="firebase-bewertung.js"></script>
     <script src="firebase-vorlagen.js"></script>
