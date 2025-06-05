@@ -60,12 +60,12 @@ function loadThemenWithFilter(filterValue) {
         
         html += `<div class="liste-item thema-item" onclick="themaAuswaehlenUndGruppeErstellen('${thema.name}')">
             <div>
-                <strong>${thema.name}</strong><br>
-                <div style="margin-top: 5px;">
+                <strong style="font-size: 1.1rem; color: #2c3e50;">${thema.name}</strong><br>
+                <div style="margin-top: 8px;">
                     ${faecherBadges}
                 </div>
                 <small>Erstellt von: ${thema.ersteller} am ${thema.erstellt}</small>
-                <div style="margin-top: 5px; font-size: 0.8rem; color: #667eea;">
+                <div style="margin-top: 8px; font-size: 0.9rem; color: #667eea; font-weight: 600;">
                     👆 Klicken um Gruppe zu erstellen
                 </div>
             </div>
@@ -261,36 +261,55 @@ function schließeFaecherModal() {
     ausgewaehlteFaecher = [];
 }
 
-// KORRIGIERT: Thema auswählen und direkt Gruppe erstellen
+// LÖSUNG 2: Thema auswählen und direkt Gruppe erstellen - KOMPLETT ÜBERARBEITET
 function themaAuswaehlenUndGruppeErstellen(thema) {
     console.log('💡 Thema ausgewählt für Gruppe:', thema);
     
-    // Wechsle zum Gruppen-Tab
+    // 1. Zum Gruppen-Tab wechseln
     openTab('gruppen');
     
-    // Setze das Thema ins Eingabefeld
+    // 2. Kurz warten bis Tab gewechselt wurde
     setTimeout(() => {
+        // 3. Das Thema ins Eingabefeld setzen
         const gruppenThemaInput = document.getElementById('gruppenThema');
         if (gruppenThemaInput) {
             gruppenThemaInput.value = thema;
-            gruppenThemaInput.focus();
         }
         
-        // Scroll zum Eingabebereich
-        const gruppenCard = document.querySelector('#gruppen .card');
-        if (gruppenCard) {
-            gruppenCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // 4. Den Gruppenerstellungs-Dialog öffnen
+        if (typeof window.neueGruppeAnlegenDialog === 'function') {
+            window.neueGruppeAnlegenDialog();
+        } else {
+            console.warn('⚠️ neueGruppeAnlegenDialog Funktion nicht gefunden');
+            
+            // Fallback: Scroll zum Bereich
+            const erstellerCard = document.querySelector('#gruppen .card');
+            if (erstellerCard) {
+                erstellerCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                
+                // Visual Highlighting
+                erstellerCard.style.background = '#e8f5e8';
+                erstellerCard.style.border = '3px solid #27ae60';
+                
+                if (gruppenThemaInput) {
+                    gruppenThemaInput.focus();
+                    gruppenThemaInput.style.background = '#fff3cd';
+                }
+                
+                // Highlighting nach 3 Sekunden entfernen
+                setTimeout(() => {
+                    erstellerCard.style.background = '';
+                    erstellerCard.style.border = '';
+                    if (gruppenThemaInput) {
+                        gruppenThemaInput.style.background = '';
+                    }
+                }, 3000);
+            }
         }
         
-        // Visual Feedback
-        if (gruppenThemaInput) {
-            gruppenThemaInput.style.background = '#e8f5e8';
-            setTimeout(() => {
-                gruppenThemaInput.style.background = '';
-            }, 2000);
-        }
+        console.log('✅ Thema übertragen und Gruppenerstellung geöffnet:', thema);
         
-    }, 100);
+    }, 200); // Kurze Verzögerung für Tab-Wechsel
 }
 
 // Alte Funktion für Rückwärtskompatibilität
@@ -348,12 +367,23 @@ function getThemenForDropdown() {
     }));
 }
 
+// GLOBALE FUNKTIONEN - WICHTIG FÜR ONCLICK
+window.themaAuswaehlenUndGruppeErstellen = themaAuswaehlenUndGruppeErstellen;
+window.themaAuswaehlen = themaAuswaehlen;
+window.themaHinzufuegen = themaHinzufuegen;
+window.filterThemen = filterThemen;
+window.themaLoeschen = themaLoeschen;
+window.speichereThemaMitFaechern = speichereThemaMitFaechern;
+window.schließeFaecherModal = schließeFaecherModal;
+window.toggleFach = toggleFach;
+
 // Export für andere Module
 window.themenFunctions = {
     getThemenForDropdown,
     getFachName,
-    themaAuswaehlenUndGruppeErstellen, // NEU: Export der neuen Funktion
-    themaAuswaehlen // Rückwärtskompatibilität
+    themaAuswaehlenUndGruppeErstellen,
+    themaAuswaehlen,
+    loadThemen
 };
 
-console.log('✅ Firebase Themen System bereit');
+console.log('✅ Firebase Themen System bereit - Alle Funktionen global verfügbar');
