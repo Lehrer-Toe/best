@@ -84,6 +84,13 @@
                         <button class="btn" onclick="adminNewsErstellen()">Nachricht veröffentlichen</button>
                     </div>
                 </div>
+                <!-- NEU: Alles gelesen Button -->
+                <div class="card" id="newsActionBereich">
+                    <div class="input-group">
+                        <button class="btn btn-success" onclick="alleNewsAlsGelesenMarkieren()">📚 Alles gelesen</button>
+                        <small style="color: #666;">Markiert alle aktuell sichtbaren News als gelesen</small>
+                    </div>
+                </div>
                 <div id="newsList">
                     <!-- News werden hier dynamisch eingefügt -->
                 </div>
@@ -113,20 +120,56 @@
                 </div>
             </div>
 
-            <!-- Gruppen Tab - KORRIGIERT -->
+            <!-- Gruppen Tab - ÜBERARBEITET -->
             <div id="gruppen" class="tab-content">
                 <h2>Gruppen erstellen</h2>
+                
+                <!-- NEU: Button zum Öffnen der Gruppenersteller -->
                 <div class="card">
+                    <div class="input-group">
+                        <button class="btn btn-success" onclick="neueGruppeAnlegen()" id="neueGruppeBtn">
+                            ➕ Neue Gruppe anlegen
+                        </button>
+                        <button class="btn" onclick="gruppenErstellerSchließen()" id="gruppenAbbrechenBtn" style="display: none;">
+                            ❌ Abbrechen
+                        </button>
+                    </div>
+                </div>
+
+                <!-- NEU: Versteckter Gruppenersteller -->
+                <div id="gruppenErsteller" class="card" style="display: none;">
                     <h3>Neue Gruppe anlegen</h3>
                     <div class="input-group">
                         <input type="text" id="gruppenThema" placeholder="Thema (oder aus Liste wählen)">
                         <button class="btn" onclick="gruppeErstellen()">Gruppe erstellen</button>
                     </div>
+                    
+                    <!-- NEU: Klassenfilter -->
+                    <div class="filter-section">
+                        <div class="filter-group">
+                            <label>Filter nach Klasse:</label>
+                            <select id="klassenFilter" onchange="filterVorhandeneSchueler()">
+                                <option value="">Alle Klassen</option>
+                                <!-- Klassen werden dynamisch geladen -->
+                            </select>
+                            <button class="btn btn-success" onclick="gewählteSchuelerHinzufuegen()">Ausgewählte hinzufügen</button>
+                        </div>
+                    </div>
+                    
+                    <!-- NEU: Vorhandene Schüler Auswahl -->
+                    <div id="vorhandeneSchueler" class="vorhandene-schueler-bereich">
+                        <h4>Vorhandene Schüler auswählen:</h4>
+                        <div id="schuelerAuswahl" class="schueler-auswahl-grid">
+                            <!-- Vorhandene Schüler werden hier angezeigt -->
+                        </div>
+                    </div>
+                    
                     <div style="margin-top: 1rem;">
-                        <h4>Schüler hinzufügen:</h4>
+                        <h4>Schüler manuell hinzufügen:</h4>
                         <div id="schuelerListe">
                             <div class="input-group schueler-row">
                                 <input type="text" placeholder="Schülername" class="schueler-name">
+                                <input type="text" placeholder="Klasse (z.B. 9a)" class="schueler-klasse">
                                 <select class="schueler-lehrer">
                                     <option value="">Lehrer wählen...</option>
                                 </select>
@@ -139,16 +182,7 @@
                         <button class="btn" onclick="schuelerHinzufuegen()">Weiteren Schüler hinzufügen</button>
                     </div>
                 </div>
-                
-                <!-- LÖSUNG 1: Button zum Öffnen der Gruppenerstellung -->
-                <div class="card" style="text-align: center; background: #e8f5e8; border-left: 4px solid #27ae60;">
-                    <h3>💡 Neue Gruppe anlegen</h3>
-                    <p>Klicken Sie hier, um eine neue Gruppe zu erstellen</p>
-                    <button class="btn btn-success" onclick="neueGruppeAnlegenDialog()" style="font-size: 1.1rem; padding: 12px 24px;">
-                        🆕 Neue Gruppe anlegen
-                    </button>
-                </div>
-                
+
                 <div class="liste" id="gruppenListe">
                     <!-- Gruppen werden hier angezeigt -->
                 </div>
