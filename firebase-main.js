@@ -1,4 +1,4 @@
-// Firebase Hauptsystem - Realtime Database (Erweitert um Klassensystem)
+// Firebase Hauptsystem - Realtime Database
 console.log('🚀 Firebase Main System geladen');
 
 // Globale Daten-Cache für bessere Performance
@@ -8,7 +8,6 @@ let dataCache = {
     bewertungsCheckpoints: {},
     themen: {},
     gruppen: {},
-    klassen: {}, // NEU: Klassen-Cache
     bewertungen: {},
     vorlagen: {},
     news: {},
@@ -53,7 +52,6 @@ function initializeDataCache() {
         bewertungsCheckpoints: {},
         themen: {},
         gruppen: {},
-        klassen: {}, // NEU: Klassen-Cache
         bewertungen: {},
         vorlagen: {},
         news: {},
@@ -394,24 +392,6 @@ function setupRealtimeListeners() {
             }
         });
         
-        // NEU: Klassen Listener (nur für Admin)
-        if (currentUser && currentUser.role === 'admin') {
-            const klassenRef = window.firebaseDB.ref(window.database, 'klassen');
-            activeListeners.klassen = window.firebaseDB.onValue(klassenRef, (snapshot) => {
-                if (snapshot.exists()) {
-                    dataCache.klassen = snapshot.val();
-                    console.log('🔄 Klassen Update erhalten');
-                    if (typeof loadKlassen === 'function') {
-                        loadKlassen();
-                    }
-                    // Klassen-Selects in anderen Bereichen aktualisieren
-                    if (window.klassenFunctions && window.klassenFunctions.updateKlassenSelects) {
-                        window.klassenFunctions.updateKlassenSelects();
-                    }
-                }
-            });
-        }
-        
         // Bewertungen Listener (nur für den aktuellen Lehrer)
         if (currentUser && currentUser.role === 'lehrer') {
             const bewertungenRef = window.firebaseDB.ref(window.database, `bewertungen/${sanitizeEmail(currentUser.email)}`);
@@ -469,7 +449,6 @@ function openTab(tabName) {
         if (tabName === 'news') loadNews();
         if (tabName === 'themen') loadThemen();
         if (tabName === 'gruppen') loadGruppen();
-        if (tabName === 'klassen') loadKlassen(); // NEU: Klassen-Tab
         if (tabName === 'lehrer') loadLehrer();
         if (tabName === 'daten') loadDatenverwaltung();
         if (tabName === 'bewerten') loadBewertungen();
@@ -525,11 +504,6 @@ function getGruppenFromCache() {
     return Object.values(dataCache.gruppen || {});
 }
 
-// NEU: Klassen aus Cache
-function getKlassenFromCache() {
-    return Object.values(dataCache.klassen || {});
-}
-
 // Bewertungen aus Cache (für aktuellen Lehrer)
 function getBewertungenFromCache() {
     if (!currentUser) return [];
@@ -571,7 +545,6 @@ window.firebaseFunctions = {
     getNewsFromCache,
     getThemenFromCache,
     getGruppenFromCache,
-    getKlassenFromCache, // NEU: Klassen-Cache Access
     getBewertungenFromCache,
     getAllFaecher,
     getFachNameFromGlobal,
@@ -593,6 +566,37 @@ window.firebaseFunctions = {
     
     // Cache Access
     dataCache
+};
+
+// NEU: Globale Funktionen für HTML verfügbar machen
+window.neueGruppeAnlegen = function() {
+    if (typeof neueGruppeAnlegen === 'function') {
+        neueGruppeAnlegen();
+    }
+};
+
+window.gruppenErstellerSchließen = function() {
+    if (typeof gruppenErstellerSchließen === 'function') {
+        gruppenErstellerSchließen();
+    }
+};
+
+window.filterVorhandeneSchueler = function() {
+    if (typeof filterVorhandeneSchueler === 'function') {
+        filterVorhandeneSchueler();
+    }
+};
+
+window.gewählteSchuelerHinzufuegen = function() {
+    if (typeof gewählteSchuelerHinzufuegen === 'function') {
+        gewählteSchuelerHinzufuegen();
+    }
+};
+
+window.alleNewsAlsGelesenMarkieren = function() {
+    if (typeof alleNewsAlsGelesenMarkieren === 'function') {
+        alleNewsAlsGelesenMarkieren();
+    }
 };
 
 // Window Event Listeners
