@@ -1444,3 +1444,58 @@ textarea {
 .hidden {
     display: none !important;
 }
+
+/* Themen-spezifische Styles */
+.thema-item {
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.thema-item:hover {
+    background: #e3f2fd !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.thema-item > div:first-child {
+    flex: 1;
+    cursor: pointer;
+}
+
+.thema-item > div:last-child {
+    flex-shrink: 0;
+}
+
+/* Tooltip für Themen-Auswahl */
+.thema-item::before {
+    content: "Klicken Sie hier, um eine Gruppe mit diesem Thema zu erstellen";
+    position: absolute;
+    background: #2c3e50;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s;
+    z-index: 1000;
+    top: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+    pointer-events: none;
+}
+
+.thema-item:hover::before {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Kleine Animation für besseres Feedback */
+.thema-item:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
