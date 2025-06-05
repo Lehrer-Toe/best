@@ -1,4 +1,4 @@
-// Firebase Hauptsystem - Realtime Database
+// Firebase Hauptsystem - Realtime Database (Erweitert um Klassensystem)
 console.log('🚀 Firebase Main System geladen');
 
 // Globale Daten-Cache für bessere Performance
@@ -8,6 +8,7 @@ let dataCache = {
     bewertungsCheckpoints: {},
     themen: {},
     gruppen: {},
+    klassen: {}, // NEU: Klassen-Cache
     bewertungen: {},
     vorlagen: {},
     news: {},
@@ -52,6 +53,7 @@ function initializeDataCache() {
         bewertungsCheckpoints: {},
         themen: {},
         gruppen: {},
+        klassen: {}, // NEU: Klassen-Cache
         bewertungen: {},
         vorlagen: {},
         news: {},
@@ -392,6 +394,24 @@ function setupRealtimeListeners() {
             }
         });
         
+        // NEU: Klassen Listener (nur für Admin)
+        if (currentUser && currentUser.role === 'admin') {
+            const klassenRef = window.firebaseDB.ref(window.database, 'klassen');
+            activeListeners.klassen = window.firebaseDB.onValue(klassenRef, (snapshot) => {
+                if (snapshot.exists()) {
+                    dataCache.klassen = snapshot.val();
+                    console.log('🔄 Klassen Update erhalten');
+                    if (typeof loadKlassen === 'function') {
+                        loadKlassen();
+                    }
+                    // Klassen-Selects in anderen Bereichen aktualisieren
+                    if (window.klassenFunctions && window.klassenFunctions.updateKlassenSelects) {
+                        window.klassenFunctions.updateKlassenSelects();
+                    }
+                }
+            });
+        }
+        
         // Bewertungen Listener (nur für den aktuellen Lehrer)
         if (currentUser && currentUser.role === 'lehrer') {
             const bewertungenRef = window.firebaseDB.ref(window.database, `bewertungen/${sanitizeEmail(currentUser.email)}`);
@@ -430,23 +450,16 @@ function cleanupListeners() {
 // === HILFSFUNKTIONEN ===
 
 // Tab Navigation
-function openTab(tabName, evt) {
+function openTab(tabName) {
     const contents = document.querySelectorAll('.tab-content');
     const buttons = document.querySelectorAll('.tab-btn');
-
+    
     contents.forEach(content => content.classList.remove('active'));
     buttons.forEach(button => button.classList.remove('active'));
-
-    const targetContent = document.getElementById(tabName);
-    if (targetContent) {
-        targetContent.classList.add('active');
-    }
-
-    if (evt && evt.target) {
-        evt.target.classList.add('active');
-    } else {
-        const fallbackBtn = document.querySelector(`.tab-btn[onclick*="openTab('${tabName}')"]`);
-        if (fallbackBtn) fallbackBtn.classList.add('active');
+    
+    document.getElementById(tabName).classList.add('active');
+    if (event && event.target) {
+        event.target.classList.add('active');
     }
     
     console.log('📑 Tab gewechselt zu:', tabName);
@@ -456,6 +469,7 @@ function openTab(tabName, evt) {
         if (tabName === 'news') loadNews();
         if (tabName === 'themen') loadThemen();
         if (tabName === 'gruppen') loadGruppen();
+        if (tabName === 'klassen') loadKlassen(); // NEU: Klassen-Tab
         if (tabName === 'lehrer') loadLehrer();
         if (tabName === 'daten') loadDatenverwaltung();
         if (tabName === 'bewerten') loadBewertungen();
@@ -511,6 +525,11 @@ function getGruppenFromCache() {
     return Object.values(dataCache.gruppen || {});
 }
 
+// NEU: Klassen aus Cache
+function getKlassenFromCache() {
+    return Object.values(dataCache.klassen || {});
+}
+
 // Bewertungen aus Cache (für aktuellen Lehrer)
 function getBewertungenFromCache() {
     if (!currentUser) return [];
@@ -552,6 +571,7 @@ window.firebaseFunctions = {
     getNewsFromCache,
     getThemenFromCache,
     getGruppenFromCache,
+    getKlassenFromCache, // NEU: Klassen-Cache Access
     getBewertungenFromCache,
     getAllFaecher,
     getFachNameFromGlobal,
