@@ -547,10 +547,23 @@ function getGruppenForUser() {
     return getGruppenForCurrentUser();
 }
 
+// === GLOBALE FUNKTIONEN VERFÜGBAR MACHEN ===
+// Alle wichtigen Funktionen global verfügbar machen
+window.loadGruppen = loadGruppen;
+window.gruppeErstellen = gruppeErstellen;
+window.gruppeBearbeiten = gruppeBearbeiten;
+window.gruppeLoeschen = gruppeLoeschen;
+window.schuelerHinzufuegen = schuelerHinzufuegen;
+window.schuelerEntfernen = schuelerEntfernen;
+window.gruppeEditSpeichern = gruppeEditSpeichern;
+window.gruppeEditAbbrechen = gruppeEditAbbrechen;
+window.editSchuelerEntfernen = editSchuelerEntfernen;
+window.neuerSchuelerInEdit = neuerSchuelerInEdit;
+
 // Export für andere Module
 window.gruppenFunctions = {
     getGruppenForUser,
     updateSchuelerSelects
 };
 
-console.log('✅ Firebase Gruppen-System bereit');
+console.log('✅ Firebase Gruppen-System bereit - Funktionen global verfügbar');
