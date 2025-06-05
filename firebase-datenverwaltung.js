@@ -23,9 +23,15 @@ async function loadStatistiken() {
                 </div>
                 
                 <div class="statistik-card">
-                    <h4>🏫 Gruppen</h4>
+                    <h4>🏫 Klassen</h4>
+                    <div style="font-size: 2rem; font-weight: bold; color: #9b59b6;">${stats.klassen.total}</div>
+                    <small>${stats.klassen.schueler} Schüler gesamt</small>
+                </div>
+                
+                <div class="statistik-card">
+                    <h4>👥 Gruppen</h4>
                     <div style="font-size: 2rem; font-weight: bold; color: #667eea;">${stats.gruppen.total}</div>
-                    <small>${stats.gruppen.schueler} Schüler gesamt</small>
+                    <small>${stats.gruppen.schueler} zugewiesene Schüler</small>
                 </div>
                 
                 <div class="statistik-card">
@@ -87,6 +93,7 @@ async function calculateSystemStatistiken() {
     const stats = {
         users: { total: 0, lehrer: 0, admin: 0 },
         gruppen: { total: 0, schueler: 0 },
+        klassen: { total: 0, schueler: 0 }, // NEU: Klassen-Statistiken
         bewertungen: { total: 0, durchschnitt: 0, fortschritt: 0 },
         news: { total: 0, wichtig: 0 },
         faecher: {},
@@ -118,6 +125,15 @@ async function calculateSystemStatistiken() {
                         stats.faecher[fachName] = (stats.faecher[fachName] || 0) + 1;
                     }
                 });
+            }
+        });
+        
+        // NEU: Klassen-Statistiken
+        const klassen = window.firebaseFunctions.getKlassenFromCache();
+        stats.klassen.total = klassen.length;
+        klassen.forEach(klasse => {
+            if (klasse.schueler) {
+                stats.klassen.schueler += klasse.schueler.length;
             }
         });
         
@@ -221,6 +237,11 @@ async function datenExportieren(typ) {
                 filename = `gruppen-export-${new Date().toISOString().split('T')[0]}.json`;
                 break;
                 
+            case 'klassen':
+                exportData = await exportKlassen();
+                filename = `klassen-export-${new Date().toISOString().split('T')[0]}.json`;
+                break;
+                
             default:
                 alert('Unbekannter Export-Typ!');
                 return;
@@ -261,7 +282,7 @@ async function exportAlleData() {
     };
     
     // Alle Bereiche der Firebase Database laden
-    const bereiche = ['users', 'gruppen', 'bewertungen', 'news', 'themen', 'vorlagen', 'system', 'config'];
+    const bereiche = ['users', 'gruppen', 'klassen', 'bewertungen', 'news', 'themen', 'vorlagen', 'system', 'config'];
     
     for (const bereich of bereiche) {
         try {
@@ -312,6 +333,20 @@ async function exportGruppen() {
     return exportData;
 }
 
+// NEU: Klassen exportieren
+async function exportKlassen() {
+    const exportData = {
+        exportInfo: {
+            typ: 'Klassen-Export',
+            datum: new Date().toISOString(),
+            exportiert_von: window.firebaseFunctions.getCurrentUserName()
+        },
+        klassen: window.firebaseFunctions.getKlassenFromCache()
+    };
+    
+    return exportData;
+}
+
 // Daten löschen
 async function datenLoeschen(typ) {
     console.log('🗑️ Lösche Daten:', typ);
@@ -327,6 +362,11 @@ async function datenLoeschen(typ) {
             bereiche = ['bewertungen'];
             break;
             
+        case 'klassen':
+            confirmText = 'ALLE KLASSEN löschen?\n\nDies löscht auch alle zugehörigen Gruppen und Bewertungen!';
+            bereiche = ['klassen'];
+            break;
+            
         case 'gruppen':
             confirmText = 'ALLE GRUPPEN löschen?\n\nDies löscht auch alle zugehörigen Bewertungen!';
             bereiche = ['gruppen', 'bewertungen'];
@@ -338,8 +378,8 @@ async function datenLoeschen(typ) {
             break;
             
         case 'alle':
-            confirmText = 'WIRKLICH ALLE DATEN LÖSCHEN?\n\nDies löscht:\n- Alle Gruppen\n- Alle Bewertungen\n- Alle News\n- Alle Themen\n- Alle Vorlagen\n\nDIES KANN NICHT RÜCKGÄNGIG GEMACHT WERDEN!';
-            bereiche = ['gruppen', 'bewertungen', 'news', 'themen', 'vorlagen'];
+            confirmText = 'WIRKLICH ALLE DATEN LÖSCHEN?\n\nDies löscht:\n- Alle Klassen\n- Alle Gruppen\n- Alle Bewertungen\n- Alle News\n- Alle Themen\n- Alle Vorlagen\n\nDIES KANN NICHT RÜCKGÄNGIG GEMACHT WERDEN!';
+            bereiche = ['klassen', 'gruppen', 'bewertungen', 'news', 'themen', 'vorlagen'];
             break;
             
         default:
