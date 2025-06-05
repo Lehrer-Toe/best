@@ -13,18 +13,18 @@ function loadGruppen() {
     const liste = document.getElementById('gruppenListe');
     if (!liste) return;
     
-    // Gruppen basierend auf Benutzerrolle filtern
-    const gruppen = getGruppenForCurrentUser();
+    // Gruppen aus Cache holen
+    const gruppen = window.firebaseFunctions.getGruppenFromCache();
     
     // Bewertungen für Statusanzeige laden
     const alleBewertungen = getAllBewertungsdata();
     
     let html = '';
     gruppen.forEach((gruppe) => {
-        // Berechtigung prüfen - Admin oder Ersteller können bearbeiten
+        // Berechtigung prüfen - Admin oder beteiligte Lehrer können bearbeiten
         const currentUserName = window.firebaseFunctions.getCurrentUserName();
-        const istErsteller = gruppe.ersteller === currentUserName;
-        const kannBearbeiten = window.firebaseFunctions.isAdmin() || istErsteller;
+        const istBeteiligt = gruppe.schueler?.some(s => s.lehrer === currentUserName);
+        const kannBearbeiten = window.firebaseFunctions.isAdmin() || istBeteiligt;
         
         html += `<div class="liste-item">
             <div>
@@ -52,7 +52,7 @@ function loadGruppen() {
             </div>
             <div>
                 ${kannBearbeiten ? `<button class="btn" onclick="gruppeBearbeiten('${gruppe.id}')">Bearbeiten</button>` : ''}
-                ${window.firebaseFunctions.isAdmin() || istErsteller ? `<button class="btn btn-danger" onclick="gruppeLoeschen('${gruppe.id}')">Löschen</button>` : ''}
+                ${window.firebaseFunctions.isAdmin() ? `<button class="btn btn-danger" onclick="gruppeLoeschen('${gruppe.id}')">Löschen</button>` : ''}
             </div>
         </div>`;
     });
@@ -63,19 +63,6 @@ function loadGruppen() {
     updateSchuelerSelects();
     
     console.log('👥 Gruppen geladen:', gruppen.length);
-}
-
-// Gruppen für aktuellen Benutzer filtern
-function getGruppenForCurrentUser() {
-    const alleGruppen = window.firebaseFunctions.getGruppenFromCache();
-    const currentUserName = window.firebaseFunctions.getCurrentUserName();
-    
-    if (window.firebaseFunctions.isAdmin()) {
-        return alleGruppen; // Admin sieht alle Gruppen
-    } else {
-        // Lehrer sieht nur selbst erstellte Gruppen
-        return alleGruppen.filter(gruppe => gruppe.ersteller === currentUserName);
-    }
 }
 
 // Alle Bewertungsdaten sammeln (für Statusanzeige)
@@ -149,8 +136,13 @@ async function loadLehrerForSelects() {
 
 // Schüler-Zeile hinzufügen
 function schuelerHinzufuegen() {
+    console.log('➕ Füge Schüler-Zeile hinzu...');
+    
     const container = document.getElementById('schuelerListe');
-    if (!container) return;
+    if (!container) {
+        console.error('❌ Container schuelerListe nicht gefunden!');
+        return;
+    }
     
     const newRow = document.createElement('div');
     newRow.className = 'input-group schueler-row';
@@ -171,41 +163,66 @@ function schuelerHinzufuegen() {
     // Neue Selects mit Optionen füllen
     updateSchuelerSelects();
     
-    console.log('➕ Schüler-Zeile hinzugefügt');
+    console.log('✅ Schüler-Zeile hinzugefügt');
 }
 
 // Schüler-Zeile entfernen
 function schuelerEntfernen(button) {
+    console.log('➖ Entferne Schüler-Zeile...');
+    
     const rows = document.querySelectorAll('.schueler-row');
     if (rows.length > 1) {
         button.parentElement.remove();
-        console.log('➖ Schüler-Zeile entfernt');
+        console.log('✅ Schüler-Zeile entfernt');
     } else {
         alert('Mindestens ein Schüler muss vorhanden sein!');
     }
 }
 
-// Neue Gruppe erstellen
+// KORRIGIERT: Neue Gruppe erstellen
 async function gruppeErstellen() {
     console.log('👥 Erstelle neue Gruppe...');
     
-    if (!window.firebaseFunctions.requireAuth()) return;
+    if (!window.firebaseFunctions.requireAuth()) {
+        console.error('❌ Nicht authentifiziert!');
+        return;
+    }
     
     const themaInput = document.getElementById('gruppenThema');
-    const thema = themaInput?.value.trim();
+    if (!themaInput) {
+        console.error('❌ Thema-Input nicht gefunden!');
+        alert('Fehler: Thema-Eingabefeld nicht gefunden!');
+        return;
+    }
+    
+    const thema = themaInput.value.trim();
     
     if (!thema) {
         alert('Bitte geben Sie ein Thema ein!');
+        themaInput.focus();
         return;
     }
 
     const schuelerRows = document.querySelectorAll('.schueler-row');
+    console.log('🔍 Gefundene Schüler-Zeilen:', schuelerRows.length);
+    
+    if (schuelerRows.length === 0) {
+        alert('Keine Schüler-Eingabezeilen gefunden! Bitte laden Sie die Seite neu.');
+        return;
+    }
+    
     const schueler = [];
     
     for (let row of schuelerRows) {
-        const name = row.querySelector('.schueler-name')?.value.trim();
-        const lehrer = row.querySelector('.schueler-lehrer')?.value;
-        const fach = row.querySelector('.schueler-fach')?.value;
+        const nameInput = row.querySelector('.schueler-name');
+        const lehrerSelect = row.querySelector('.schueler-lehrer');
+        const fachSelect = row.querySelector('.schueler-fach');
+        
+        const name = nameInput?.value.trim();
+        const lehrer = lehrerSelect?.value;
+        const fach = fachSelect?.value;
+        
+        console.log('📝 Schüler-Daten:', { name, lehrer, fach });
         
         if (name && lehrer) {
             schueler.push({ name, lehrer, fach: fach || null });
@@ -219,6 +236,8 @@ async function gruppeErstellen() {
         alert('Bitte fügen Sie mindestens einen Schüler hinzu!');
         return;
     }
+
+    console.log('👥 Erstelle Gruppe mit', schueler.length, 'Schülern:', schueler);
 
     try {
         // Gruppe zu Firebase hinzufügen
@@ -235,6 +254,8 @@ async function gruppeErstellen() {
         };
         
         await window.firebaseDB.set(newGruppenRef, gruppe);
+        
+        console.log('✅ Gruppe in Firebase gespeichert:', gruppe);
         
         // News für jeden betroffenen Lehrer erstellen
         const lehrer = [...new Set(schueler.map(s => s.lehrer))];
@@ -260,6 +281,12 @@ async function gruppeErstellen() {
         
         alert(`Gruppe "${thema}" wurde erfolgreich erstellt!`);
         
+        // Scroll zur Gruppenliste
+        const gruppenListe = document.getElementById('gruppenListe');
+        if (gruppenListe) {
+            gruppenListe.scrollIntoView({ behavior: 'smooth' });
+        }
+        
     } catch (error) {
         console.error('❌ Fehler beim Erstellen der Gruppe:', error);
         alert('Fehler beim Erstellen der Gruppe: ' + error.message);
@@ -279,16 +306,6 @@ async function gruppeBearbeiten(gruppenId) {
         
         if (!gruppe) {
             alert('Gruppe nicht gefunden!');
-            return;
-        }
-        
-        // Berechtigung prüfen
-        const currentUserName = window.firebaseFunctions.getCurrentUserName();
-        const istErsteller = gruppe.ersteller === currentUserName;
-        const istAdmin = window.firebaseFunctions.isAdmin();
-        
-        if (!istAdmin && !istErsteller) {
-            alert('Sie können nur selbst erstellte Gruppen bearbeiten!');
             return;
         }
         
@@ -466,7 +483,7 @@ function gruppeEditAbbrechen() {
 
 // Gruppe löschen
 async function gruppeLoeschen(gruppenId) {
-    if (!window.firebaseFunctions.requireAuth()) return;
+    if (!window.firebaseFunctions.requireAdmin()) return;
     
     try {
         // Gruppe aus Cache finden
@@ -475,16 +492,6 @@ async function gruppeLoeschen(gruppenId) {
         
         if (!gruppe) {
             alert('Gruppe nicht gefunden!');
-            return;
-        }
-        
-        // Berechtigung prüfen
-        const currentUserName = window.firebaseFunctions.getCurrentUserName();
-        const istErsteller = gruppe.ersteller === currentUserName;
-        const istAdmin = window.firebaseFunctions.isAdmin();
-        
-        if (!istAdmin && !istErsteller) {
-            alert('Sie können nur selbst erstellte Gruppen löschen!');
             return;
         }
         
@@ -544,26 +551,38 @@ async function deleteGruppenBewertungen(gruppenId) {
 
 // Gruppen-Daten für andere Module bereitstellen
 function getGruppenForUser() {
-    return getGruppenForCurrentUser();
+    const gruppen = window.firebaseFunctions.getGruppenFromCache();
+    const currentUserName = window.firebaseFunctions.getCurrentUserName();
+    
+    if (window.firebaseFunctions.isAdmin()) {
+        return gruppen; // Admin sieht alle Gruppen
+    } else {
+        // Lehrer sieht nur Gruppen mit eigenen Schülern
+        return gruppen.filter(gruppe => 
+            gruppe.schueler && gruppe.schueler.some(s => s.lehrer === currentUserName)
+        );
+    }
 }
 
-// === GLOBALE FUNKTIONEN VERFÜGBAR MACHEN ===
-// Alle wichtigen Funktionen global verfügbar machen
-window.loadGruppen = loadGruppen;
+// GLOBALE FUNKTIONEN FÜR WINDOW - WICHTIG FÜR ONCLICK-HANDLER
 window.gruppeErstellen = gruppeErstellen;
-window.gruppeBearbeiten = gruppeBearbeiten;
-window.gruppeLoeschen = gruppeLoeschen;
 window.schuelerHinzufuegen = schuelerHinzufuegen;
 window.schuelerEntfernen = schuelerEntfernen;
+window.gruppeBearbeiten = gruppeBearbeiten;
+window.gruppeLoeschen = gruppeLoeschen;
 window.gruppeEditSpeichern = gruppeEditSpeichern;
 window.gruppeEditAbbrechen = gruppeEditAbbrechen;
-window.editSchuelerEntfernen = editSchuelerEntfernen;
 window.neuerSchuelerInEdit = neuerSchuelerInEdit;
+window.editSchuelerEntfernen = editSchuelerEntfernen;
 
 // Export für andere Module
 window.gruppenFunctions = {
     getGruppenForUser,
-    updateSchuelerSelects
+    updateSchuelerSelects,
+    loadGruppen, // Wichtig: auch loadGruppen exportieren
+    gruppeErstellen,
+    schuelerHinzufuegen,
+    schuelerEntfernen
 };
 
-console.log('✅ Firebase Gruppen-System bereit - Funktionen global verfügbar');
+console.log('✅ Firebase Gruppen-System bereit - Alle Funktionen global verfügbar');
