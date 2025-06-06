@@ -7,6 +7,7 @@ let dataCache = {
     faecher: {},
     bewertungsCheckpoints: {},
     themen: {},
+    klassen: {},
     gruppen: {},
     bewertungen: {},
     vorlagen: {},
@@ -51,6 +52,7 @@ function initializeDataCache() {
         faecher: {},
         bewertungsCheckpoints: {},
         themen: {},
+        klassen: {},
         gruppen: {},
         bewertungen: {},
         vorlagen: {},
@@ -73,7 +75,10 @@ async function loadSystemData() {
         
         // Fächer laden
         await loadFaecher();
-        
+
+        // Klassen laden
+        await loadKlassen();
+
         // Bewertungs-Checkpoints laden
         await loadBewertungsCheckpoints();
         
@@ -349,6 +354,25 @@ async function loadStaerkenFormulierungen() {
     }
 }
 
+// Klassen laden
+async function loadKlassen() {
+    try {
+        const klassenRef = window.firebaseDB.ref(window.database, 'klassen');
+        const snapshot = await window.firebaseDB.get(klassenRef);
+
+        if (snapshot.exists()) {
+            dataCache.klassen = Object.values(snapshot.val());
+            console.log('✅ Klassen geladen:', dataCache.klassen.length);
+        } else {
+            dataCache.klassen = [];
+            console.log('ℹ️ Keine Klassen gefunden');
+        }
+    } catch (error) {
+        console.error('❌ Fehler beim Laden der Klassen:', error);
+        dataCache.klassen = [];
+    }
+}
+
 // === REALTIME LISTENERS ===
 
 // Realtime Listeners einrichten
@@ -388,6 +412,24 @@ function setupRealtimeListeners() {
                 console.log('🔄 Gruppen Update erhalten');
                 if (typeof loadGruppen === 'function') {
                     loadGruppen();
+                }
+            }
+        });
+
+        // Klassen Listener
+        const klassenRef = window.firebaseDB.ref(window.database, 'klassen');
+        activeListeners.klassen = window.firebaseDB.onValue(klassenRef, (snapshot) => {
+            if (snapshot.exists()) {
+                dataCache.klassen = Object.values(snapshot.val());
+                console.log('🔄 Klassen Update erhalten');
+                if (typeof updateKlassenSelects === 'function') {
+                    updateKlassenSelects();
+                }
+                if (typeof loadKlassenListe === 'function') {
+                    loadKlassenListe();
+                }
+                if (typeof updateKlassenauswahlForGruppen === 'function') {
+                    updateKlassenauswahlForGruppen();
                 }
             }
         });
@@ -511,6 +553,11 @@ function getGruppenFromCache() {
     return Object.values(dataCache.gruppen || {});
 }
 
+// Klassen aus Cache
+function getKlassenFromCache() {
+    return Array.isArray(dataCache.klassen) ? dataCache.klassen : [];
+}
+
 // Bewertungen aus Cache (für aktuellen Lehrer)
 function getBewertungenFromCache() {
     if (!currentUser) return [];
@@ -552,6 +599,7 @@ window.firebaseFunctions = {
     getNewsFromCache,
     getThemenFromCache,
     getGruppenFromCache,
+    getKlassenFromCache,
     getBewertungenFromCache,
     getAllFaecher,
     getFachNameFromGlobal,
