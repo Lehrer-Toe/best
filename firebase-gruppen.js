@@ -5,6 +5,34 @@ console.log('👥 Firebase Gruppen-System geladen (mit Klassen-Integration)');
 let aktuelleGruppeEdit = null;
 let ausgewaehlteSchueler = [];
 
+// Gruppe-Erstellen Modal anzeigen
+function showGruppenCreateModal() {
+    const modal = document.getElementById('gruppenCreateModal');
+    if (!modal) return;
+
+    modal.classList.remove('hidden');
+    ausgewaehlteSchueler = [];
+    schuelerInBearbeitung = null;
+    document.getElementById('gruppenThema').value = '';
+    document.getElementById('gruppenKlasseSelect').value = '';
+    document.getElementById('verfuegbareSchueler').innerHTML = '<p>Bitte wählen Sie eine Klasse aus.</p>';
+    document.getElementById('schuelerDetail').innerHTML = '';
+    document.getElementById('ausgewaehlteSchuelerAnzeige').innerHTML = '<p>Keine Schüler ausgewählt.</p>';
+    updateKlassenauswahlForGruppen();
+    updateLehrerSelects();
+}
+
+function gruppeCreateAbbrechen() {
+    const modal = document.getElementById('gruppenCreateModal');
+    if (modal) modal.classList.add('hidden');
+    ausgewaehlteSchueler = [];
+    schuelerInBearbeitung = null;
+}
+
+function gruppeErstellenAbschliessen() {
+    gruppeErstellen();
+}
+
 // Gruppen laden und anzeigen
 function loadGruppen() {
     console.log('👥 Lade Gruppen von Firebase...');
@@ -145,8 +173,12 @@ function klasseGewaehlt() {
         return;
     }
     
-    // Verfügbare Schüler der Klasse laden
-    const verfuegbareSchueler = window.klassenFunctions.getVerfuegbareSchueler(klasseId);
+    // Verfügbare Schüler der Klasse laden und alphabetisch sortieren
+    const ausgewaehltKeys = new Set(ausgewaehlteSchueler.map(s => `${s.vorname}-${s.nachname}`));
+    const verfuegbareSchueler = window.klassenFunctions
+        .getVerfuegbareSchueler(klasseId)
+        .filter(s => !ausgewaehltKeys.has(`${s.vorname}-${s.nachname}`))
+        .sort((a, b) => a.nachname.localeCompare(b.nachname) || a.vorname.localeCompare(b.vorname));
     
     if (verfuegbareSchueler.length === 0) {
         schuelerContainer.innerHTML = '<p>Alle Schüler dieser Klasse sind bereits in Gruppen eingeteilt.</p>';
@@ -156,53 +188,73 @@ function klasseGewaehlt() {
     }
     
     // Schüler-Auswahl anzeigen
-    let html = '<h4>Verfügbare Schüler auswählen:</h4><div class="schueler-auswahl-grid">';
-    
+    let html = '<h4>Verfügbare Schüler:</h4><div class="schueler-auswahl-grid">';
+
     verfuegbareSchueler.forEach((schueler, index) => {
         html += `
-            <div class="schueler-auswahl-item" onclick="schuelerToggle('${klasseId}', ${index})">
-                <input type="checkbox" id="schueler-${index}" class="schueler-checkbox">
-                <label for="schueler-${index}">${schueler.vorname} ${schueler.nachname}</label>
+            <div class="schueler-auswahl-item">
+                <button class="btn btn-small" onclick="schuelerDetails('${klasseId}', ${index})">${schueler.vorname} ${schueler.nachname}</button>
             </div>
         `;
     });
-    
+
     html += '</div>';
     schuelerContainer.innerHTML = html;
-    
-    // Reset ausgewählte Schüler
-    ausgewaehlteSchueler = [];
+
     updateAusgewaehlteSchuelerAnzeige();
 }
 
-// Schüler auswählen/abwählen
-function schuelerToggle(klasseId, schuelerIndex) {
-    const checkbox = document.getElementById(`schueler-${schuelerIndex}`);
-    const verfuegbareSchueler = window.klassenFunctions.getVerfuegbareSchueler(klasseId);
+let schuelerInBearbeitung = null;
+
+// Details für ausgewählten Schüler anzeigen
+function schuelerDetails(klasseId, schuelerIndex) {
+    const verfuegbareSchueler = window.klassenFunctions
+        .getVerfuegbareSchueler(klasseId)
+        .sort((a, b) => a.nachname.localeCompare(b.nachname) || a.vorname.localeCompare(b.vorname));
     const schueler = verfuegbareSchueler[schuelerIndex];
-    
     if (!schueler) return;
-    
-    checkbox.checked = !checkbox.checked;
-    
-    if (checkbox.checked) {
-        // Schüler hinzufügen
-        if (!ausgewaehlteSchueler.find(s => s.vorname === schueler.vorname && s.nachname === schueler.nachname)) {
-            ausgewaehlteSchueler.push({
-                ...schueler,
-                klasseId: klasseId,
-                lehrer: '', // Wird später zugewiesen
-                fach: ''    // Wird später zugewiesen
-            });
-        }
-    } else {
-        // Schüler entfernen
-        ausgewaehlteSchueler = ausgewaehlteSchueler.filter(s => 
-            !(s.vorname === schueler.vorname && s.nachname === schueler.nachname)
-        );
+
+    schuelerInBearbeitung = { ...schueler, klasseId };
+
+    const detail = document.getElementById('schuelerDetail');
+    if (detail) {
+        detail.innerHTML = `
+            <div class="schueler-detail-form">
+                <strong>${schueler.vorname} ${schueler.nachname}</strong><br>
+                <select id="detailLehrer">
+                    <option value="">Lehrer wählen...</option>
+                    ${getLehrerOptions()}
+                </select>
+                <select id="detailFach">
+                    <option value="">Fach wählen...</option>
+                    ${getFachOptions()}
+                </select>
+                <button class="btn btn-success btn-sm" onclick="hinzufuegenAktuellenSchueler()">Hinzufügen</button>
+            </div>`;
     }
-    
-    updateAusgewaehlteSchuelerAnzeige();
+}
+
+// Ausgewählten Schüler aus Detail hinzufügen
+function hinzufuegenAktuellenSchueler() {
+    if (!schuelerInBearbeitung) return;
+
+    const lehrer = document.getElementById('detailLehrer').value;
+    const fach = document.getElementById('detailFach').value;
+
+    if (!lehrer || !fach) {
+        alert('Bitte Lehrer und Fach wählen!');
+        return;
+    }
+
+    schuelerInBearbeitung.lehrer = lehrer;
+    schuelerInBearbeitung.fach = fach;
+
+    ausgewaehlteSchueler.push(schuelerInBearbeitung);
+    schuelerInBearbeitung = null;
+    const detail = document.getElementById('schuelerDetail');
+    if (detail) detail.innerHTML = '';
+
+    klasseGewaehlt();
 }
 
 // Anzeige der ausgewählten Schüler aktualisieren
@@ -239,10 +291,24 @@ function updateAusgewaehlteSchuelerAnzeige() {
 
 // Lehrer-Optionen für Select generieren
 function getLehrerOptions() {
-    // Diese Funktion sollte verfügbare Lehrer aus Firebase laden
-    // Für jetzt verwenden wir eine statische Liste
-    const lehrer = ['Max Mustermann', 'Anna Schmidt', 'Thomas Weber']; // TODO: Aus Firebase laden
-    return lehrer.map(name => `<option value="${name}">${name}</option>`).join('');
+    const lehrer = window.firebaseFunctions.getLehrerFromCache();
+    return lehrer.map(l => `<option value="${l.name}">${l.name}</option>`).join('');
+}
+
+// Lehrer-Selects aktualisieren
+function updateLehrerSelects() {
+    const optionHtml = '<option value="">Lehrer wählen...</option>' + getLehrerOptions();
+    const detailSelect = document.getElementById('detailLehrer');
+    if (detailSelect) {
+        const current = detailSelect.value;
+        detailSelect.innerHTML = optionHtml;
+        detailSelect.value = current;
+    }
+    document.querySelectorAll('.schueler-lehrer-select').forEach(sel => {
+        const cur = sel.value;
+        sel.innerHTML = optionHtml;
+        sel.value = cur;
+    });
 }
 
 // Fach-Optionen für Select generieren
@@ -271,20 +337,10 @@ function fachZuweisen(index, fach) {
 function ausgewaehltenSchuelerEntfernen(index) {
     const schueler = ausgewaehlteSchueler[index];
     if (!schueler) return;
-    
-    // Checkbox zurücksetzen
-    const verfuegbareSchueler = window.klassenFunctions.getVerfuegbareSchueler(schueler.klasseId);
-    const originalIndex = verfuegbareSchueler.findIndex(s => 
-        s.vorname === schueler.vorname && s.nachname === schueler.nachname
-    );
-    
-    if (originalIndex !== -1) {
-        const checkbox = document.getElementById(`schueler-${originalIndex}`);
-        if (checkbox) checkbox.checked = false;
-    }
-    
+
     // Aus ausgewählten entfernen
     ausgewaehlteSchueler.splice(index, 1);
+    klasseGewaehlt();
     updateAusgewaehlteSchuelerAnzeige();
 }
 
@@ -359,6 +415,8 @@ async function gruppeErstellen() {
         document.getElementById('verfuegbareSchueler').innerHTML = '<p>Bitte wählen Sie eine Klasse aus.</p>';
         document.getElementById('ausgewaehlteSchuelerAnzeige').innerHTML = '<p>Keine Schüler ausgewählt.</p>';
         ausgewaehlteSchueler = [];
+
+        gruppeCreateAbbrechen();
         
         console.log('✅ Gruppe erstellt:', thema, 'mit', gruppe.schueler.length, 'Schülern');
         
@@ -631,7 +689,8 @@ function getGruppenForUser() {
 // Export für andere Module
 window.gruppenFunctions = {
     getGruppenForUser,
-    updateKlassenauswahlForGruppen
+    updateKlassenauswahlForGruppen,
+    updateLehrerSelects
 };
 
 console.log('✅ Firebase Gruppen-System bereit (mit Klassen-Integration)');
