@@ -176,8 +176,9 @@ function showApp() {
     
     // KOMPLETT ALLE Tabs verstecken und Buttons deaktivieren
     const allTabs = [
-        'newsTab', 'themenTab', 'gruppenTab', 'lehrerTab', 
-        'datenTab', 'bewertenTab', 'vorlagenTab', 'uebersichtTab', 'adminvorlagenTab'
+        'newsTab', 'themenTab', 'gruppenTab', 'lehrerTab',
+        'datenTab', 'bewertenTab', 'vorlagenTab', 'uebersichtTab',
+        'adminvorlagenTab', 'klassenTab'
     ];
     
     allTabs.forEach(tabId => {
@@ -203,6 +204,7 @@ function showApp() {
         document.getElementById('lehrerTab').style.display = 'block';
         document.getElementById('datenTab').style.display = 'block';
         document.getElementById('adminvorlagenTab').style.display = 'block';
+        document.getElementById('klassenTab').style.display = 'block';
         
         // Ersten sichtbaren Tab aktivieren
         document.getElementById('newsTab').classList.add('active');
@@ -258,8 +260,9 @@ async function firebaseLogout() {
 // Alle Tabs verstecken
 function hideAllTabs() {
     const allTabs = [
-        'newsTab', 'themenTab', 'gruppenTab', 'lehrerTab', 
-        'datenTab', 'bewertenTab', 'vorlagenTab', 'uebersichtTab', 'adminvorlagenTab'
+        'newsTab', 'themenTab', 'gruppenTab', 'lehrerTab',
+        'datenTab', 'bewertenTab', 'vorlagenTab', 'uebersichtTab',
+        'adminvorlagenTab', 'klassenTab'
     ];
     
     allTabs.forEach(tabId => {
