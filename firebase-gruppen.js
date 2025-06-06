@@ -160,8 +160,8 @@ function klasseGewaehlt() {
     
     verfuegbareSchueler.forEach((schueler, index) => {
         html += `
-            <div class="schueler-auswahl-item" onclick="schuelerToggle('${klasseId}', ${index})">
-                <input type="checkbox" id="schueler-${index}" class="schueler-checkbox">
+            <div class="schueler-auswahl-item">
+                <input type="checkbox" id="schueler-${index}" class="schueler-checkbox" onchange="schuelerToggle('${klasseId}', ${index}, this.checked)">
                 <label for="schueler-${index}">${schueler.vorname} ${schueler.nachname}</label>
             </div>
         `;
@@ -176,16 +176,20 @@ function klasseGewaehlt() {
 }
 
 // Schüler auswählen/abwählen
-function schuelerToggle(klasseId, schuelerIndex) {
+function schuelerToggle(klasseId, schuelerIndex, isChecked) {
     const checkbox = document.getElementById(`schueler-${schuelerIndex}`);
     const verfuegbareSchueler = window.klassenFunctions.getVerfuegbareSchueler(klasseId);
     const schueler = verfuegbareSchueler[schuelerIndex];
-    
+
     if (!schueler) return;
-    
-    checkbox.checked = !checkbox.checked;
-    
-    if (checkbox.checked) {
+
+    if (isChecked === undefined) {
+        isChecked = checkbox.checked;
+    } else {
+        checkbox.checked = isChecked;
+    }
+
+    if (isChecked) {
         // Schüler hinzufügen
         if (!ausgewaehlteSchueler.find(s => s.vorname === schueler.vorname && s.nachname === schueler.nachname)) {
             ausgewaehlteSchueler.push({
@@ -197,7 +201,7 @@ function schuelerToggle(klasseId, schuelerIndex) {
         }
     } else {
         // Schüler entfernen
-        ausgewaehlteSchueler = ausgewaehlteSchueler.filter(s => 
+        ausgewaehlteSchueler = ausgewaehlteSchueler.filter(s =>
             !(s.vorname === schueler.vorname && s.nachname === schueler.nachname)
         );
     }
@@ -238,6 +242,14 @@ async function updateAusgewaehlteSchuelerAnzeige() {
     });
     
     container.innerHTML = html;
+
+    // Gewählte Lehrer/Fächer wiederherstellen
+    container.querySelectorAll('.schueler-lehrer-select').forEach((sel, i) => {
+        sel.value = ausgewaehlteSchueler[i].lehrer || '';
+    });
+    container.querySelectorAll('.schueler-fach-select').forEach((sel, i) => {
+        sel.value = ausgewaehlteSchueler[i].fach || '';
+    });
 }
 
 // Lehrer-Optionen für Select generieren
