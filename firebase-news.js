@@ -47,16 +47,6 @@ function loadNews() {
         return true;
     });
     
-    // NEU: "Alles gelesen" Button nur anzeigen wenn News vorhanden
-    const newsActionBereich = document.getElementById('newsActionBereich');
-    if (newsActionBereich) {
-        if (aktuelleNews.length > 0) {
-            newsActionBereich.style.display = 'block';
-        } else {
-            newsActionBereich.style.display = 'none';
-        }
-    }
-    
     if (aktuelleNews.length === 0) {
         newsList.innerHTML = '<div class="card"><p>Keine aktuellen News vorhanden.</p></div>';
         return;
@@ -248,62 +238,6 @@ async function newsAlsGelesenMarkieren(newsId) {
     } catch (error) {
         console.error('❌ Fehler beim Markieren als gelesen:', error);
         alert('Fehler beim Markieren als gelesen: ' + error.message);
-    }
-}
-
-// NEU: Alle News als gelesen markieren
-async function alleNewsAlsGelesenMarkieren() {
-    console.log('📚 Markiere alle News als gelesen...');
-    
-    if (!window.firebaseFunctions.requireAuth()) return;
-    
-    if (!confirm('Wirklich alle aktuell sichtbaren News als gelesen markieren?')) {
-        return;
-    }
-    
-    try {
-        const currentUserEmail = window.authFunctions.getUserEmail();
-        const sanitizedEmail = window.firebaseFunctions.sanitizeEmail(currentUserEmail);
-        
-        // Alle aktuell sichtbaren News finden
-        const allNews = window.firebaseFunctions.getNewsFromCache();
-        const relevanteNews = filterNewsForUser(allNews);
-        
-        const aktuelleNews = relevanteNews.filter(item => {
-            // Nur ungelesene News
-            if (item.gelesenVon && item.gelesenVon[sanitizedEmail]) {
-                return false;
-            }
-            
-            // Prüfe Ablaufdatum
-            if (item.ablauf) {
-                return new Date(item.ablauf) >= new Date();
-            }
-            return true;
-        });
-        
-        if (aktuelleNews.length === 0) {
-            alert('Keine ungelesenen News vorhanden.');
-            return;
-        }
-        
-        // Alle als gelesen markieren
-        const markierungsPromises = aktuelleNews.map(async (newsItem) => {
-            const gelesenRef = window.firebaseFunctions.getDatabaseRef(`news/${newsItem.id}/gelesenVon/${sanitizedEmail}`);
-            return window.firebaseDB.set(gelesenRef, {
-                timestamp: window.firebaseFunctions.getTimestamp(),
-                user: window.firebaseFunctions.getCurrentUserName()
-            });
-        });
-        
-        await Promise.all(markierungsPromises);
-        
-        console.log('✅ Alle News als gelesen markiert:', aktuelleNews.length, 'News');
-        alert(`${aktuelleNews.length} News wurden als gelesen markiert.`);
-        
-    } catch (error) {
-        console.error('❌ Fehler beim Markieren aller News:', error);
-        alert('Fehler beim Markieren aller News: ' + error.message);
     }
 }
 

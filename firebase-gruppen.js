@@ -1,10 +1,8 @@
-// Firebase Gruppen-System - Realtime Database mit Klassen-Filter
+// Firebase Gruppen-System - Realtime Database
 console.log('👥 Firebase Gruppen-System geladen');
 
 // Globale Variablen für Gruppenbearbeitung
 let aktuelleGruppeEdit = null;
-let verfuegbareSchueler = []; // Alle Schüler aus gewählter Klasse
-let bereitsZugewieseneSchueler = []; // Bereits zugewiesene Schüler
 
 // Gruppen laden und anzeigen
 function loadGruppen() {
@@ -21,9 +19,6 @@ function loadGruppen() {
     // Bewertungen für Statusanzeige laden
     const alleBewertungen = getAllBewertungsdata();
     
-    // Bereits zugewiesene Schüler sammeln für Filter
-    updateBereitsZugewieseneSchueler();
-    
     let html = '';
     gruppen.forEach((gruppe) => {
         // Berechtigung prüfen - Admin oder beteiligte Lehrer können bearbeiten
@@ -34,7 +29,7 @@ function loadGruppen() {
         html += `<div class="liste-item">
             <div>
                 <strong>${gruppe.thema}</strong><br>
-                <small>Klasse: ${gruppe.klasse || 'Keine Klasse'} | Erstellt: ${gruppe.erstellt} von ${gruppe.ersteller || 'System'}</small><br>
+                <small>Erstellt: ${gruppe.erstellt} von ${gruppe.ersteller || 'System'}</small><br>
                 <div style="margin-top: 0.5rem;">`;
         
         if (gruppe.schueler && Array.isArray(gruppe.schueler)) {
@@ -64,84 +59,10 @@ function loadGruppen() {
     
     liste.innerHTML = html || '<div class="card"><p>Keine Gruppen vorhanden.</p></div>';
     
-    // Klassen-Filter und Lehrer-Auswahl für neue Gruppen aktualisieren
-    loadKlassenFilter();
+    // Lehrer- und Fach-Auswahl für neue Gruppen aktualisieren
     updateSchuelerSelects();
     
     console.log('👥 Gruppen geladen:', gruppen.length);
-}
-
-// Klassen-Filter laden
-async function loadKlassenFilter() {
-    console.log('🏫 Lade Klassen für Filter...');
-    
-    try {
-        const klassenSelect = document.getElementById('klassenFilter');
-        if (!klassenSelect) return;
-        
-        // Klassen aus Cache holen
-        const klassen = window.firebaseFunctions.getKlassenFromCache();
-        
-        let html = '<option value="">Klasse wählen...</option>';
-        Object.keys(klassen).forEach(klassenName => {
-            html += `<option value="${klassenName}">${klassenName}</option>`;
-        });
-        
-        klassenSelect.innerHTML = html;
-        
-    } catch (error) {
-        console.error('❌ Fehler beim Laden der Klassen:', error);
-    }
-}
-
-// Klasse ausgewählt - Schüler laden
-function klasseAusgewaehlt() {
-    const klassenSelect = document.getElementById('klassenFilter');
-    const selectedKlasse = klassenSelect?.value;
-    
-    if (!selectedKlasse) {
-        verfuegbareSchueler = [];
-        updateSchuelerSelects();
-        return;
-    }
-    
-    console.log('🏫 Klasse ausgewählt:', selectedKlasse);
-    
-    // Schüler der gewählten Klasse laden
-    const klassen = window.firebaseFunctions.getKlassenFromCache();
-    const klassenDaten = klassen[selectedKlasse];
-    
-    if (klassenDaten && klassenDaten.schueler) {
-        verfuegbareSchueler = klassenDaten.schueler.map(schueler => ({
-            ...schueler,
-            klasse: selectedKlasse
-        }));
-    } else {
-        verfuegbareSchueler = [];
-    }
-    
-    // Bereits zugewiesene Schüler herausfiltern
-    updateBereitsZugewieseneSchueler();
-    updateSchuelerDropdowns();
-    
-    // Erste Schüler-Zeile automatisch aktualisieren
-    updateSchuelerSelects();
-}
-
-// Bereits zugewiesene Schüler sammeln
-function updateBereitsZugewieseneSchueler() {
-    bereitsZugewieseneSchueler = [];
-    
-    const gruppen = window.firebaseFunctions.getGruppenFromCache();
-    gruppen.forEach(gruppe => {
-        if (gruppe.schueler) {
-            gruppe.schueler.forEach(schueler => {
-                bereitsZugewieseneSchueler.push(schueler.name);
-            });
-        }
-    });
-    
-    console.log('📋 Bereits zugewiesene Schüler:', bereitsZugewieseneSchueler.length);
 }
 
 // Alle Bewertungsdaten sammeln (für Statusanzeige)
@@ -168,58 +89,6 @@ function getAllBewertungsdata() {
     }
 }
 
-// Schüler-Dropdowns aktualisieren
-function updateSchuelerDropdowns() {
-    const schuelerSelects = document.querySelectorAll('.schueler-name-select');
-    
-    schuelerSelects.forEach(select => {
-        const currentValue = select.value;
-        
-        // Verfügbare Schüler (nicht bereits zugewiesen)
-        const verfuegbar = verfuegbareSchueler.filter(schueler => 
-            !bereitsZugewieseneSchueler.includes(schueler.name) || schueler.name === currentValue
-        );
-        
-        let html = '<option value="">Schüler wählen...</option>';
-        verfuegbar.forEach(schueler => {
-            const selected = schueler.name === currentValue ? 'selected' : '';
-            html += `<option value="${schueler.name}" ${selected}>${schueler.name}</option>`;
-        });
-        
-        select.innerHTML = html;
-    });
-    
-    // Statistik anzeigen
-    updateSchuelerStatistik();
-}
-
-// Schüler-Statistik anzeigen
-function updateSchuelerStatistik() {
-    const statistikElement = document.getElementById('schuelerStatistik');
-    if (!statistikElement) return;
-    
-    const klassenSelect = document.getElementById('klassenFilter');
-    const selectedKlasse = klassenSelect?.value;
-    
-    if (!selectedKlasse) {
-        statistikElement.innerHTML = '<p>Wählen Sie eine Klasse aus, um Schüler zu sehen.</p>';
-        return;
-    }
-    
-    const gesamt = verfuegbareSchueler.length;
-    const verfuegbar = verfuegbareSchueler.filter(s => !bereitsZugewieseneSchueler.includes(s.name)).length;
-    const zugewiesen = gesamt - verfuegbar;
-    
-    statistikElement.innerHTML = `
-        <div class="schueler-statistik">
-            <strong>Klasse ${selectedKlasse}:</strong>
-            <span class="stat-item">📊 Gesamt: ${gesamt}</span>
-            <span class="stat-item verfuegbar">✅ Verfügbar: ${verfuegbar}</span>
-            <span class="stat-item zugewiesen">📝 Zugewiesen: ${zugewiesen}</span>
-        </div>
-    `;
-}
-
 // Lehrer- und Fach-Selects aktualisieren
 function updateSchuelerSelects() {
     console.log('👨‍🏫 Aktualisiere Lehrer- und Fach-Auswahl...');
@@ -237,9 +106,6 @@ function updateSchuelerSelects() {
     fachSelects.forEach(select => {
         select.innerHTML = '<option value="">Fach wählen...</option>' + fachOptions;
     });
-    
-    // Schüler-Dropdowns aktualisieren
-    updateSchuelerDropdowns();
 }
 
 // Lehrer für Selects laden
@@ -268,26 +134,16 @@ async function loadLehrerForSelects() {
     }
 }
 
-// Schüler-Zeile hinzufügen (mit Dropdown)
+// Schüler-Zeile hinzufügen
 function schuelerHinzufuegen() {
     const container = document.getElementById('schuelerListe');
     if (!container) return;
-    
-    const klassenSelect = document.getElementById('klassenFilter');
-    const selectedKlasse = klassenSelect?.value;
-    
-    if (!selectedKlasse) {
-        alert('Bitte wählen Sie zuerst eine Klasse aus!');
-        return;
-    }
     
     const newRow = document.createElement('div');
     newRow.className = 'input-group schueler-row';
     
     newRow.innerHTML = `
-        <select class="schueler-name-select" onchange="schuelerAusgewaehlt(this)">
-            <option value="">Schüler wählen...</option>
-        </select>
+        <input type="text" placeholder="Schülername" class="schueler-name">
         <select class="schueler-lehrer">
             <option value="">Lehrer wählen...</option>
         </select>
@@ -305,43 +161,18 @@ function schuelerHinzufuegen() {
     console.log('➕ Schüler-Zeile hinzugefügt');
 }
 
-// Schüler ausgewählt (Event Handler)
-function schuelerAusgewaehlt(select) {
-    const selectedName = select.value;
-    if (!selectedName) return;
-    
-    // Schüler-Daten finden
-    const schueler = verfuegbareSchueler.find(s => s.name === selectedName);
-    if (!schueler) return;
-    
-    // Automatisch Lehrer vorauswählen falls verfügbar
-    const row = select.closest('.schueler-row');
-    const lehrerSelect = row.querySelector('.schueler-lehrer');
-    
-    if (schueler.klassenlehrer && lehrerSelect) {
-        // Prüfen ob Klassenlehrer in der Lehrer-Liste ist
-        const lehrerOption = Array.from(lehrerSelect.options).find(opt => opt.value === schueler.klassenlehrer);
-        if (lehrerOption) {
-            lehrerSelect.value = schueler.klassenlehrer;
-        }
-    }
-    
-    console.log('👤 Schüler ausgewählt:', selectedName);
-}
-
 // Schüler-Zeile entfernen
 function schuelerEntfernen(button) {
     const rows = document.querySelectorAll('.schueler-row');
     if (rows.length > 1) {
         button.parentElement.remove();
-        updateSchuelerDropdowns(); // Dropdowns nach Entfernen aktualisieren
         console.log('➖ Schüler-Zeile entfernt');
     } else {
         alert('Mindestens ein Schüler muss vorhanden sein!');
     }
 }
 
-// Neue Gruppe erstellen (angepasst für Klassen)
+// Neue Gruppe erstellen
 async function gruppeErstellen() {
     console.log('👥 Erstelle neue Gruppe...');
     
@@ -350,16 +181,8 @@ async function gruppeErstellen() {
     const themaInput = document.getElementById('gruppenThema');
     const thema = themaInput?.value.trim();
     
-    const klassenSelect = document.getElementById('klassenFilter');
-    const selectedKlasse = klassenSelect?.value;
-    
     if (!thema) {
         alert('Bitte geben Sie ein Thema ein!');
-        return;
-    }
-    
-    if (!selectedKlasse) {
-        alert('Bitte wählen Sie eine Klasse aus!');
         return;
     }
 
@@ -367,8 +190,7 @@ async function gruppeErstellen() {
     const schueler = [];
     
     for (let row of schuelerRows) {
-        const nameSelect = row.querySelector('.schueler-name-select');
-        const name = nameSelect?.value;
+        const name = row.querySelector('.schueler-name')?.value.trim();
         const lehrer = row.querySelector('.schueler-lehrer')?.value;
         const fach = row.querySelector('.schueler-fach')?.value;
         
@@ -393,7 +215,6 @@ async function gruppeErstellen() {
         const gruppe = { 
             id: newGruppenRef.key,
             thema, 
-            klasse: selectedKlasse,
             schueler, 
             erstellt: window.firebaseFunctions.formatGermanDate(),
             timestamp: window.firebaseFunctions.getTimestamp(),
@@ -409,7 +230,7 @@ async function gruppeErstellen() {
             if (window.newsFunctions) {
                 await window.newsFunctions.createNewsForAction(
                     `Neue Bewertung für ${lehrerName}`, 
-                    `Gruppe "${thema}" (Klasse ${selectedKlasse}) zugewiesen mit Schüler(n): ${schuelerDesLehrers.join(', ')}`,
+                    `Gruppe "${thema}" zugewiesen mit Schüler(n): ${schuelerDesLehrers.join(', ')}`,
                     true,
                     lehrerName // Spezifischer Empfänger
                 );
@@ -418,32 +239,11 @@ async function gruppeErstellen() {
         
         // Felder zurücksetzen
         themaInput.value = '';
-        klassenSelect.value = '';
-        verfuegbareSchueler = [];
+        document.querySelectorAll('.schueler-name').forEach(input => input.value = '');
+        document.querySelectorAll('.schueler-lehrer').forEach(select => select.value = '');
+        document.querySelectorAll('.schueler-fach').forEach(select => select.value = '');
         
-        // Alle Schüler-Zeilen bis auf eine entfernen
-        const schuelerListe = document.getElementById('schuelerListe');
-        if (schuelerListe) {
-            schuelerListe.innerHTML = `
-                <div class="input-group schueler-row">
-                    <select class="schueler-name-select" onchange="schuelerAusgewaehlt(this)">
-                        <option value="">Schüler wählen...</option>
-                    </select>
-                    <select class="schueler-lehrer">
-                        <option value="">Lehrer wählen...</option>
-                    </select>
-                    <select class="schueler-fach">
-                        <option value="">Fach wählen...</option>
-                    </select>
-                    <button type="button" class="btn btn-danger" onclick="schuelerEntfernen(this)">Entfernen</button>
-                </div>
-            `;
-        }
-        
-        updateSchuelerSelects();
-        updateSchuelerStatistik();
-        
-        console.log('✅ Gruppe erstellt:', thema, 'mit', schueler.length, 'Schülern aus Klasse', selectedKlasse);
+        console.log('✅ Gruppe erstellt:', thema, 'mit', schueler.length, 'Schülern');
         
         alert(`Gruppe "${thema}" wurde erfolgreich erstellt!`);
         
@@ -453,7 +253,7 @@ async function gruppeErstellen() {
     }
 }
 
-// Gruppe bearbeiten (Rest bleibt gleich wie vorher)
+// Gruppe bearbeiten
 async function gruppeBearbeiten(gruppenId) {
     console.log('👥 Bearbeite Gruppe:', gruppenId);
     
@@ -527,7 +327,7 @@ async function buildEditSchuelerListe() {
         aktuelleGruppeEdit.schueler.forEach((schueler, index) => {
             html += `
                 <div class="edit-schueler-item">
-                    <input type="text" value="${schueler.name}" class="edit-schueler-name" data-index="${index}" readonly style="background: #f0f0f0;">
+                    <input type="text" value="${schueler.name}" class="edit-schueler-name" data-index="${index}">
                     <select class="edit-schueler-lehrer" data-index="${index}">
                         ${lehrerOptions.replace(`value="${schueler.lehrer}"`, `value="${schueler.lehrer}" selected`)}
                     </select>
@@ -554,9 +354,14 @@ function editSchuelerEntfernen(index) {
     buildEditSchuelerListe();
 }
 
-// Neuen Schüler in Edit hinzufügen (vereinfacht)
+// Neuen Schüler in Edit hinzufügen
 function neuerSchuelerInEdit() {
-    alert('Das Hinzufügen neuer Schüler beim Bearbeiten ist nicht möglich. Bitte erstellen Sie eine neue Gruppe.');
+    if (!aktuelleGruppeEdit.schueler) {
+        aktuelleGruppeEdit.schueler = [];
+    }
+    
+    aktuelleGruppeEdit.schueler.push({ name: '', lehrer: '', fach: '' });
+    buildEditSchuelerListe();
 }
 
 // Gruppen-Edit speichern
@@ -575,7 +380,7 @@ async function gruppeEditSpeichern() {
             return;
         }
         
-        // Schüler-Daten sammeln (nur Lehrer und Fach können geändert werden)
+        // Schüler-Daten sammeln
         const neueSchueler = [];
         const schuelerInputs = document.querySelectorAll('.edit-schueler-item');
         
@@ -636,7 +441,7 @@ function gruppeEditAbbrechen() {
     aktuelleGruppeEdit = null;
 }
 
-// Gruppe löschen (bleibt wie vorher)
+// Gruppe löschen
 async function gruppeLoeschen(gruppenId) {
     if (!window.firebaseFunctions.requireAdmin()) return;
     
@@ -722,9 +527,7 @@ function getGruppenForUser() {
 // Export für andere Module
 window.gruppenFunctions = {
     getGruppenForUser,
-    updateSchuelerSelects,
-    klasseAusgewaehlt,
-    schuelerAusgewaehlt
+    updateSchuelerSelects
 };
 
 console.log('✅ Firebase Gruppen-System bereit');

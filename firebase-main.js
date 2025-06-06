@@ -1,4 +1,4 @@
-// Firebase Hauptsystem - Realtime Database mit Klassen-System
+// Firebase Hauptsystem - Realtime Database
 console.log('🚀 Firebase Main System geladen');
 
 // Globale Daten-Cache für bessere Performance
@@ -13,8 +13,7 @@ let dataCache = {
     news: {},
     config: {},
     briefvorlage: {},
-    staerkenFormulierungen: {},
-    klassen: {} // NEU: Klassen-Cache
+    staerkenFormulierungen: {}
 };
 
 // Realtime Listeners für automatische Updates
@@ -58,8 +57,7 @@ function initializeDataCache() {
         news: {},
         config: {},
         briefvorlage: {},
-        staerkenFormulierungen: {},
-        klassen: {} // NEU: Klassen-Cache
+        staerkenFormulierungen: {}
     };
     
     console.log('✅ Daten-Cache initialisiert');
@@ -84,9 +82,6 @@ async function loadSystemData() {
         
         // Stärken-Formulierungen laden
         await loadStaerkenFormulierungen();
-        
-        // NEU: Klassen laden
-        await loadKlassen();
         
         console.log('✅ System-Grunddaten geladen');
         
@@ -222,30 +217,6 @@ async function loadFaecher() {
             "E": "Englisch",
             "ALL": "Allgemein"
         };
-    }
-}
-
-// NEU: Klassen laden
-async function loadKlassen() {
-    try {
-        const klassenRef = window.firebaseDB.ref(window.database, 'system/klassen');
-        const snapshot = await window.firebaseDB.get(klassenRef);
-        
-        if (snapshot.exists()) {
-            dataCache.klassen = snapshot.val();
-            console.log('✅ Klassen geladen:', Object.keys(dataCache.klassen).length);
-        } else {
-            // Default Klassen erstellen (leer)
-            const defaultKlassen = {};
-            
-            await window.firebaseDB.set(klassenRef, defaultKlassen);
-            dataCache.klassen = defaultKlassen;
-            console.log('✅ Leerer Klassen-Container erstellt');
-        }
-    } catch (error) {
-        console.error('❌ Fehler beim Laden der Klassen:', error);
-        // Fallback Klassen (leer)
-        dataCache.klassen = {};
     }
 }
 
@@ -421,21 +392,6 @@ function setupRealtimeListeners() {
             }
         });
         
-        // NEU: Klassen Listener (nur für Admins)
-        if (currentUser && currentUser.role === 'admin') {
-            const klassenRef = window.firebaseDB.ref(window.database, 'system/klassen');
-            activeListeners.klassen = window.firebaseDB.onValue(klassenRef, (snapshot) => {
-                if (snapshot.exists()) {
-                    dataCache.klassen = snapshot.val();
-                    console.log('🔄 Klassen Update erhalten');
-                    // Gruppen-Tab aktualisieren falls geöffnet
-                    if (typeof loadGruppen === 'function') {
-                        loadGruppen();
-                    }
-                }
-            });
-        }
-        
         // Bewertungen Listener (nur für den aktuellen Lehrer)
         if (currentUser && currentUser.role === 'lehrer') {
             const bewertungenRef = window.firebaseDB.ref(window.database, `bewertungen/${sanitizeEmail(currentUser.email)}`);
@@ -474,16 +430,23 @@ function cleanupListeners() {
 // === HILFSFUNKTIONEN ===
 
 // Tab Navigation
-function openTab(tabName) {
+function openTab(tabName, evt) {
     const contents = document.querySelectorAll('.tab-content');
     const buttons = document.querySelectorAll('.tab-btn');
-    
+
     contents.forEach(content => content.classList.remove('active'));
     buttons.forEach(button => button.classList.remove('active'));
-    
-    document.getElementById(tabName).classList.add('active');
-    if (event && event.target) {
-        event.target.classList.add('active');
+
+    const targetContent = document.getElementById(tabName);
+    if (targetContent) {
+        targetContent.classList.add('active');
+    }
+
+    if (evt && evt.target) {
+        evt.target.classList.add('active');
+    } else {
+        const fallbackBtn = document.querySelector(`.tab-btn[onclick*="openTab('${tabName}')"]`);
+        if (fallbackBtn) fallbackBtn.classList.add('active');
     }
     
     console.log('📑 Tab gewechselt zu:', tabName);
@@ -512,11 +475,6 @@ function getFachNameFromGlobal(fachKuerzel) {
 // Alle Fächer aus Cache holen
 function getAllFaecher() {
     return dataCache.faecher;
-}
-
-// NEU: Klassen aus Cache holen
-function getKlassenFromCache() {
-    return dataCache.klassen || {};
 }
 
 // Email für Firebase Key sanitieren
@@ -597,7 +555,6 @@ window.firebaseFunctions = {
     getBewertungenFromCache,
     getAllFaecher,
     getFachNameFromGlobal,
-    getKlassenFromCache, // NEU
     
     // Utilities
     sanitizeEmail,

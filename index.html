@@ -53,15 +53,15 @@
 
         <div class="tab-container">
             <div class="tab-nav">
-                <button class="tab-btn active" onclick="openTab('news')" id="newsTab">News</button>
-                <button class="tab-btn" onclick="openTab('themen')" id="themenTab">Themen</button>
-                <button class="tab-btn" onclick="openTab('gruppen')" id="gruppenTab">Gruppen erstellen</button>
-                <button class="tab-btn" onclick="openTab('lehrer')" id="lehrerTab">Lehrer verwalten</button>
-                <button class="tab-btn" onclick="openTab('daten')" id="datenTab">Datenverwaltung</button>
-                <button class="tab-btn" onclick="openTab('bewerten')" id="bewertenTab">Schüler bewerten</button>
-                <button class="tab-btn" onclick="openTab('vorlagen')" id="vorlagenTab">Bewertungsvorlagen</button>
-                <button class="tab-btn" onclick="openTab('uebersicht')" id="uebersichtTab">Übersicht</button>
-                <button class="tab-btn" onclick="openTab('adminvorlagen')" id="adminvorlagenTab">System-Vorlagen</button>
+                <button class="tab-btn active" onclick="openTab('news', event)" id="newsTab">News</button>
+                <button class="tab-btn" onclick="openTab('themen', event)" id="themenTab">Themen</button>
+                <button class="tab-btn" onclick="openTab('gruppen', event)" id="gruppenTab">Gruppen erstellen</button>
+                <button class="tab-btn" onclick="openTab('lehrer', event)" id="lehrerTab">Lehrer verwalten</button>
+                <button class="tab-btn" onclick="openTab('daten', event)" id="datenTab">Datenverwaltung</button>
+                <button class="tab-btn" onclick="openTab('bewerten', event)" id="bewertenTab">Schüler bewerten</button>
+                <button class="tab-btn" onclick="openTab('vorlagen', event)" id="vorlagenTab">Bewertungsvorlagen</button>
+                <button class="tab-btn" onclick="openTab('uebersicht', event)" id="uebersichtTab">Übersicht</button>
+                <button class="tab-btn" onclick="openTab('adminvorlagen', event)" id="adminvorlagenTab">System-Vorlagen</button>
             </div>
 
             <!-- News Tab -->
@@ -113,37 +113,20 @@
                 </div>
             </div>
 
-            <!-- Gruppen Tab - ERWEITERT MIT KLASSEN-SYSTEM -->
+            <!-- Gruppen Tab -->
             <div id="gruppen" class="tab-content">
                 <h2>Gruppen erstellen</h2>
                 <div class="card">
                     <h3>Neue Gruppe anlegen</h3>
-                    
-                    <!-- Klassen-Filter (NEU) -->
-                    <div class="klassen-filter-bereich">
-                        <label for="klassenFilter"><strong>1. Klasse auswählen:</strong></label>
-                        <select id="klassenFilter" onchange="klasseAusgewaehlt()">
-                            <option value="">Klasse wählen...</option>
-                        </select>
-                        <div id="schuelerStatistik" class="schueler-statistik">
-                            <p>Wählen Sie eine Klasse aus, um Schüler zu sehen.</p>
-                        </div>
-                    </div>
-                    
                     <div class="input-group">
-                        <label for="gruppenThema"><strong>2. Thema eingeben:</strong></label>
                         <input type="text" id="gruppenThema" placeholder="Thema (oder aus Liste wählen)">
                         <button class="btn" onclick="gruppeErstellen()">Gruppe erstellen</button>
                     </div>
-                    
                     <div style="margin-top: 1rem;">
-                        <h4><strong>3. Schüler zuweisen:</strong></h4>
-                        <p><em>Wählen Sie Schüler aus der gewählten Klasse aus:</em></p>
+                        <h4>Schüler hinzufügen:</h4>
                         <div id="schuelerListe">
                             <div class="input-group schueler-row">
-                                <select class="schueler-name-select" onchange="schuelerAusgewaehlt(this)">
-                                    <option value="">Schüler wählen...</option>
-                                </select>
+                                <input type="text" placeholder="Schülername" class="schueler-name">
                                 <select class="schueler-lehrer">
                                     <option value="">Lehrer wählen...</option>
                                 </select>
@@ -331,16 +314,9 @@
                 </div>
             </div>
 
-            <!-- Admin System-Vorlagen Tab (nur Admin) - ERWEITERT UM KLASSEN -->
+            <!-- Admin System-Vorlagen Tab (nur Admin) -->
             <div id="adminvorlagen" class="tab-content">
                 <h2>System-Vorlagen bearbeiten</h2>
-                
-                <!-- NEU: Klassen verwalten -->
-                <div class="card">
-                    <div id="klassenVerwaltung">
-                        <!-- Klassen-Verwaltung wird hier angezeigt -->
-                    </div>
-                </div>
                 
                 <!-- Fächer verwalten -->
                 <div class="card">

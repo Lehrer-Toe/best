@@ -1,4 +1,4 @@
-// Firebase Authentication System - Funktionsfähige Version mit Auto-Logout (Erweitert um Klassen-Tab)
+// Firebase Authentication System - Funktionsfähige Version mit Auto-Logout
 console.log('🔐 Firebase Authentication System geladen');
 
 // Globale Variablen
@@ -176,7 +176,7 @@ function showApp() {
     
     // KOMPLETT ALLE Tabs verstecken und Buttons deaktivieren
     const allTabs = [
-        'newsTab', 'themenTab', 'gruppenTab', 'klassenTab', 'lehrerTab', 
+        'newsTab', 'themenTab', 'gruppenTab', 'lehrerTab', 
         'datenTab', 'bewertenTab', 'vorlagenTab', 'uebersichtTab', 'adminvorlagenTab'
     ];
     
@@ -199,11 +199,7 @@ function showApp() {
     
     // Tabs je nach Rolle anzeigen
     if (currentUser.role === 'admin') {
-        // Admin sieht alle Tabs
         document.getElementById('newsTab').style.display = 'block';
-        document.getElementById('themenTab').style.display = 'block';
-        document.getElementById('gruppenTab').style.display = 'block';
-        document.getElementById('klassenTab').style.display = 'block'; // NEU: Klassen-Tab für Admin
         document.getElementById('lehrerTab').style.display = 'block';
         document.getElementById('datenTab').style.display = 'block';
         document.getElementById('adminvorlagenTab').style.display = 'block';
@@ -213,7 +209,6 @@ function showApp() {
         console.log('👑 Admin-Interface aktiviert');
         
     } else if (currentUser.role === 'lehrer') {
-        // Lehrer sieht nur diese Tabs
         document.getElementById('newsTab').style.display = 'block';
         document.getElementById('themenTab').style.display = 'block';
         document.getElementById('gruppenTab').style.display = 'block';
@@ -263,7 +258,7 @@ async function firebaseLogout() {
 // Alle Tabs verstecken
 function hideAllTabs() {
     const allTabs = [
-        'newsTab', 'themenTab', 'gruppenTab', 'klassenTab', 'lehrerTab', 
+        'newsTab', 'themenTab', 'gruppenTab', 'lehrerTab', 
         'datenTab', 'bewertenTab', 'vorlagenTab', 'uebersichtTab', 'adminvorlagenTab'
     ];
     

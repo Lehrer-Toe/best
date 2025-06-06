@@ -148,7 +148,7 @@ function setupTabNavigation() {
             e.preventDefault();
             const tabName = this.getAttribute('onclick')?.match(/openTab\('([^']+)'\)/)?.[1];
             if (tabName) {
-                openTab(tabName);
+                openTab(tabName, e);
             }
         });
     });
@@ -185,11 +185,6 @@ function makeModulesGloballyAvailable() {
     // Gruppen-Funktionen
     if (window.gruppenFunctions) {
         Object.assign(window, window.gruppenFunctions);
-    }
-    
-    // Klassen-Funktionen (NEU)
-    if (window.klassenFunctions) {
-        Object.assign(window, window.klassenFunctions);
     }
     
     // Vorlagen-Funktionen
@@ -311,10 +306,6 @@ function handleKeyboardShortcuts(e) {
                 e.preventDefault();
                 if (window.firebaseFunctions.isLehrer()) openTab('uebersicht');
                 break;
-            case 'k':
-                e.preventDefault();
-                if (window.firebaseFunctions.isAdmin()) openTab('klassen');
-                break;
             case 'l':
                 e.preventDefault();
                 firebaseLogout();
@@ -348,7 +339,6 @@ function checkSystemHealth() {
             news: typeof window.newsFunctions === 'object',
             themen: typeof window.themenFunctions === 'object',
             gruppen: typeof window.gruppenFunctions === 'object',
-            klassen: typeof window.klassenFunctions === 'object', // NEU
             bewertungen: typeof window.bewertungsFunctions === 'object',
             pdf: typeof window.pdfFunctions === 'object',
             vorlagen: typeof window.vorlagenFunctions === 'object',
