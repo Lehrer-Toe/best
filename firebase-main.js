@@ -1,5 +1,5 @@
-// Firebase Hauptsystem - Realtime Database (Erweitert um Klassen)
-console.log('🚀 Firebase Main System geladen (Erweitert)');
+// Firebase Hauptsystem - Realtime Database mit Klassen-System
+console.log('🚀 Firebase Main System geladen');
 
 // Globale Daten-Cache für bessere Performance
 let dataCache = {
@@ -14,7 +14,7 @@ let dataCache = {
     config: {},
     briefvorlage: {},
     staerkenFormulierungen: {},
-    klassen: {} // NEU: Cache für Klassen
+    klassen: {} // NEU: Klassen-Cache
 };
 
 // Realtime Listeners für automatische Updates
@@ -59,7 +59,7 @@ function initializeDataCache() {
         config: {},
         briefvorlage: {},
         staerkenFormulierungen: {},
-        klassen: {} // NEU: Cache für Klassen
+        klassen: {} // NEU: Klassen-Cache
     };
     
     console.log('✅ Daten-Cache initialisiert');
@@ -76,9 +76,6 @@ async function loadSystemData() {
         // Fächer laden
         await loadFaecher();
         
-        // Klassen laden (NEU)
-        await loadKlassen();
-        
         // Bewertungs-Checkpoints laden
         await loadBewertungsCheckpoints();
         
@@ -87,6 +84,9 @@ async function loadSystemData() {
         
         // Stärken-Formulierungen laden
         await loadStaerkenFormulierungen();
+        
+        // NEU: Klassen laden
+        await loadKlassen();
         
         console.log('✅ System-Grunddaten geladen');
         
@@ -225,7 +225,7 @@ async function loadFaecher() {
     }
 }
 
-// Klassen laden (NEU)
+// NEU: Klassen laden
 async function loadKlassen() {
     try {
         const klassenRef = window.firebaseDB.ref(window.database, 'system/klassen');
@@ -235,12 +235,16 @@ async function loadKlassen() {
             dataCache.klassen = snapshot.val();
             console.log('✅ Klassen geladen:', Object.keys(dataCache.klassen).length);
         } else {
-            // Leerer Cache - keine Default-Klassen erstellen
-            dataCache.klassen = {};
-            console.log('✅ Klassen-Cache initialisiert (leer)');
+            // Default Klassen erstellen (leer)
+            const defaultKlassen = {};
+            
+            await window.firebaseDB.set(klassenRef, defaultKlassen);
+            dataCache.klassen = defaultKlassen;
+            console.log('✅ Leerer Klassen-Container erstellt');
         }
     } catch (error) {
         console.error('❌ Fehler beim Laden der Klassen:', error);
+        // Fallback Klassen (leer)
         dataCache.klassen = {};
     }
 }
@@ -417,18 +421,20 @@ function setupRealtimeListeners() {
             }
         });
         
-        // Klassen Listener (NEU)
-        const klassenRef = window.firebaseDB.ref(window.database, 'system/klassen');
-        activeListeners.klassen = window.firebaseDB.onValue(klassenRef, (snapshot) => {
-            if (snapshot.exists()) {
-                dataCache.klassen = snapshot.val();
-                console.log('🔄 Klassen Update erhalten');
-                // Klassen-abhängige UI-Elemente aktualisieren
-                if (typeof updateKlassenFilter === 'function') {
-                    updateKlassenFilter();
+        // NEU: Klassen Listener (nur für Admins)
+        if (currentUser && currentUser.role === 'admin') {
+            const klassenRef = window.firebaseDB.ref(window.database, 'system/klassen');
+            activeListeners.klassen = window.firebaseDB.onValue(klassenRef, (snapshot) => {
+                if (snapshot.exists()) {
+                    dataCache.klassen = snapshot.val();
+                    console.log('🔄 Klassen Update erhalten');
+                    // Gruppen-Tab aktualisieren falls geöffnet
+                    if (typeof loadGruppen === 'function') {
+                        loadGruppen();
+                    }
                 }
-            }
-        });
+            });
+        }
         
         // Bewertungen Listener (nur für den aktuellen Lehrer)
         if (currentUser && currentUser.role === 'lehrer') {
@@ -508,6 +514,11 @@ function getAllFaecher() {
     return dataCache.faecher;
 }
 
+// NEU: Klassen aus Cache holen
+function getKlassenFromCache() {
+    return dataCache.klassen || {};
+}
+
 // Email für Firebase Key sanitieren
 function sanitizeEmail(email) {
     return email.replace(/[.$#\[\]/]/g, '_');
@@ -540,11 +551,6 @@ function getThemenFromCache() {
 // Gruppen aus Cache
 function getGruppenFromCache() {
     return Object.values(dataCache.gruppen || {});
-}
-
-// Klassen aus Cache (NEU)
-function getKlassenFromCache() {
-    return dataCache.klassen || {};
 }
 
 // Bewertungen aus Cache (für aktuellen Lehrer)
@@ -588,10 +594,10 @@ window.firebaseFunctions = {
     getNewsFromCache,
     getThemenFromCache,
     getGruppenFromCache,
-    getKlassenFromCache, // NEU
     getBewertungenFromCache,
     getAllFaecher,
     getFachNameFromGlobal,
+    getKlassenFromCache, // NEU
     
     // Utilities
     sanitizeEmail,
@@ -617,4 +623,4 @@ window.addEventListener('beforeunload', () => {
     cleanupListeners();
 });
 
-console.log('✅ Firebase Main System bereit (Erweitert um Klassen)');
+console.log('✅ Firebase Main System bereit');
