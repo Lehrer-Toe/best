@@ -721,6 +721,29 @@ function getSchuelerFuerKlasse(klasseId) {
     return klasse ? (klasse.schueler || []) : [];
 }
 
+// Verfügbare Schüler für Gruppen-Erstellung (nicht bereits in Gruppen)
+function getVerfuegbareSchueler(klasseId) {
+    const klassenSchueler = getSchuelerFuerKlasse(klasseId);
+    const gruppen = window.firebaseFunctions.getGruppenFromCache();
+    
+    // Sammle alle bereits verwendeten Schüler
+    const verwendeteSchueler = new Set();
+    gruppen.forEach(gruppe => {
+        if (gruppe.schueler) {
+            gruppe.schueler.forEach(schueler => {
+                if (schueler.klasseId === klasseId) {
+                    verwendeteSchueler.add(`${schueler.vorname}-${schueler.nachname}`);
+                }
+            });
+        }
+    });
+    
+    // Filtere verfügbare Schüler
+    return klassenSchueler.filter(schueler => 
+        !verwendeteSchueler.has(`${schueler.vorname}-${schueler.nachname}`)
+    );
+}
+
 // Klassen-Daten für andere Module bereitstellen
 function getKlassenForDropdown() {
     const klassen = window.firebaseFunctions.getKlassenFromCache();
@@ -734,6 +757,7 @@ function getKlassenForDropdown() {
 // Export für andere Module
 window.klassenFunctions = {
     getSchuelerFuerKlasse,
+    getVerfuegbareSchueler,
     getKlassenForDropdown,
     updateKlassenSelects
 };
