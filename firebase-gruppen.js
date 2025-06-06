@@ -249,7 +249,16 @@ function hinzufuegenAktuellenSchueler() {
     schuelerInBearbeitung.lehrer = lehrer;
     schuelerInBearbeitung.fach = fach;
 
-    ausgewaehlteSchueler.push(schuelerInBearbeitung);
+    // Doppelten Eintrag verhindern
+    const exists = ausgewaehlteSchueler.some(s =>
+        s.vorname === schuelerInBearbeitung.vorname &&
+        s.nachname === schuelerInBearbeitung.nachname &&
+        s.klasseId === schuelerInBearbeitung.klasseId
+    );
+
+    if (!exists) {
+        ausgewaehlteSchueler.push(schuelerInBearbeitung);
+    }
     schuelerInBearbeitung = null;
     const detail = document.getElementById('schuelerDetail');
     if (detail) detail.innerHTML = '';
