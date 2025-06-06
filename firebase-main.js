@@ -7,6 +7,7 @@ let dataCache = {
     faecher: {},
     bewertungsCheckpoints: {},
     themen: {},
+    klassen: {},
     gruppen: {},
     bewertungen: {},
     vorlagen: {},
@@ -51,6 +52,7 @@ function initializeDataCache() {
         faecher: {},
         bewertungsCheckpoints: {},
         themen: {},
+        klassen: {},
         gruppen: {},
         bewertungen: {},
         vorlagen: {},
@@ -70,10 +72,15 @@ async function loadSystemData() {
     try {
         // Config laden
         await loadConfig();
-        
+        // Benutzer laden
+        await loadUsers();
+
         // Fächer laden
         await loadFaecher();
-        
+
+        // Klassen laden
+        await loadKlassen();
+
         // Bewertungs-Checkpoints laden
         await loadBewertungsCheckpoints();
         
@@ -349,6 +356,44 @@ async function loadStaerkenFormulierungen() {
     }
 }
 
+// Benutzer laden
+async function loadUsers() {
+    try {
+        const usersRef = window.firebaseDB.ref(window.database, 'users');
+        const snapshot = await window.firebaseDB.get(usersRef);
+
+        if (snapshot.exists()) {
+            dataCache.users = snapshot.val();
+            console.log('✅ Benutzer geladen:', Object.keys(dataCache.users).length);
+        } else {
+            dataCache.users = {};
+            console.log('ℹ️ Keine Benutzer gefunden');
+        }
+    } catch (error) {
+        console.error('❌ Fehler beim Laden der Benutzer:', error);
+        dataCache.users = {};
+    }
+}
+
+// Klassen laden
+async function loadKlassen() {
+    try {
+        const klassenRef = window.firebaseDB.ref(window.database, 'klassen');
+        const snapshot = await window.firebaseDB.get(klassenRef);
+
+        if (snapshot.exists()) {
+            dataCache.klassen = Object.values(snapshot.val());
+            console.log('✅ Klassen geladen:', dataCache.klassen.length);
+        } else {
+            dataCache.klassen = [];
+            console.log('ℹ️ Keine Klassen gefunden');
+        }
+    } catch (error) {
+        console.error('❌ Fehler beim Laden der Klassen:', error);
+        dataCache.klassen = [];
+    }
+}
+
 // === REALTIME LISTENERS ===
 
 // Realtime Listeners einrichten
@@ -388,6 +433,36 @@ function setupRealtimeListeners() {
                 console.log('🔄 Gruppen Update erhalten');
                 if (typeof loadGruppen === 'function') {
                     loadGruppen();
+                }
+            }
+        });
+
+        // Klassen Listener
+        const klassenRef = window.firebaseDB.ref(window.database, 'klassen');
+        activeListeners.klassen = window.firebaseDB.onValue(klassenRef, (snapshot) => {
+            if (snapshot.exists()) {
+                dataCache.klassen = Object.values(snapshot.val());
+                console.log('🔄 Klassen Update erhalten');
+                if (typeof updateKlassenSelects === 'function') {
+                    updateKlassenSelects();
+                }
+                if (typeof loadKlassenListe === 'function') {
+                    loadKlassenListe();
+                }
+                if (typeof updateKlassenauswahlForGruppen === 'function') {
+                    updateKlassenauswahlForGruppen();
+                }
+            }
+        });
+
+        // Benutzer Listener
+        const usersRef = window.firebaseDB.ref(window.database, 'users');
+        activeListeners.users = window.firebaseDB.onValue(usersRef, (snapshot) => {
+            if (snapshot.exists()) {
+                dataCache.users = snapshot.val();
+                console.log('🔄 Benutzer Update erhalten');
+                if (typeof updateLehrerSelects === 'function') {
+                    updateLehrerSelects();
                 }
             }
         });
@@ -431,6 +506,9 @@ function cleanupListeners() {
 
 // Tab Navigation
 function openTab(tabName, evt) {
+    if (tabName === 'klassen' && !window.firebaseFunctions.requireAdmin()) {
+        return;
+    }
     const contents = document.querySelectorAll('.tab-content');
     const buttons = document.querySelectorAll('.tab-btn');
 
@@ -462,6 +540,7 @@ function openTab(tabName, evt) {
         if (tabName === 'vorlagen') loadVorlagen();
         if (tabName === 'uebersicht') loadUebersicht();
         if (tabName === 'adminvorlagen') loadAdminVorlagen();
+        if (tabName === 'klassen') loadKlassen();
     } catch (error) {
         console.error('❌ Fehler beim Laden von Tab:', tabName, error);
     }
@@ -511,6 +590,16 @@ function getGruppenFromCache() {
     return Object.values(dataCache.gruppen || {});
 }
 
+// Klassen aus Cache
+function getKlassenFromCache() {
+    return Array.isArray(dataCache.klassen) ? dataCache.klassen : [];
+}
+
+// Lehrer aus Cache
+function getLehrerFromCache() {
+    return Object.values(dataCache.users || {}).filter(u => u.role === 'lehrer');
+}
+
 // Bewertungen aus Cache (für aktuellen Lehrer)
 function getBewertungenFromCache() {
     if (!currentUser) return [];
@@ -552,6 +641,8 @@ window.firebaseFunctions = {
     getNewsFromCache,
     getThemenFromCache,
     getGruppenFromCache,
+    getKlassenFromCache,
+    getLehrerFromCache,
     getBewertungenFromCache,
     getAllFaecher,
     getFachNameFromGlobal,
