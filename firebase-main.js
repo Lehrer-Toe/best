@@ -473,6 +473,9 @@ function cleanupListeners() {
 
 // Tab Navigation
 function openTab(tabName, evt) {
+    if (tabName === 'klassen' && !window.firebaseFunctions.requireAdmin()) {
+        return;
+    }
     const contents = document.querySelectorAll('.tab-content');
     const buttons = document.querySelectorAll('.tab-btn');
 
@@ -504,6 +507,7 @@ function openTab(tabName, evt) {
         if (tabName === 'vorlagen') loadVorlagen();
         if (tabName === 'uebersicht') loadUebersicht();
         if (tabName === 'adminvorlagen') loadAdminVorlagen();
+        if (tabName === 'klassen') loadKlassen();
     } catch (error) {
         console.error('❌ Fehler beim Laden von Tab:', tabName, error);
     }
