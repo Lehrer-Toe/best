@@ -229,12 +229,6 @@ function showLoginScreen() {
     document.getElementById('loadingScreen').style.display = 'none';
     document.getElementById('loginScreen').style.display = 'flex';
     document.getElementById('appContainer').style.display = 'none';
-    
-    // Firebase-Status aktualisieren
-    const statusElement = document.getElementById('firebaseStatus');
-    if (statusElement) {
-        statusElement.innerHTML = '🔥 Firebase bereit - Bitte anmelden';
-    }
 }
 
 // Initialisierungsfehler anzeigen
