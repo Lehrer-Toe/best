@@ -206,7 +206,7 @@ function schuelerToggle(klasseId, schuelerIndex) {
 }
 
 // Anzeige der ausgewählten Schüler aktualisieren
-function updateAusgewaehlteSchuelerAnzeige() {
+async function updateAusgewaehlteSchuelerAnzeige() {
     const container = document.getElementById('ausgewaehlteSchuelerAnzeige');
     if (!container) return;
     
@@ -217,17 +217,20 @@ function updateAusgewaehlteSchuelerAnzeige() {
     
     let html = '<h4>Ausgewählte Schüler - Lehrer und Fach zuweisen:</h4>';
     
+    const lehrerOptions = await getLehrerOptions();
+    const fachOptions = getFachOptions();
+
     ausgewaehlteSchueler.forEach((schueler, index) => {
         html += `
             <div class="ausgewaehlter-schueler-item">
                 <span class="schueler-name">${schueler.vorname} ${schueler.nachname}</span>
                 <select class="schueler-lehrer-select" onchange="lehrerZuweisen(${index}, this.value)">
                     <option value="">Lehrer wählen...</option>
-                    ${getLehrerOptions()}
+                    ${lehrerOptions}
                 </select>
                 <select class="schueler-fach-select" onchange="fachZuweisen(${index}, this.value)">
                     <option value="">Fach wählen...</option>
-                    ${getFachOptions()}
+                    ${fachOptions}
                 </select>
                 <button class="btn btn-danger btn-sm" onclick="ausgewaehltenSchuelerEntfernen(${index})">Entfernen</button>
             </div>
@@ -238,11 +241,30 @@ function updateAusgewaehlteSchuelerAnzeige() {
 }
 
 // Lehrer-Optionen für Select generieren
-function getLehrerOptions() {
-    // Diese Funktion sollte verfügbare Lehrer aus Firebase laden
-    // Für jetzt verwenden wir eine statische Liste
-    const lehrer = ['Max Mustermann', 'Anna Schmidt', 'Thomas Weber']; // TODO: Aus Firebase laden
-    return lehrer.map(name => `<option value="${name}">${name}</option>`).join('');
+let cachedLehrerOptions = null;
+async function getLehrerOptions() {
+    if (cachedLehrerOptions !== null) {
+        return cachedLehrerOptions;
+    }
+    try {
+        const usersRef = window.firebaseFunctions.getDatabaseRef('users');
+        const snapshot = await window.firebaseDB.get(usersRef);
+        if (snapshot.exists()) {
+            const users = snapshot.val();
+            const lehrer = Object.values(users)
+                .filter(u => u.role === 'lehrer')
+                .map(u => u.name);
+            cachedLehrerOptions = lehrer
+                .map(name => `<option value="${name}">${name}</option>`)
+                .join('');
+        } else {
+            cachedLehrerOptions = '';
+        }
+    } catch (error) {
+        console.error('❌ Fehler beim Laden der Lehrer:', error);
+        cachedLehrerOptions = '';
+    }
+    return cachedLehrerOptions;
 }
 
 // Fach-Optionen für Select generieren
@@ -424,7 +446,7 @@ async function buildEditSchuelerListe() {
     if (!container || !aktuelleGruppeEdit) return;
     
     // Lehrer laden für Selects
-    const lehrerOptions = getLehrerOptions();
+    const lehrerOptions = await getLehrerOptions();
     
     // Fach-Optionen
     const fachOptions = getFachOptions();
