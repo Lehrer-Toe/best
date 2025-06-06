@@ -160,8 +160,8 @@ function klasseGewaehlt() {
     
     verfuegbareSchueler.forEach((schueler, index) => {
         html += `
-            <div class="schueler-auswahl-item" onclick="schuelerToggle('${klasseId}', ${index})">
-                <input type="checkbox" id="schueler-${index}" class="schueler-checkbox">
+            <div class="schueler-auswahl-item">
+                <input type="checkbox" id="schueler-${index}" class="schueler-checkbox" onchange="schuelerToggle('${klasseId}', ${index}, this.checked)">
                 <label for="schueler-${index}">${schueler.vorname} ${schueler.nachname}</label>
             </div>
         `;
@@ -176,16 +176,20 @@ function klasseGewaehlt() {
 }
 
 // Schüler auswählen/abwählen
-function schuelerToggle(klasseId, schuelerIndex) {
+function schuelerToggle(klasseId, schuelerIndex, isChecked) {
     const checkbox = document.getElementById(`schueler-${schuelerIndex}`);
     const verfuegbareSchueler = window.klassenFunctions.getVerfuegbareSchueler(klasseId);
     const schueler = verfuegbareSchueler[schuelerIndex];
-    
+
     if (!schueler) return;
-    
-    checkbox.checked = !checkbox.checked;
-    
-    if (checkbox.checked) {
+
+    if (isChecked === undefined) {
+        isChecked = checkbox.checked;
+    } else {
+        checkbox.checked = isChecked;
+    }
+
+    if (isChecked) {
         // Schüler hinzufügen
         if (!ausgewaehlteSchueler.find(s => s.vorname === schueler.vorname && s.nachname === schueler.nachname)) {
             ausgewaehlteSchueler.push({
@@ -197,7 +201,7 @@ function schuelerToggle(klasseId, schuelerIndex) {
         }
     } else {
         // Schüler entfernen
-        ausgewaehlteSchueler = ausgewaehlteSchueler.filter(s => 
+        ausgewaehlteSchueler = ausgewaehlteSchueler.filter(s =>
             !(s.vorname === schueler.vorname && s.nachname === schueler.nachname)
         );
     }
@@ -206,7 +210,7 @@ function schuelerToggle(klasseId, schuelerIndex) {
 }
 
 // Anzeige der ausgewählten Schüler aktualisieren
-function updateAusgewaehlteSchuelerAnzeige() {
+async function updateAusgewaehlteSchuelerAnzeige() {
     const container = document.getElementById('ausgewaehlteSchuelerAnzeige');
     if (!container) return;
     
@@ -217,17 +221,20 @@ function updateAusgewaehlteSchuelerAnzeige() {
     
     let html = '<h4>Ausgewählte Schüler - Lehrer und Fach zuweisen:</h4>';
     
+    const lehrerOptions = await getLehrerOptions();
+    const fachOptions = getFachOptions();
+
     ausgewaehlteSchueler.forEach((schueler, index) => {
         html += `
             <div class="ausgewaehlter-schueler-item">
                 <span class="schueler-name">${schueler.vorname} ${schueler.nachname}</span>
                 <select class="schueler-lehrer-select" onchange="lehrerZuweisen(${index}, this.value)">
                     <option value="">Lehrer wählen...</option>
-                    ${getLehrerOptions()}
+                    ${lehrerOptions}
                 </select>
                 <select class="schueler-fach-select" onchange="fachZuweisen(${index}, this.value)">
                     <option value="">Fach wählen...</option>
-                    ${getFachOptions()}
+                    ${fachOptions}
                 </select>
                 <button class="btn btn-danger btn-sm" onclick="ausgewaehltenSchuelerEntfernen(${index})">Entfernen</button>
             </div>
@@ -235,14 +242,41 @@ function updateAusgewaehlteSchuelerAnzeige() {
     });
     
     container.innerHTML = html;
+
+    // Gewählte Lehrer/Fächer wiederherstellen
+    container.querySelectorAll('.schueler-lehrer-select').forEach((sel, i) => {
+        sel.value = ausgewaehlteSchueler[i].lehrer || '';
+    });
+    container.querySelectorAll('.schueler-fach-select').forEach((sel, i) => {
+        sel.value = ausgewaehlteSchueler[i].fach || '';
+    });
 }
 
 // Lehrer-Optionen für Select generieren
-function getLehrerOptions() {
-    // Diese Funktion sollte verfügbare Lehrer aus Firebase laden
-    // Für jetzt verwenden wir eine statische Liste
-    const lehrer = ['Max Mustermann', 'Anna Schmidt', 'Thomas Weber']; // TODO: Aus Firebase laden
-    return lehrer.map(name => `<option value="${name}">${name}</option>`).join('');
+let cachedLehrerOptions = null;
+async function getLehrerOptions() {
+    if (cachedLehrerOptions !== null) {
+        return cachedLehrerOptions;
+    }
+    try {
+        const usersRef = window.firebaseFunctions.getDatabaseRef('users');
+        const snapshot = await window.firebaseDB.get(usersRef);
+        if (snapshot.exists()) {
+            const users = snapshot.val();
+            const lehrer = Object.values(users)
+                .filter(u => u.role === 'lehrer')
+                .map(u => u.name);
+            cachedLehrerOptions = lehrer
+                .map(name => `<option value="${name}">${name}</option>`)
+                .join('');
+        } else {
+            cachedLehrerOptions = '';
+        }
+    } catch (error) {
+        console.error('❌ Fehler beim Laden der Lehrer:', error);
+        cachedLehrerOptions = '';
+    }
+    return cachedLehrerOptions;
 }
 
 // Fach-Optionen für Select generieren
@@ -424,7 +458,7 @@ async function buildEditSchuelerListe() {
     if (!container || !aktuelleGruppeEdit) return;
     
     // Lehrer laden für Selects
-    const lehrerOptions = getLehrerOptions();
+    const lehrerOptions = await getLehrerOptions();
     
     // Fach-Optionen
     const fachOptions = getFachOptions();
