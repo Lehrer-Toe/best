@@ -1,4 +1,4 @@
-// Firebase Admin-System - Realtime Database
+// Firebase Admin-System - Realtime Database mit Klassen-Verwaltung
 console.log('⚙️ Firebase Admin-System geladen');
 
 // Admin-Vorlagen Tab laden
@@ -8,8 +8,8 @@ function loadAdminVorlagen() {
     if (!window.firebaseFunctions.requireAdmin()) return;
     
     // Alle Admin-Bereiche laden
-    loadFaecherVerwaltung();
     loadKlassenVerwaltung();
+    loadFaecherVerwaltung();
     loadCheckpointsVerwaltung();
     loadBriefvorlage();
 }
@@ -27,13 +27,14 @@ async function loadKlassenVerwaltung() {
         const klassen = window.firebaseFunctions.getKlassenFromCache();
         
         let html = `
-            <h3>Klassen und Schüler verwalten</h3>
-            <p>Hier können Sie Klassen anlegen und Schüler zuordnen.</p>
+            <h3>🏫 Klassen verwalten</h3>
+            <p>Hier können Sie Klassen mit Schülern verwalten. Verwenden Sie CSV-Import oder manuelle Eingabe.</p>
             
             <!-- CSV Import -->
             <div class="csv-import-bereich">
-                <h4>📄 Schüler aus CSV importieren</h4>
-                <p><strong>CSV-Format:</strong> Klasse,Nachname,Vorname (z.B. "7a,Müller,Max")</p>
+                <h4>📋 CSV-Import</h4>
+                <p><strong>CSV-Format:</strong> Klasse, Schülername, Klassenlehrer (Optional)</p>
+                <p><em>Beispiel: 8a, Müller Max, Herr Schmidt</em></p>
                 <div class="input-group">
                     <input type="file" id="csvFileInput" accept=".csv" onchange="csvDateiAusgewaehlt()">
                     <button class="btn btn-success" onclick="csvImportieren()">CSV importieren</button>
@@ -41,74 +42,55 @@ async function loadKlassenVerwaltung() {
                 <div id="csvPreview" class="csv-preview hidden"></div>
             </div>
             
-            <!-- Neue Klasse manuell anlegen -->
-            <div class="neue-klasse-bereich">
-                <h4>➕ Neue Klasse anlegen</h4>
+            <!-- Manuelle Klassen-Verwaltung -->
+            <div class="manuelle-klassen">
+                <h4>➕ Neue Klasse manuell erstellen</h4>
                 <div class="input-group">
-                    <input type="text" id="neueKlasseName" placeholder="Klassenname (z.B. 7a)" maxlength="10">
-                    <button class="btn btn-success" onclick="neueKlasseAnlegen()">Klasse anlegen</button>
+                    <input type="text" id="neueKlasseName" placeholder="Klassenname (z.B. 8a)" maxlength="10">
+                    <input type="text" id="neuerKlassenlehrer" placeholder="Klassenlehrer (Optional)">
+                    <button class="btn btn-success" onclick="neueKlasseErstellen()">Klasse erstellen</button>
                 </div>
             </div>
             
             <!-- Bestehende Klassen -->
-            <div class="klassen-liste">
-                <h4>📚 Bestehende Klassen</h4>
-                <div id="klassenListe">
+            <div id="klassenListe" class="klassen-liste">
         `;
         
-        if (Object.keys(klassen).length > 0) {
-            Object.entries(klassen).forEach(([klassenName, klassenData]) => {
-                const schuelerCount = klassenData.schueler ? klassenData.schueler.length : 0;
-                const zugewieseneCount = getZugewieseneSchuelerCount(klassenName);
-                const freieCount = schuelerCount - zugewieseneCount;
-                
-                html += `
-                    <div class="klassen-item">
-                        <div class="klassen-header">
-                            <h5>${klassenName}</h5>
-                            <div class="klassen-stats">
-                                <span class="stat-badge">Gesamt: ${schuelerCount}</span>
-                                <span class="stat-badge frei">Frei: ${freieCount}</span>
-                                <span class="stat-badge zugewiesen">Zugewiesen: ${zugewieseneCount}</span>
-                            </div>
-                            <div class="klassen-actions">
-                                <button class="btn btn-sm" onclick="klasseBearbeiten('${klassenName}')">Bearbeiten</button>
-                                <button class="btn btn-danger btn-sm" onclick="klasseLoeschen('${klassenName}')">Löschen</button>
-                            </div>
-                        </div>
-                        <div class="schueler-liste-preview" id="schueler-${klassenName}">
-                `;
-                
-                if (klassenData.schueler && klassenData.schueler.length > 0) {
-                    klassenData.schueler.forEach(schueler => {
-                        const istZugewiesen = istSchuelerZugewiesen(klassenName, schueler.nachname, schueler.vorname);
-                        const statusClass = istZugewiesen ? 'zugewiesen' : 'frei';
-                        const statusText = istZugewiesen ? '📋 Zugewiesen' : '✅ Verfügbar';
-                        
-                        html += `
-                            <div class="schueler-preview-item ${statusClass}">
-                                <span class="schueler-name">${schueler.nachname}, ${schueler.vorname}</span>
-                                <span class="schueler-status">${statusText}</span>
-                            </div>
-                        `;
-                    });
-                } else {
-                    html += '<p class="keine-schueler">Keine Schüler in dieser Klasse</p>';
-                }
-                
-                html += `
+        Object.entries(klassen).forEach(([klassenName, klassenDaten]) => {
+            const schuelerAnzahl = klassenDaten.schueler ? klassenDaten.schueler.length : 0;
+            const klassenlehrer = klassenDaten.klassenlehrer || 'Nicht zugewiesen';
+            
+            html += `
+                <div class="klassen-item">
+                    <div class="klassen-header">
+                        <h5>🏫 ${klassenName}</h5>
+                        <div class="klassen-info">
+                            <span class="schueler-anzahl">👥 ${schuelerAnzahl} Schüler</span>
+                            <span class="klassenlehrer-info">👨‍🏫 ${klassenlehrer}</span>
                         </div>
                     </div>
-                `;
-            });
-        } else {
-            html += '<p class="keine-klassen">Noch keine Klassen angelegt. Importieren Sie eine CSV-Datei oder legen Sie manuell eine Klasse an.</p>';
-        }
+                    <div class="klassen-actions">
+                        <button class="btn" onclick="klasseBearbeiten('${klassenName}')">Bearbeiten</button>
+                        <button class="btn btn-danger" onclick="klasseLoeschen('${klassenName}')">Löschen</button>
+                    </div>
+                    <div class="schueler-vorschau">
+                        ${klassenDaten.schueler ? 
+                            klassenDaten.schueler.slice(0, 5).map(s => `<span class="schueler-name-tag">${s.name}</span>`).join('') +
+                            (schuelerAnzahl > 5 ? `<span class="weitere-schueler">... und ${schuelerAnzahl - 5} weitere</span>` : '')
+                            : '<em>Keine Schüler</em>'
+                        }
+                    </div>
+                </div>
+            `;
+        });
         
         html += `
-                </div>
             </div>
-            <button class="btn btn-success" onclick="klassenSpeichern()">Alle Änderungen speichern</button>
+            <div class="klassen-statistik">
+                <strong>📊 Statistik:</strong> 
+                ${Object.keys(klassen).length} Klassen mit insgesamt 
+                ${Object.values(klassen).reduce((sum, k) => sum + (k.schueler ? k.schueler.length : 0), 0)} Schülern
+            </div>
         `;
         
         container.innerHTML = html;
@@ -122,423 +104,354 @@ async function loadKlassenVerwaltung() {
 // CSV-Datei ausgewählt
 function csvDateiAusgewaehlt() {
     const fileInput = document.getElementById('csvFileInput');
-    const file = fileInput.files[0];
+    const file = fileInput?.files[0];
     
     if (!file) return;
     
+    console.log('📄 CSV-Datei ausgewählt:', file.name);
+    
     const reader = new FileReader();
     reader.onload = function(e) {
-        const csvText = e.target.result;
-        csvVorschauAnzeigen(csvText);
+        const csvContent = e.target.result;
+        showCSVPreview(csvContent);
     };
-    reader.readAsText(file, 'UTF-8');
+    reader.readAsText(file);
 }
 
 // CSV-Vorschau anzeigen
-function csvVorschauAnzeigen(csvText) {
-    const preview = document.getElementById('csvPreview');
-    if (!preview) return;
+function showCSVPreview(csvContent) {
+    const previewContainer = document.getElementById('csvPreview');
+    if (!previewContainer) return;
     
-    const lines = csvText.split('\n').filter(line => line.trim());
-    if (lines.length === 0) {
-        preview.innerHTML = '<p style="color: #e74c3c;">CSV-Datei ist leer oder ungültig.</p>';
-        preview.classList.remove('hidden');
-        return;
-    }
-    
-    let html = `
-        <h5>📋 CSV-Vorschau (${lines.length} Einträge)</h5>
-        <div class="csv-preview-liste">
-    `;
-    
-    const klassenStats = {};
-    let validEntries = 0;
-    let invalidEntries = 0;
+    const lines = csvContent.split('\n').filter(line => line.trim());
+    const parsedData = [];
     
     lines.forEach((line, index) => {
-        const parts = line.split(',').map(part => part.trim().replace(/"/g, ''));
-        
-        if (parts.length >= 3) {
-            const [klasse, nachname, vorname] = parts;
-            if (klasse && nachname && vorname) {
-                klassenStats[klasse] = (klassenStats[klasse] || 0) + 1;
-                html += `
-                    <div class="csv-entry valid">
-                        <span class="klasse-badge">${klasse}</span>
-                        ${nachname}, ${vorname}
-                    </div>
-                `;
-                validEntries++;
-            } else {
-                html += `
-                    <div class="csv-entry invalid">
-                        Zeile ${index + 1}: Ungültige Daten - "${line}"
-                    </div>
-                `;
-                invalidEntries++;
-            }
-        } else {
-            html += `
-                <div class="csv-entry invalid">
-                    Zeile ${index + 1}: Zu wenige Spalten - "${line}"
-                </div>
-            `;
-            invalidEntries++;
+        const parts = line.split(',').map(p => p.trim());
+        if (parts.length >= 2) {
+            parsedData.push({
+                klasse: parts[0],
+                name: parts[1],
+                klassenlehrer: parts[2] || ''
+            });
         }
     });
     
-    html += '</div>';
+    if (parsedData.length === 0) {
+        previewContainer.innerHTML = '<p style="color: #e74c3c;">Keine gültigen Daten in der CSV-Datei gefunden.</p>';
+        previewContainer.classList.remove('hidden');
+        return;
+    }
     
-    // Statistiken hinzufügen
-    html += `
-        <div class="csv-stats">
-            <div class="stat-item">
-                <strong>Gültige Einträge:</strong> ${validEntries}
-            </div>
-            <div class="stat-item">
-                <strong>Ungültige Einträge:</strong> ${invalidEntries}
-            </div>
-            <div class="stat-item">
-                <strong>Klassen:</strong> ${Object.keys(klassenStats).map(k => `${k} (${klassenStats[k]})`).join(', ')}
-            </div>
-        </div>
+    // Klassen gruppieren
+    const klassenGruppen = {};
+    parsedData.forEach(item => {
+        if (!klassenGruppen[item.klasse]) {
+            klassenGruppen[item.klasse] = {
+                schueler: [],
+                klassenlehrer: item.klassenlehrer
+            };
+        }
+        klassenGruppen[item.klasse].schueler.push({
+            name: item.name
+        });
+    });
+    
+    let html = `
+        <h4>📋 CSV-Vorschau</h4>
+        <p><strong>${parsedData.length}</strong> Schüler in <strong>${Object.keys(klassenGruppen).length}</strong> Klassen gefunden:</p>
+        <div class="csv-vorschau-liste">
     `;
     
-    preview.innerHTML = html;
-    preview.classList.remove('hidden');
+    Object.entries(klassenGruppen).forEach(([klassenName, klassenDaten]) => {
+        html += `
+            <div class="csv-klasse-vorschau">
+                <strong>🏫 ${klassenName}</strong>
+                ${klassenDaten.klassenlehrer ? `<span class="klassenlehrer">(${klassenDaten.klassenlehrer})</span>` : ''}
+                <div class="csv-schueler-liste">
+                    ${klassenDaten.schueler.map(s => `<span class="csv-schueler-tag">${s.name}</span>`).join('')}
+                </div>
+            </div>
+        `;
+    });
+    
+    html += `</div>`;
+    
+    previewContainer.innerHTML = html;
+    previewContainer.classList.remove('hidden');
+    
+    // Daten für Import zwischenspeichern
+    window.csvImportData = klassenGruppen;
 }
 
 // CSV importieren
 async function csvImportieren() {
-    console.log('📄 Importiere CSV-Daten...');
-    
-    if (!window.firebaseFunctions.requireAdmin()) return;
-    
-    const fileInput = document.getElementById('csvFileInput');
-    const file = fileInput.files[0];
-    
-    if (!file) {
-        alert('Bitte wählen Sie eine CSV-Datei aus!');
+    if (!window.csvImportData) {
+        alert('Keine CSV-Daten zum Importieren vorhanden!');
         return;
     }
     
-    const reader = new FileReader();
-    reader.onload = async function(e) {
-        const csvText = e.target.result;
-        const lines = csvText.split('\n').filter(line => line.trim());
-        
-        if (lines.length === 0) {
-            alert('CSV-Datei ist leer!');
-            return;
-        }
-        
-        try {
-            const neueKlassen = {};
-            let importCount = 0;
-            let errorCount = 0;
-            
-            lines.forEach(line => {
-                const parts = line.split(',').map(part => part.trim().replace(/"/g, ''));
-                
-                if (parts.length >= 3) {
-                    const [klasse, nachname, vorname] = parts;
-                    
-                    if (klasse && nachname && vorname) {
-                        if (!neueKlassen[klasse]) {
-                            neueKlassen[klasse] = {
-                                name: klasse,
-                                schueler: [],
-                                erstellt: window.firebaseFunctions.formatGermanDate(),
-                                timestamp: window.firebaseFunctions.getTimestamp()
-                            };
-                        }
-                        
-                        // Prüfen ob Schüler bereits existiert
-                        const existiert = neueKlassen[klasse].schueler.some(s => 
-                            s.nachname === nachname && s.vorname === vorname
-                        );
-                        
-                        if (!existiert) {
-                            neueKlassen[klasse].schueler.push({ nachname, vorname });
-                            importCount++;
-                        }
-                    } else {
-                        errorCount++;
-                    }
-                } else {
-                    errorCount++;
-                }
-            });
-            
-            if (Object.keys(neueKlassen).length === 0) {
-                alert('Keine gültigen Daten zum Importieren gefunden!');
-                return;
-            }
-            
-            // Bestehende Klassen laden und zusammenführen
-            const bestehendKlassen = window.firebaseFunctions.getKlassenFromCache();
-            
-            Object.entries(neueKlassen).forEach(([klassenName, klassenData]) => {
-                if (bestehendKlassen[klassenName]) {
-                    // Klasse existiert bereits - Schüler hinzufügen
-                    klassenData.schueler.forEach(neuerSchueler => {
-                        const existiert = bestehendKlassen[klassenName].schueler.some(s => 
-                            s.nachname === neuerSchueler.nachname && s.vorname === neuerSchueler.vorname
-                        );
-                        
-                        if (!existiert) {
-                            bestehendKlassen[klassenName].schueler.push(neuerSchueler);
-                        }
-                    });
-                } else {
-                    // Neue Klasse
-                    bestehendKlassen[klassenName] = klassenData;
-                }
-            });
-            
-            // In Firebase speichern
-            const klassenRef = window.firebaseFunctions.getDatabaseRef('system/klassen');
-            await window.firebaseDB.set(klassenRef, bestehendKlassen);
-            
-            // Cache aktualisieren
-            window.firebaseFunctions.dataCache.klassen = bestehendKlassen;
-            
-            // News erstellen
-            if (window.newsFunctions) {
-                await window.newsFunctions.createNewsForAction(
-                    'Schülerdaten importiert', 
-                    `${importCount} Schüler in ${Object.keys(neueKlassen).length} Klassen importiert.`
-                );
-            }
-            
-            console.log('✅ CSV-Import erfolgreich:', importCount, 'Schüler');
-            alert(`Import erfolgreich!\n\n${importCount} Schüler importiert\n${errorCount} Fehler\nKlassen: ${Object.keys(neueKlassen).join(', ')}`);
-            
-            // UI neu laden
-            loadKlassenVerwaltung();
-            
-            // CSV-Eingabe zurücksetzen
-            fileInput.value = '';
-            document.getElementById('csvPreview').classList.add('hidden');
-            
-        } catch (error) {
-            console.error('❌ Fehler beim CSV-Import:', error);
-            alert('Fehler beim Import: ' + error.message);
-        }
-    };
-    
-    reader.readAsText(file, 'UTF-8');
-}
-
-// Neue Klasse anlegen
-async function neueKlasseAnlegen() {
-    console.log('🏫 Lege neue Klasse an...');
-    
     if (!window.firebaseFunctions.requireAdmin()) return;
     
-    const nameInput = document.getElementById('neueKlasseName');
-    const klassenName = nameInput?.value.trim();
+    const klassenAnzahl = Object.keys(window.csvImportData).length;
+    const schuelerAnzahl = Object.values(window.csvImportData).reduce((sum, k) => sum + k.schueler.length, 0);
     
-    if (!klassenName) {
-        alert('Bitte Klassennamen eingeben!');
-        return;
-    }
-    
-    // Prüfen ob Klasse bereits existiert
-    const klassen = window.firebaseFunctions.getKlassenFromCache();
-    if (klassen[klassenName]) {
-        alert('Diese Klasse existiert bereits!');
+    if (!confirm(`${klassenAnzahl} Klassen mit ${schuelerAnzahl} Schülern importieren?\n\nBestehende Klassen werden überschrieben!`)) {
         return;
     }
     
     try {
+        // Bestehende Klassen laden
+        const klasssenRef = window.firebaseFunctions.getDatabaseRef('system/klassen');
+        const snapshot = await window.firebaseDB.get(klasssenRef);
+        
+        let existingKlassen = {};
+        if (snapshot.exists()) {
+            existingKlassen = snapshot.val();
+        }
+        
+        // Neue Klassen hinzufügen/überschreiben
+        const updatedKlassen = { ...existingKlassen, ...window.csvImportData };
+        
+        // In Firebase speichern
+        await window.firebaseDB.set(klasssenRef, updatedKlassen);
+        
+        // Cache aktualisieren
+        window.firebaseFunctions.dataCache.klassen = updatedKlassen;
+        
+        // UI zurücksetzen
+        document.getElementById('csvFileInput').value = '';
+        document.getElementById('csvPreview').classList.add('hidden');
+        window.csvImportData = null;
+        
+        // News erstellen
+        if (window.newsFunctions) {
+            await window.newsFunctions.createNewsForAction(
+                'Klassen importiert', 
+                `${klassenAnzahl} Klassen mit ${schuelerAnzahl} Schülern wurden importiert.`
+            );
+        }
+        
+        console.log('✅ CSV-Import erfolgreich');
+        alert(`${klassenAnzahl} Klassen mit ${schuelerAnzahl} Schülern wurden erfolgreich importiert!`);
+        
+        // Klassen-Verwaltung neu laden
+        loadKlassenVerwaltung();
+        
+    } catch (error) {
+        console.error('❌ Fehler beim CSV-Import:', error);
+        alert('Fehler beim CSV-Import: ' + error.message);
+    }
+}
+
+// Neue Klasse manuell erstellen
+async function neueKlasseErstellen() {
+    const nameInput = document.getElementById('neueKlasseName');
+    const lehrerInput = document.getElementById('neuerKlassenlehrer');
+    
+    const name = nameInput?.value.trim();
+    const klassenlehrer = lehrerInput?.value.trim();
+    
+    if (!name) {
+        alert('Bitte geben Sie einen Klassennamen ein!');
+        return;
+    }
+    
+    if (!window.firebaseFunctions.requireAdmin()) return;
+    
+    try {
+        // Bestehende Klassen prüfen
+        const klassen = window.firebaseFunctions.getKlassenFromCache();
+        
+        if (klassen[name]) {
+            if (!confirm(`Klasse "${name}" existiert bereits. Überschreiben?`)) {
+                return;
+            }
+        }
+        
+        // Neue Klasse erstellen
         const neueKlasse = {
-            name: klassenName,
+            klassenlehrer: klassenlehrer || null,
             schueler: [],
             erstellt: window.firebaseFunctions.formatGermanDate(),
             timestamp: window.firebaseFunctions.getTimestamp()
         };
         
-        klassen[klassenName] = neueKlasse;
-        
         // In Firebase speichern
-        const klassenRef = window.firebaseFunctions.getDatabaseRef('system/klassen');
-        await window.firebaseDB.set(klassenRef, klassen);
+        const klasseRef = window.firebaseFunctions.getDatabaseRef(`system/klassen/${name}`);
+        await window.firebaseDB.set(klasseRef, neueKlasse);
         
         // Cache aktualisieren
-        window.firebaseFunctions.dataCache.klassen = klassen;
+        window.firebaseFunctions.dataCache.klassen[name] = neueKlasse;
         
-        // News erstellen
-        if (window.newsFunctions) {
-            await window.newsFunctions.createNewsForAction(
-                'Neue Klasse angelegt', 
-                `Die Klasse "${klassenName}" wurde angelegt.`
-            );
-        }
-        
-        console.log('✅ Neue Klasse angelegt:', klassenName);
-        alert(`Klasse "${klassenName}" wurde erfolgreich angelegt!`);
-        
-        // Eingabefeld leeren
+        // Eingabefelder leeren
         nameInput.value = '';
+        lehrerInput.value = '';
         
-        // UI neu laden
+        console.log('✅ Neue Klasse erstellt:', name);
+        alert(`Klasse "${name}" wurde erfolgreich erstellt!`);
+        
+        // Klassen-Verwaltung neu laden
         loadKlassenVerwaltung();
         
     } catch (error) {
-        console.error('❌ Fehler beim Anlegen der Klasse:', error);
-        alert('Fehler beim Anlegen der Klasse: ' + error.message);
+        console.error('❌ Fehler beim Erstellen der Klasse:', error);
+        alert('Fehler beim Erstellen der Klasse: ' + error.message);
     }
 }
 
 // Klasse bearbeiten
 function klasseBearbeiten(klassenName) {
-    console.log('✏️ Bearbeite Klasse:', klassenName);
-    
     const klassen = window.firebaseFunctions.getKlassenFromCache();
-    const klasse = klassen[klassenName];
+    const klassenDaten = klassen[klassenName];
     
-    if (!klasse) {
+    if (!klassenDaten) {
         alert('Klasse nicht gefunden!');
         return;
     }
     
-    // Modal für Klassenbearbeitung öffnen
-    showKlassenEditModal(klassenName, klasse);
+    // Modal für Klassen-Bearbeitung anzeigen
+    showKlassenEditModal(klassenName, klassenDaten);
 }
 
 // Klassen-Edit Modal anzeigen
-function showKlassenEditModal(klassenName, klasse) {
+function showKlassenEditModal(klassenName, klassenDaten) {
     const modal = document.createElement('div');
     modal.className = 'modal';
     modal.id = 'klassenEditModal';
     
-    let schuelerHtml = '';
-    if (klasse.schueler && klasse.schueler.length > 0) {
-        klasse.schueler.forEach((schueler, index) => {
-            schuelerHtml += `
-                <div class="schueler-edit-item">
-                    <input type="text" value="${schueler.nachname}" placeholder="Nachname" data-index="${index}" data-field="nachname">
-                    <input type="text" value="${schueler.vorname}" placeholder="Vorname" data-index="${index}" data-field="vorname">
-                    <button class="btn btn-danger btn-sm" onclick="schuelerAusKlasseEntfernen(${index})">Entfernen</button>
-                </div>
-            `;
-        });
-    }
+    const schuelerListe = klassenDaten.schueler || [];
     
     modal.innerHTML = `
         <div class="modal-content">
-            <h3>Klasse "${klassenName}" bearbeiten</h3>
+            <h3>✏️ Klasse "${klassenName}" bearbeiten</h3>
             
-            <div class="schueler-bearbeitung">
-                <h4>Schüler in der Klasse:</h4>
-                <div id="schuelerEditListe">
-                    ${schuelerHtml}
-                </div>
-                
-                <div class="neuer-schueler">
-                    <h5>Neuen Schüler hinzufügen:</h5>
-                    <div class="input-group">
-                        <input type="text" id="neuerSchuelerNachname" placeholder="Nachname">
-                        <input type="text" id="neuerSchuelerVorname" placeholder="Vorname">
-                        <button class="btn btn-success" onclick="schuelerZuKlasseHinzufuegen()">Hinzufügen</button>
+            <div class="input-group">
+                <label>Klassenlehrer:</label>
+                <input type="text" id="editKlassenlehrer" value="${klassenDaten.klassenlehrer || ''}" placeholder="Klassenlehrer (Optional)">
+            </div>
+            
+            <h4>👥 Schüler (${schuelerListe.length})</h4>
+            <div class="input-group">
+                <input type="text" id="neuerSchuelerName" placeholder="Neuer Schüler">
+                <button class="btn btn-success" onclick="schuelerZurKlasseHinzufuegen()">Hinzufügen</button>
+            </div>
+            
+            <div id="klassenSchuelerListe" class="klassen-schueler-liste">
+                ${schuelerListe.map((schueler, index) => `
+                    <div class="schueler-edit-item">
+                        <span class="schueler-name">${schueler.name}</span>
+                        <button class="btn btn-danger btn-sm" onclick="schuelerAusKlasseEntfernen(${index})">Entfernen</button>
                     </div>
-                </div>
+                `).join('')}
             </div>
             
             <div class="modal-buttons">
-                <button class="btn btn-success" onclick="klassenEditSpeichern('${klassenName}')">Speichern</button>
-                <button class="btn btn-danger" onclick="klassenEditAbbrechen()">Abbrechen</button>
+                <button class="btn btn-success" onclick="klasseEditSpeichern('${klassenName}')">Speichern</button>
+                <button class="btn btn-danger" onclick="klasseEditAbbrechen()">Abbrechen</button>
             </div>
         </div>
     `;
     
     document.body.appendChild(modal);
+    
+    // Aktuelle Klassen-Daten für Bearbeitung speichern
+    window.currentEditKlasse = {
+        name: klassenName,
+        data: { ...klassenDaten }
+    };
 }
 
-// Schüler zu Klasse hinzufügen (im Modal)
-function schuelerZuKlasseHinzufuegen() {
-    const nachnameInput = document.getElementById('neuerSchuelerNachname');
-    const vornameInput = document.getElementById('neuerSchuelerVorname');
+// Schüler zur Klasse hinzufügen
+function schuelerZurKlasseHinzufuegen() {
+    const nameInput = document.getElementById('neuerSchuelerName');
+    const name = nameInput?.value.trim();
     
-    const nachname = nachnameInput?.value.trim();
-    const vorname = vornameInput?.value.trim();
-    
-    if (!nachname || !vorname) {
-        alert('Bitte Vor- und Nachname eingeben!');
+    if (!name) {
+        alert('Bitte geben Sie einen Schülernamen ein!');
         return;
     }
     
-    const liste = document.getElementById('schuelerEditListe');
-    const existingItems = liste.querySelectorAll('.schueler-edit-item');
-    const newIndex = existingItems.length;
+    if (!window.currentEditKlasse) return;
     
-    const newItem = document.createElement('div');
-    newItem.className = 'schueler-edit-item';
-    newItem.innerHTML = `
-        <input type="text" value="${nachname}" placeholder="Nachname" data-index="${newIndex}" data-field="nachname">
-        <input type="text" value="${vorname}" placeholder="Vorname" data-index="${newIndex}" data-field="vorname">
-        <button class="btn btn-danger btn-sm" onclick="schuelerAusKlasseEntfernen(${newIndex})">Entfernen</button>
-    `;
+    // Prüfen ob Schüler bereits existiert
+    const existiert = window.currentEditKlasse.data.schueler.some(s => s.name === name);
+    if (existiert) {
+        alert('Dieser Schüler ist bereits in der Klasse!');
+        return;
+    }
     
-    liste.appendChild(newItem);
+    // Schüler hinzufügen
+    window.currentEditKlasse.data.schueler.push({ name });
     
-    // Eingabefelder leeren
-    nachnameInput.value = '';
-    vornameInput.value = '';
+    // Liste aktualisieren
+    updateKlassenSchuelerListe();
     
-    console.log('➕ Schüler hinzugefügt:', nachname, vorname);
+    // Eingabefeld leeren
+    nameInput.value = '';
+    
+    console.log('➕ Schüler hinzugefügt:', name);
 }
 
-// Schüler aus Klasse entfernen (im Modal)
+// Schüler aus Klasse entfernen
 function schuelerAusKlasseEntfernen(index) {
-    const item = document.querySelector(`[data-index="${index}"]`)?.closest('.schueler-edit-item');
-    if (item) {
-        item.remove();
-        console.log('➖ Schüler entfernt:', index);
+    if (!window.currentEditKlasse) return;
+    
+    const schueler = window.currentEditKlasse.data.schueler[index];
+    if (confirm(`Schüler "${schueler.name}" aus der Klasse entfernen?`)) {
+        window.currentEditKlasse.data.schueler.splice(index, 1);
+        updateKlassenSchuelerListe();
+        console.log('➖ Schüler entfernt:', schueler.name);
     }
 }
 
-// Klassen-Edit speichern
-async function klassenEditSpeichern(klassenName) {
-    console.log('💾 Speichere Klassen-Änderungen...');
+// Klassen-Schüler-Liste aktualisieren
+function updateKlassenSchuelerListe() {
+    const container = document.getElementById('klassenSchuelerListe');
+    if (!container || !window.currentEditKlasse) return;
     
-    if (!window.firebaseFunctions.requireAdmin()) return;
+    const schuelerListe = window.currentEditKlasse.data.schueler;
+    
+    container.innerHTML = schuelerListe.map((schueler, index) => `
+        <div class="schueler-edit-item">
+            <span class="schueler-name">${schueler.name}</span>
+            <button class="btn btn-danger btn-sm" onclick="schuelerAusKlasseEntfernen(${index})">Entfernen</button>
+        </div>
+    `).join('');
+    
+    // Schüler-Anzahl im Titel aktualisieren
+    const titleElement = container.previousElementSibling;
+    if (titleElement && titleElement.tagName === 'H4') {
+        titleElement.textContent = `👥 Schüler (${schuelerListe.length})`;
+    }
+}
+
+// Klasse-Edit speichern
+async function klasseEditSpeichern(klassenName) {
+    if (!window.currentEditKlasse) return;
+    
+    const lehrerInput = document.getElementById('editKlassenlehrer');
+    const klassenlehrer = lehrerInput?.value.trim();
     
     try {
-        const schuelerItems = document.querySelectorAll('.schueler-edit-item');
-        const neueSchuelerListe = [];
-        
-        schuelerItems.forEach(item => {
-            const nachnameInput = item.querySelector('[data-field="nachname"]');
-            const vornameInput = item.querySelector('[data-field="vorname"]');
-            
-            const nachname = nachnameInput?.value.trim();
-            const vorname = vornameInput?.value.trim();
-            
-            if (nachname && vorname) {
-                neueSchuelerListe.push({ nachname, vorname });
-            }
-        });
-        
-        // Klassen aus Cache holen und aktualisieren
-        const klassen = window.firebaseFunctions.getKlassenFromCache();
-        if (klassen[klassenName]) {
-            klassen[klassenName].schueler = neueSchuelerListe;
-            klassen[klassenName].lastUpdate = window.firebaseFunctions.getTimestamp();
-        }
+        // Aktualisierte Klassen-Daten
+        const updatedKlassenData = {
+            ...window.currentEditKlasse.data,
+            klassenlehrer: klassenlehrer || null,
+            lastUpdate: window.firebaseFunctions.getTimestamp()
+        };
         
         // In Firebase speichern
-        const klassenRef = window.firebaseFunctions.getDatabaseRef('system/klassen');
-        await window.firebaseDB.set(klassenRef, klassen);
+        const klasseRef = window.firebaseFunctions.getDatabaseRef(`system/klassen/${klassenName}`);
+        await window.firebaseDB.set(klasseRef, updatedKlassenData);
         
         // Cache aktualisieren
-        window.firebaseFunctions.dataCache.klassen = klassen;
+        window.firebaseFunctions.dataCache.klassen[klassenName] = updatedKlassenData;
         
-        console.log('✅ Klasse aktualisiert:', klassenName, neueSchuelerListe.length, 'Schüler');
+        console.log('✅ Klasse aktualisiert:', klassenName);
         alert(`Klasse "${klassenName}" wurde erfolgreich aktualisiert!`);
         
-        klassenEditAbbrechen();
+        klasseEditAbbrechen();
         loadKlassenVerwaltung();
         
     } catch (error) {
@@ -547,37 +460,40 @@ async function klassenEditSpeichern(klassenName) {
     }
 }
 
-// Klassen-Edit abbrechen
-function klassenEditAbbrechen() {
+// Klasse-Edit abbrechen
+function klasseEditAbbrechen() {
     const modal = document.getElementById('klassenEditModal');
     if (modal) {
         modal.remove();
     }
+    window.currentEditKlasse = null;
 }
 
 // Klasse löschen
 async function klasseLoeschen(klassenName) {
     if (!window.firebaseFunctions.requireAdmin()) return;
     
-    const zugewieseneCount = getZugewieseneSchuelerCount(klassenName);
+    const klassen = window.firebaseFunctions.getKlassenFromCache();
+    const klassenDaten = klassen[klassenName];
     
-    let confirmText = `Klasse "${klassenName}" wirklich löschen?`;
-    if (zugewieseneCount > 0) {
-        confirmText += `\n\nAchtung: ${zugewieseneCount} Schüler aus dieser Klasse sind bereits Gruppen zugewiesen!`;
+    if (!klassenDaten) {
+        alert('Klasse nicht gefunden!');
+        return;
     }
     
-    if (!confirm(confirmText)) return;
+    const schuelerAnzahl = klassenDaten.schueler ? klassenDaten.schueler.length : 0;
+    
+    if (!confirm(`Klasse "${klassenName}" mit ${schuelerAnzahl} Schülern wirklich löschen?\n\nDies kann bestehende Gruppenzuordnungen beeinträchtigen!`)) {
+        return;
+    }
     
     try {
-        const klassen = window.firebaseFunctions.getKlassenFromCache();
-        delete klassen[klassenName];
-        
-        // In Firebase speichern
-        const klassenRef = window.firebaseFunctions.getDatabaseRef('system/klassen');
-        await window.firebaseDB.set(klassenRef, klassen);
+        // Klasse aus Firebase löschen
+        const klasseRef = window.firebaseFunctions.getDatabaseRef(`system/klassen/${klassenName}`);
+        await window.firebaseDB.remove(klasseRef);
         
         // Cache aktualisieren
-        window.firebaseFunctions.dataCache.klassen = klassen;
+        delete window.firebaseFunctions.dataCache.klassen[klassenName];
         
         // News erstellen
         if (window.newsFunctions) {
@@ -590,6 +506,7 @@ async function klasseLoeschen(klassenName) {
         console.log('🗑️ Klasse gelöscht:', klassenName);
         alert(`Klasse "${klassenName}" wurde gelöscht.`);
         
+        // Klassen-Verwaltung neu laden
         loadKlassenVerwaltung();
         
     } catch (error) {
@@ -598,38 +515,7 @@ async function klasseLoeschen(klassenName) {
     }
 }
 
-// Hilfsfunktionen für Klassen-Verwaltung
-function getZugewieseneSchuelerCount(klassenName) {
-    let count = 0;
-    const gruppen = window.firebaseFunctions.getGruppenFromCache();
-    
-    gruppen.forEach(gruppe => {
-        if (gruppe.schueler) {
-            gruppe.schueler.forEach(schueler => {
-                if (schueler.klasse === klassenName) {
-                    count++;
-                }
-            });
-        }
-    });
-    
-    return count;
-}
-
-function istSchuelerZugewiesen(klassenName, nachname, vorname) {
-    const gruppen = window.firebaseFunctions.getGruppenFromCache();
-    
-    return gruppen.some(gruppe => {
-        if (!gruppe.schueler) return false;
-        return gruppe.schueler.some(schueler => 
-            schueler.klasse === klassenName && 
-            schueler.nachname === nachname && 
-            schueler.vorname === vorname
-        );
-    });
-}
-
-// === FÄCHER-VERWALTUNG ===
+// === FÄCHER-VERWALTUNG (bleibt wie vorher) ===
 
 async function loadFaecherVerwaltung() {
     console.log('📚 Lade Fächer-Verwaltung...');
@@ -787,7 +673,7 @@ async function faecherSpeichern() {
     }
 }
 
-// === CHECKPOINTS-VERWALTUNG (Neu strukturiert) ===
+// === CHECKPOINTS-VERWALTUNG (bleibt wie vorher) ===
 
 async function loadCheckpointsVerwaltung() {
     console.log('📋 Lade Checkpoints-Verwaltung...');
@@ -1052,7 +938,7 @@ async function checkpointsUndFormulierungenSpeichern() {
     }
 }
 
-// === BRIEFVORLAGE ===
+// === BRIEFVORLAGE (bleibt wie vorher) ===
 
 async function loadBriefvorlage() {
     console.log('📄 Lade Briefvorlage...');
@@ -1115,7 +1001,7 @@ async function briefvorlageSpeichern() {
     }
 }
 
-// === WEITERE ADMIN-FUNKTIONEN ===
+// === WEITERE ADMIN-FUNKTIONEN (bleiben wie vorher) ===
 
 // Lehrer-Verwaltung laden
 function loadLehrer() {
@@ -1241,7 +1127,16 @@ window.adminFunctions = {
     loadLehrer,
     loadDatenverwaltung,
     updateFirebaseInfo,
-    schuljahrSpeichern
+    schuljahrSpeichern,
+    csvDateiAusgewaehlt,
+    csvImportieren,
+    neueKlasseErstellen,
+    klasseBearbeiten,
+    klasseLoeschen,
+    schuelerZurKlasseHinzufuegen,
+    schuelerAusKlasseEntfernen,
+    klasseEditSpeichern,
+    klasseEditAbbrechen
 };
 
 console.log('✅ Firebase Admin-System bereit');
