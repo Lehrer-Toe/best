@@ -1,103 +1,216 @@
-// Login-System - NUR JSON-basiert, KEIN Firebase
-console.log('🔐 Login-System geladen - JSON-basiert');
+import React, { useState, useEffect } from 'react';
+import { Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 
-document.addEventListener('DOMContentLoaded', function() {
-    const loginForm = document.getElementById('loginForm');
-    if (loginForm) {
-        loginForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            
-            console.log('🔐 Login-Versuch für:', email);
-            
-            const user = users.find(u => u.email === email && u.password === password);
-            if (user) {
-                currentUser = user;
-                console.log('✅ Login erfolgreich:', user.name);
-                showApp();
-            } else {
-                console.log('❌ Login fehlgeschlagen');
-                showError('Ungültige Anmeldedaten!');
-            }
-        });
-    }
-});
+export default function LoginSystem() {
+  // Zustände für Login-Prozess
+  const [isAppReady, setIsAppReady] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loginError, setLoginError] = useState('');
+  const [loginSuccess, setLoginSuccess] = useState(false);
+  
+  // Formular-Daten
+  const [formData, setFormData] = useState({
+    username: '',
+    password: ''
+  });
 
-function showError(message) {
-    const errorDiv = document.getElementById('errorMessage');
-    if (errorDiv) {
-        errorDiv.textContent = message;
-        errorDiv.style.display = 'block';
-    }
-}
+  // App-Initialisierung - Login wird ZUERST geladen
+  useEffect(() => {
+    // Simuliere App-Initialisierung
+    const initApp = async () => {
+      try {
+        // Kurze Verzögerung für realistisches Laden
+        await new Promise(resolve => setTimeout(resolve, 500));
+        setIsAppReady(true);
+      } catch (error) {
+        console.error('App-Initialisierung fehlgeschlagen:', error);
+        setLoginError('App konnte nicht geladen werden. Bitte Seite neu laden.');
+      }
+    };
+    
+    initApp();
+  }, []);
 
-function showApp() {
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('appContainer').style.display = 'block';
-    document.getElementById('currentUser').textContent = `${currentUser.name} (${currentUser.role})`;
-    
-    console.log('👤 Benutzer angemeldet:', currentUser.name, 'Rolle:', currentUser.role);
-    
-    // ALLE Tabs erst mal verstecken
-    hideAllTabs();
-    
-    // Tabs je nach Rolle anzeigen
-    if (currentUser.role === 'admin') {
-        // Admin sieht alle Tabs
-        document.getElementById('newsTab').style.display = 'block';
-        document.getElementById('lehrerTab').style.display = 'block';
-        document.getElementById('datenTab').style.display = 'block';
-        document.getElementById('faecherTab').style.display = 'block';
-        document.getElementById('checkpointsTab').style.display = 'block';
-        document.getElementById('adminvorlagenTab').style.display = 'block';
-        console.log('👑 Admin-Interface aktiviert');
-    } else {
-        // Lehrer sieht nur diese Tabs
-        document.getElementById('newsTab').style.display = 'block';
-        document.getElementById('themenTab').style.display = 'block';
-        document.getElementById('gruppenTab').style.display = 'block';
-        document.getElementById('bewertenTab').style.display = 'block';
-        document.getElementById('vorlagenTab').style.display = 'block';
-        document.getElementById('uebersichtTab').style.display = 'block';
-        console.log('👨‍🏫 Lehrer-Interface aktiviert');
+  // Login-Funktion mit robuster Fehlerbehandlung
+  const handleLogin = async () => {
+    // Validierung
+    if (!formData.username || !formData.password) {
+      setLoginError('Bitte alle Felder ausfüllen');
+      return;
     }
-    
-    // App nach Login initialisieren
-    if (typeof initializeApp === 'function') {
-        initializeApp();
-    }
-}
 
-function hideAllTabs() {
-    const allTabs = [
-        'newsTab', 'themenTab', 'gruppenTab', 'lehrerTab', 'datenTab', 
-        'bewertenTab', 'vorlagenTab', 'uebersichtTab', 'faecherTab', 
-        'checkpointsTab', 'adminvorlagenTab'
-    ];
-    
-    allTabs.forEach(tabId => {
-        const tab = document.getElementById(tabId);
-        if (tab) {
-            tab.style.display = 'none';
-        }
-    });
-}
+    setIsLoggingIn(true);
+    setLoginError('');
+    setLoginSuccess(false);
 
-function logout() {
-    console.log('👋 Benutzer meldet sich ab:', currentUser ? currentUser.name : 'unbekannt');
-    currentUser = null;
-    
-    // Alle Tabs verstecken beim Logout
-    hideAllTabs();
-    
-    document.getElementById('loginScreen').style.display = 'flex';
-    document.getElementById('appContainer').style.display = 'none';
-    document.getElementById('email').value = '';
-    document.getElementById('password').value = '';
-    
-    const errorMessage = document.getElementById('errorMessage');
-    if (errorMessage) {
-        errorMessage.style.display = 'none';
+    try {
+      // Simuliere API-Call mit Timeout
+      const loginPromise = new Promise((resolve, reject) => {
+        setTimeout(() => {
+          // Simuliere erfolgreiche Anmeldung
+          if (formData.username === 'admin' && formData.password === 'admin') {
+            resolve({ success: true, user: formData.username });
+          } else {
+            reject(new Error('Ungültige Anmeldedaten'));
+          }
+        }, 1500);
+      });
+
+      // Timeout nach 10 Sekunden
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Zeitüberschreitung bei der Anmeldung')), 10000);
+      });
+
+      const result = await Promise.race([loginPromise, timeoutPromise]);
+      
+      // Erfolgreiche Anmeldung
+      setLoginSuccess(true);
+      setTimeout(() => {
+        setIsLoggedIn(true);
+      }, 1000);
+      
+    } catch (error) {
+      setLoginError(error.message || 'Anmeldung fehlgeschlagen');
+    } finally {
+      setIsLoggingIn(false);
     }
+  };
+
+  // Logout-Funktion
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setFormData({ username: '', password: '' });
+    setLoginSuccess(false);
+  };
+
+  // Input-Handler
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    setLoginError(''); // Clear error when user types
+  };
+
+  // Enter-Taste Handler
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !isLoggingIn) {
+      handleLogin();
+    }
+  };
+
+  // Zeige Ladebildschirm während App-Initialisierung
+  if (!isAppReady) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">App wird geladen...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Hauptinhalt nach erfolgreicher Anmeldung
+  if (isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full">
+          <div className="text-center">
+            <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+            <h1 className="text-2xl font-bold text-gray-800 mb-2">
+              Willkommen, {formData.username}!
+            </h1>
+            <p className="text-gray-600 mb-6">Sie sind erfolgreich angemeldet.</p>
+            <button
+              onClick={handleLogout}
+              className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors"
+            >
+              Abmelden
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Login-Formular
+  return (
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full">
+        <h1 className="text-2xl font-bold text-center text-gray-800 mb-6">
+          Anmeldung
+        </h1>
+
+        {/* Erfolgs-Nachricht */}
+        {loginSuccess && (
+          <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded-lg flex items-center">
+            <CheckCircle className="w-5 h-5 mr-2" />
+            Anmeldung erfolgreich! Einen Moment...
+          </div>
+        )}
+
+        {/* Fehler-Nachricht */}
+        {loginError && (
+          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg flex items-center">
+            <AlertCircle className="w-5 h-5 mr-2" />
+            {loginError}
+          </div>
+        )}
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Benutzername
+            </label>
+            <input
+              type="text"
+              name="username"
+              value={formData.username}
+              onChange={handleInputChange}
+              onKeyPress={handleKeyPress}
+              disabled={isLoggingIn}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+              placeholder="Benutzername eingeben"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Passwort
+            </label>
+            <input
+              type="password"
+              name="password"
+              value={formData.password}
+              onChange={handleInputChange}
+              onKeyPress={handleKeyPress}
+              disabled={isLoggingIn}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+              placeholder="Passwort eingeben"
+            />
+          </div>
+
+          <button
+            onClick={handleLogin}
+            disabled={isLoggingIn}
+            className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+          >
+            {isLoggingIn ? (
+              <>
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                Anmeldung läuft...
+              </>
+            ) : (
+              'Anmelden'
+            )}
+          </button>
+        </div>
+
+        <div className="mt-6 text-center text-sm text-gray-600">
+          <p>Test-Anmeldedaten:</p>
+          <p className="font-mono">Benutzer: admin | Passwort: admin</p>
+        </div>
+      </div>
+    </div>
+  );
 }
