@@ -38,11 +38,16 @@ async function loadBewertungen() {
             gruppe.schueler.forEach(schueler => {
                 if (schueler.lehrer === currentUserName) {
                     const fachInfo = schueler.fach ? ` (${window.firebaseFunctions.getFachNameFromGlobal(schueler.fach)})` : '';
+                    // NEUE Schüler-ID Generation basierend auf Vor- und Nachname
+                    const schuelerId = `${gruppe.id}-${schueler.vorname}-${schueler.nachname}`.replace(/\s/g, '-');
+                    
                     meineSchueler.push({
-                        name: schueler.name,
+                        vorname: schueler.vorname,
+                        nachname: schueler.nachname,
+                        name: `${schueler.vorname} ${schueler.nachname}`, // Für Kompatibilität
                         thema: gruppe.thema,
                         gruppenId: gruppe.id,
-                        schuelerId: `${gruppe.id}-${schueler.name.replace(/\s/g, '-')}`,
+                        schuelerId: schuelerId,
                         fach: schueler.fach,
                         fachInfo: fachInfo
                     });
