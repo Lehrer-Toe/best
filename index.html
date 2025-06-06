@@ -84,13 +84,6 @@
                         <button class="btn" onclick="adminNewsErstellen()">Nachricht veröffentlichen</button>
                     </div>
                 </div>
-                <!-- NEU: Alles gelesen Button -->
-                <div class="card" id="newsActionBereich">
-                    <div class="input-group">
-                        <button class="btn btn-success" onclick="alleNewsAlsGelesenMarkieren()">📚 Alles gelesen</button>
-                        <small style="color: #666;">Markiert alle aktuell sichtbaren News als gelesen</small>
-                    </div>
-                </div>
                 <div id="newsList">
                     <!-- News werden hier dynamisch eingefügt -->
                 </div>
@@ -120,56 +113,37 @@
                 </div>
             </div>
 
-            <!-- Gruppen Tab - ÜBERARBEITET -->
+            <!-- Gruppen Tab - ERWEITERT MIT KLASSEN-SYSTEM -->
             <div id="gruppen" class="tab-content">
                 <h2>Gruppen erstellen</h2>
-                
-                <!-- NEU: Button zum Öffnen der Gruppenersteller -->
                 <div class="card">
-                    <div class="input-group">
-                        <button class="btn btn-success" onclick="neueGruppeAnlegen()" id="neueGruppeBtn">
-                            ➕ Neue Gruppe anlegen
-                        </button>
-                        <button class="btn" onclick="gruppenErstellerSchließen()" id="gruppenAbbrechenBtn" style="display: none;">
-                            ❌ Abbrechen
-                        </button>
-                    </div>
-                </div>
-
-                <!-- NEU: Versteckter Gruppenersteller -->
-                <div id="gruppenErsteller" class="card" style="display: none;">
                     <h3>Neue Gruppe anlegen</h3>
+                    
+                    <!-- Klassen-Filter (NEU) -->
+                    <div class="klassen-filter-bereich">
+                        <label for="klassenFilter"><strong>1. Klasse auswählen:</strong></label>
+                        <select id="klassenFilter" onchange="klasseAusgewaehlt()">
+                            <option value="">Klasse wählen...</option>
+                        </select>
+                        <div id="schuelerStatistik" class="schueler-statistik">
+                            <p>Wählen Sie eine Klasse aus, um Schüler zu sehen.</p>
+                        </div>
+                    </div>
+                    
                     <div class="input-group">
+                        <label for="gruppenThema"><strong>2. Thema eingeben:</strong></label>
                         <input type="text" id="gruppenThema" placeholder="Thema (oder aus Liste wählen)">
                         <button class="btn" onclick="gruppeErstellen()">Gruppe erstellen</button>
                     </div>
                     
-                    <!-- NEU: Klassenfilter -->
-                    <div class="filter-section">
-                        <div class="filter-group">
-                            <label>Filter nach Klasse:</label>
-                            <select id="klassenFilter" onchange="filterVorhandeneSchueler()">
-                                <option value="">Alle Klassen</option>
-                                <!-- Klassen werden dynamisch geladen -->
-                            </select>
-                            <button class="btn btn-success" onclick="gewählteSchuelerHinzufuegen()">Ausgewählte hinzufügen</button>
-                        </div>
-                    </div>
-                    
-                    <!-- NEU: Vorhandene Schüler Auswahl -->
-                    <div id="vorhandeneSchueler" class="vorhandene-schueler-bereich">
-                        <h4>Vorhandene Schüler auswählen:</h4>
-                        <div id="schuelerAuswahl" class="schueler-auswahl-grid">
-                            <!-- Vorhandene Schüler werden hier angezeigt -->
-                        </div>
-                    </div>
-                    
                     <div style="margin-top: 1rem;">
-                        <h4>Schüler manuell hinzufügen:</h4>
+                        <h4><strong>3. Schüler zuweisen:</strong></h4>
+                        <p><em>Wählen Sie Schüler aus der gewählten Klasse aus:</em></p>
                         <div id="schuelerListe">
                             <div class="input-group schueler-row">
-                                <input type="text" placeholder="Schülername" class="schueler-name">
-                                <input type="text" placeholder="Klasse (z.B. 9a)" class="schueler-klasse">
+                                <select class="schueler-name-select" onchange="schuelerAusgewaehlt(this)">
+                                    <option value="">Schüler wählen...</option>
+                                </select>
                                 <select class="schueler-lehrer">
                                     <option value="">Lehrer wählen...</option>
                                 </select>
@@ -182,7 +156,6 @@
                         <button class="btn" onclick="schuelerHinzufuegen()">Weiteren Schüler hinzufügen</button>
                     </div>
                 </div>
-
                 <div class="liste" id="gruppenListe">
                     <!-- Gruppen werden hier angezeigt -->
                 </div>
@@ -358,9 +331,16 @@
                 </div>
             </div>
 
-            <!-- Admin System-Vorlagen Tab (nur Admin) -->
+            <!-- Admin System-Vorlagen Tab (nur Admin) - ERWEITERT UM KLASSEN -->
             <div id="adminvorlagen" class="tab-content">
                 <h2>System-Vorlagen bearbeiten</h2>
+                
+                <!-- NEU: Klassen verwalten -->
+                <div class="card">
+                    <div id="klassenVerwaltung">
+                        <!-- Klassen-Verwaltung wird hier angezeigt -->
+                    </div>
+                </div>
                 
                 <!-- Fächer verwalten -->
                 <div class="card">
