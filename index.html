@@ -146,10 +146,6 @@
                 <div id="errorMessage" class="error-message"></div>
             </form>
             
-            <!-- Firebase Authentication Status -->
-            <div id="authStatus" style="margin-top: 1rem; font-size: 0.9rem; color: #666;">
-                <div id="firebaseStatus">🔄 Firebase wird initialisiert...</div>
-            </div>
         </div>
     </div>
 
@@ -654,7 +650,6 @@
             console.log('🔥 Firebase v9 erfolgreich initialisiert');
             
             // Firebase Status anzeigen
-            document.getElementById('firebaseStatus').innerHTML = '🔥 Firebase bereit';
             
             // Firebase initialisieren und dann App starten
             if (typeof window.initializeFirebaseApp === 'function') {
@@ -662,7 +657,6 @@
             }
         } catch (error) {
             console.error('❌ KRITISCHER FEHLER bei Firebase-Initialisierung:', error);
-            document.getElementById('firebaseStatus').innerHTML = '❌ Firebase Fehler: ' + error.message;
             
             // Fallback anzeigen
             document.getElementById('loadingScreen').style.display = 'none';
