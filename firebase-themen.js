@@ -1,8 +1,10 @@
-// Firebase Themen System - Realtime Database
-console.log('💡 Firebase Themen System geladen');
+// Firebase Themen System - Realtime Database (ERWEITERT mit Bearbeitung)
+console.log('💡 Firebase Themen System geladen (mit Bearbeitung)');
 
 // Globale Variablen für Themen
 let ausgewaehlteFaecher = [];
+let bearbeitungsModus = false; // NEU: Track edit mode
+let aktuellesThemaEdit = null; // NEU: Aktuell zu bearbeitendes Thema
 
 // Themen laden und anzeigen
 function loadThemen() {
@@ -19,11 +21,37 @@ function loadThemen() {
         filterSelect.value = currentFilter;
     }
     
+    // Edit-Modus Button aktualisieren
+    updateEditModeButton();
+    
     // Mit aktuellem Filter laden
     loadThemenWithFilter(currentFilter);
 }
 
-// Themen mit spezifischem Filter laden
+// NEU: Edit-Modus Button aktualisieren
+function updateEditModeButton() {
+    const editButton = document.getElementById('themenEditButton');
+    if (!editButton) return;
+    
+    if (bearbeitungsModus) {
+        editButton.textContent = '✏️ Bearbeitung deaktivieren';
+        editButton.className = 'btn btn-danger';
+    } else {
+        editButton.textContent = '✏️ Themen bearbeiten';
+        editButton.className = 'btn';
+    }
+}
+
+// NEU: Edit-Modus togglen
+function toggleThemenEditMode() {
+    bearbeitungsModus = !bearbeitungsModus;
+    console.log('✏️ Themen-Bearbeitungsmodus:', bearbeitungsModus ? 'AN' : 'AUS');
+    
+    updateEditModeButton();
+    loadThemen(); // Neu laden um Filter anzuwenden
+}
+
+// Themen mit spezifischem Filter laden (ERWEITERT)
 function loadThemenWithFilter(filterValue) {
     if (!window.firebaseFunctions.requireAuth()) return;
     
@@ -31,15 +59,19 @@ function loadThemenWithFilter(filterValue) {
     if (!liste) return;
     
     // Themen aus Cache holen
-    const allThemen = window.firebaseFunctions.getThemenFromCache();
+    let allThemen = window.firebaseFunctions.getThemenFromCache();
+    
+    // NEU: Im Bearbeitungsmodus nur eigene Themen anzeigen
+    if (bearbeitungsModus) {
+        const currentUserName = window.firebaseFunctions.getCurrentUserName();
+        allThemen = allThemen.filter(thema => thema.ersteller === currentUserName);
+    }
     
     // Themen filtern
     let gefilterte;
     if (!filterValue || filterValue === '') {
-        // Alle Themen anzeigen
         gefilterte = allThemen;
     } else {
-        // Nach spezifischem Fach filtern
         gefilterte = allThemen.filter(thema => {
             return thema.faecher && thema.faecher.includes(filterValue);
         });
@@ -49,6 +81,7 @@ function loadThemenWithFilter(filterValue) {
     let html = '';
     gefilterte.forEach((thema) => {
         const kannLoeschen = thema.ersteller === window.firebaseFunctions.getCurrentUserName() || window.firebaseFunctions.isAdmin();
+        const kannBearbeiten = thema.ersteller === window.firebaseFunctions.getCurrentUserName(); // NEU
         
         // Fächer-Badges erstellen
         let faecherBadges = '';
@@ -58,7 +91,7 @@ function loadThemenWithFilter(filterValue) {
             ).join(' ');
         }
         
-        html += `<div class="liste-item thema-item" onclick="themaAuswaehlen('${thema.name}')">
+        html += `<div class="liste-item thema-item" ${!bearbeitungsModus ? `onclick="themaAuswaehlen('${thema.name}')"` : ''}>
             <div>
                 <strong>${thema.name}</strong><br>
                 <div style="margin-top: 5px;">
@@ -66,13 +99,210 @@ function loadThemenWithFilter(filterValue) {
                 </div>
                 <small>Erstellt von: ${thema.ersteller} am ${thema.erstellt}</small>
             </div>
-            ${kannLoeschen ? 
-                `<button class="btn btn-danger" onclick="event.stopPropagation(); themaLoeschen('${thema.id || thema.name}')">Löschen</button>` : 
-                ''}
+            <div>
+                ${bearbeitungsModus && kannBearbeiten ? 
+                    `<button class="btn" onclick="event.stopPropagation(); themaBearbeiten('${thema.id || thema.name}')">Bearbeiten</button>` : 
+                    ''}
+                ${kannLoeschen ? 
+                    `<button class="btn btn-danger" onclick="event.stopPropagation(); themaLoeschen('${thema.id || thema.name}')">Löschen</button>` : 
+                    ''}
+            </div>
         </div>`;
     });
     
-    liste.innerHTML = html || '<div class="card"><p>Keine Themen vorhanden.</p></div>';
+    if (!html) {
+        if (bearbeitungsModus) {
+            html = '<div class="card"><p>Sie haben noch keine eigenen Themen erstellt.</p></div>';
+        } else {
+            html = '<div class="card"><p>Keine Themen vorhanden.</p></div>';
+        }
+    }
+    
+    liste.innerHTML = html;
+}
+
+// NEU: Thema bearbeiten
+async function themaBearbeiten(themaId) {
+    console.log('✏️ Bearbeite Thema:', themaId);
+    
+    if (!window.firebaseFunctions.requireAuth()) return;
+    
+    try {
+        // Thema aus Cache finden
+        const allThemen = window.firebaseFunctions.getThemenFromCache();
+        const thema = allThemen.find(t => (t.id || t.name) === themaId);
+        
+        if (!thema) {
+            alert('Thema nicht gefunden!');
+            return;
+        }
+        
+        // Berechtigung prüfen
+        if (thema.ersteller !== window.firebaseFunctions.getCurrentUserName()) {
+            alert('Sie können nur eigene Themen bearbeiten!');
+            return;
+        }
+        
+        aktuellesThemaEdit = thema;
+        ausgewaehlteFaecher = [...(thema.faecher || [])];
+        
+        zeigeFaecherBearbeitungsModal(thema.name);
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Laden des Themas:', error);
+        alert('Fehler beim Laden des Themas: ' + error.message);
+    }
+}
+
+// NEU: Fächer-Bearbeitungs Modal anzeigen
+function zeigeFaecherBearbeitungsModal(themaName) {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.id = 'faecherBearbeitungModal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <h3>Thema bearbeiten</h3>
+            
+            <div class="input-group">
+                <label>Thema-Name:</label>
+                <input type="text" id="editThemaName" value="${themaName}" style="width: 100%;">
+            </div>
+            
+            <p>Fächer für dieses Thema auswählen:</p>
+            
+            <div id="editFaecherGrid" class="faecher-grid">
+                ${createFaecherButtons()}
+            </div>
+            
+            <div class="ausgewaehlte-faecher" id="editAusgewaehlteFaecherAnzeige">
+                <strong>Ausgewählte Fächer:</strong> <span id="editFaecherListe">Keine</span>
+            </div>
+            
+            <div class="modal-buttons">
+                <button class="btn btn-success" onclick="themaAktualisierungSpeichern()">Änderungen speichern</button>
+                <button class="btn btn-danger" onclick="schließeBearbeitungsModal()">Abbrechen</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Bereits ausgewählte Fächer markieren
+    ausgewaehlteFaecher.forEach(fach => {
+        const button = modal.querySelector(`[data-fach="${fach}"]`);
+        if (button) {
+            button.classList.add('selected');
+        }
+    });
+    
+    updateEditFaecherAnzeige();
+}
+
+// NEU: Fächer auswählen/abwählen (Edit-Version)
+function toggleFach(fachKuerzel) {
+    const button = document.querySelector(`[data-fach="${fachKuerzel}"]`);
+    
+    if (ausgewaehlteFaecher.includes(fachKuerzel)) {
+        // Fach entfernen
+        ausgewaehlteFaecher = ausgewaehlteFaecher.filter(f => f !== fachKuerzel);
+        button.classList.remove('selected');
+    } else {
+        // Fach hinzufügen
+        ausgewaehlteFaecher.push(fachKuerzel);
+        button.classList.add('selected');
+    }
+    
+    // Je nach Modal aktualisieren
+    if (document.getElementById('editFaecherListe')) {
+        updateEditFaecherAnzeige();
+    } else {
+        updateFaecherAnzeige();
+    }
+}
+
+// NEU: Edit-Fächer-Anzeige aktualisieren
+function updateEditFaecherAnzeige() {
+    const anzeige = document.getElementById('editFaecherListe');
+    if (anzeige) {
+        if (ausgewaehlteFaecher.length === 0) {
+            anzeige.textContent = 'Keine';
+        } else {
+            anzeige.textContent = ausgewaehlteFaecher.map(f => getFachName(f)).join(', ');
+        }
+    }
+}
+
+// NEU: Thema-Aktualisierung speichern
+async function themaAktualisierungSpeichern() {
+    if (!window.firebaseFunctions.requireAuth() || !aktuellesThemaEdit) return;
+    
+    const nameInput = document.getElementById('editThemaName');
+    const neuerName = nameInput?.value.trim();
+    
+    if (!neuerName) {
+        alert('Bitte geben Sie einen Thema-Namen ein!');
+        return;
+    }
+    
+    if (ausgewaehlteFaecher.length === 0) {
+        alert('Bitte wählen Sie mindestens ein Fach aus!');
+        return;
+    }
+    
+    // Prüfen ob Name geändert wurde und bereits existiert
+    if (neuerName !== aktuellesThemaEdit.name) {
+        const existierend = window.firebaseFunctions.getThemenFromCache().find(t => 
+            t.name === neuerName && (t.id || t.name) !== (aktuellesThemaEdit.id || aktuellesThemaEdit.name)
+        );
+        if (existierend) {
+            alert('Ein Thema mit diesem Namen existiert bereits!');
+            return;
+        }
+    }
+    
+    try {
+        // Thema in Firebase aktualisieren
+        const themaRef = window.firebaseFunctions.getDatabaseRef(`themen/${aktuellesThemaEdit.id}`);
+        
+        const aktualisiertesThema = {
+            ...aktuellesThemaEdit,
+            name: neuerName,
+            faecher: [...ausgewaehlteFaecher],
+            lastUpdate: window.firebaseFunctions.getTimestamp(),
+            bearbeitet: window.firebaseFunctions.formatGermanDate()
+        };
+        
+        await window.firebaseDB.set(themaRef, aktualisiertesThema);
+        
+        // Modal schließen
+        schließeBearbeitungsModal();
+        
+        // News erstellen
+        const faecherText = ausgewaehlteFaecher.map(f => getFachName(f)).join(', ');
+        if (window.newsFunctions) {
+            await window.newsFunctions.createNewsForAction(
+                'Thema aktualisiert', 
+                `Das Thema "${neuerName}" wurde bearbeitet (Fächer: ${faecherText}).`
+            );
+        }
+        
+        console.log('✅ Thema aktualisiert:', neuerName, 'für Fächer:', ausgewaehlteFaecher);
+        alert('Thema wurde erfolgreich aktualisiert!');
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Aktualisieren des Themas:', error);
+        alert('Fehler beim Aktualisieren des Themas: ' + error.message);
+    }
+}
+
+// NEU: Bearbeitungs-Modal schließen
+function schließeBearbeitungsModal() {
+    const modal = document.getElementById('faecherBearbeitungModal');
+    if (modal) {
+        modal.remove();
+    }
+    aktuellesThemaEdit = null;
+    ausgewaehlteFaecher = [];
 }
 
 // Fach-Filter Dropdown aktualisieren
@@ -125,10 +355,11 @@ function themaHinzufuegen() {
     
     // Zeige Fächer-Auswahl Modal
     ausgewaehlteFaecher = [];
+    aktuellesThemaEdit = null; // Sicherstellen dass wir im Neu-Modus sind
     zeigeFaecherAuswahlModal(themaName);
 }
 
-// Fächer-Auswahl Modal anzeigen
+// Fächer-Auswahl Modal anzeigen (für neue Themen)
 function zeigeFaecherAuswahlModal(themaName) {
     const modal = document.createElement('div');
     modal.className = 'modal';
@@ -172,24 +403,7 @@ function createFaecherButtons() {
     return html;
 }
 
-// Fach auswählen/abwählen
-function toggleFach(fachKuerzel) {
-    const button = document.querySelector(`[data-fach="${fachKuerzel}"]`);
-    
-    if (ausgewaehlteFaecher.includes(fachKuerzel)) {
-        // Fach entfernen
-        ausgewaehlteFaecher = ausgewaehlteFaecher.filter(f => f !== fachKuerzel);
-        button.classList.remove('selected');
-    } else {
-        // Fach hinzufügen
-        ausgewaehlteFaecher.push(fachKuerzel);
-        button.classList.add('selected');
-    }
-    
-    updateFaecherAnzeige();
-}
-
-// Fächer-Anzeige aktualisieren
+// Fächer-Anzeige aktualisieren (für neue Themen)
 function updateFaecherAnzeige() {
     const anzeige = document.getElementById('faecherListe');
     if (anzeige) {
@@ -201,7 +415,7 @@ function updateFaecherAnzeige() {
     }
 }
 
-// Thema mit Fächern speichern
+// Thema mit Fächern speichern (für neue Themen)
 async function speichereThemaMitFaechern(themaName) {
     if (!window.firebaseFunctions.requireAuth()) return;
     
@@ -249,7 +463,7 @@ async function speichereThemaMitFaechern(themaName) {
     }
 }
 
-// Fächer-Modal schließen
+// Fächer-Modal schließen (für neue Themen)
 function schließeFaecherModal() {
     const modal = document.getElementById('faecherAuswahlModal');
     if (modal) {
@@ -260,6 +474,9 @@ function schließeFaecherModal() {
 
 // Thema auswählen (für Gruppen-Erstellung)
 function themaAuswaehlen(thema) {
+    // Im Bearbeitungsmodus keine Auswahl möglich
+    if (bearbeitungsModus) return;
+    
     const gruppenThemaInput = document.getElementById('gruppenThema');
     if (gruppenThemaInput) {
         gruppenThemaInput.value = thema;
@@ -327,7 +544,8 @@ function getThemenForDropdown() {
 // Export für andere Module
 window.themenFunctions = {
     getThemenForDropdown,
-    getFachName
+    getFachName,
+    toggleThemenEditMode // NEU: Export für Button
 };
 
-console.log('✅ Firebase Themen System bereit');
+console.log('✅ Firebase Themen System bereit (mit Bearbeitung)');
