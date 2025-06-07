@@ -3,6 +3,7 @@ console.log('💡 Firebase Themen System geladen');
 
 // Globale Variablen für Themen
 let ausgewaehlteFaecher = [];
+let aktuellesThemaEdit = null;
 
 // Themen laden und anzeigen
 function loadThemen() {
@@ -48,7 +49,7 @@ function loadThemenWithFilter(filterValue) {
     // HTML erstellen
     let html = '';
     gefilterte.forEach((thema) => {
-        const kannLoeschen = thema.ersteller === window.firebaseFunctions.getCurrentUserName() || window.firebaseFunctions.isAdmin();
+        const kannBearbeiten = thema.ersteller === window.firebaseFunctions.getCurrentUserName() || window.firebaseFunctions.isAdmin();
         
         // Fächer-Badges erstellen
         let faecherBadges = '';
@@ -60,17 +61,21 @@ function loadThemenWithFilter(filterValue) {
         
         const globalBadge = thema.global ? '<span class="global-badge" title="Für andere Schulen sichtbar">🌐</span>' : '';
 
+        const zeigeErsteller = !(thema.global && thema.schule && thema.schule !== window.firebaseFunctions.getSchoolName());
+        const erstellerInfo = zeigeErsteller ? `Erstellt von: ${thema.ersteller} am ${thema.erstellt}` : `Erstellt am ${thema.erstellt}`;
+
         html += `<div class="liste-item thema-item" onclick="themaAuswaehlen('${thema.name}')">
             <div>
                 <strong>${thema.name} ${globalBadge}</strong><br>
                 <div style="margin-top: 5px;">
                     ${faecherBadges}
                 </div>
-                <small>Erstellt von: ${thema.ersteller} am ${thema.erstellt}</small>
+                <small>${erstellerInfo}</small>
             </div>
-            ${kannLoeschen ? 
-                `<button class="btn btn-danger" onclick="event.stopPropagation(); themaLoeschen('${thema.id || thema.name}')">Löschen</button>` : 
-                ''}
+            ${kannBearbeiten ?
+                `<button class="btn" onclick="event.stopPropagation(); themaBearbeiten('${thema.id || thema.name}')">Bearbeiten</button>` : ''}
+            ${kannBearbeiten ?
+                `<button class="btn btn-danger" onclick="event.stopPropagation(); themaLoeschen('${thema.id || thema.name}')">Löschen</button>` : ''}
         </div>`;
     });
     
@@ -227,6 +232,7 @@ async function speichereThemaMitFaechern(themaName) {
             id: newThemaRef.key,
             name: themaName,
             ersteller: window.firebaseFunctions.getCurrentUserName(),
+            schule: window.firebaseFunctions.getSchoolName(),
             faecher: [...ausgewaehlteFaecher],
             erstellt: window.firebaseFunctions.formatGermanDate(),
             timestamp: window.firebaseFunctions.getTimestamp(),
@@ -322,6 +328,114 @@ async function themaLoeschen(themaId) {
         console.error('❌ Fehler beim Löschen des Themas:', error);
         alert('Fehler beim Löschen des Themas: ' + error.message);
     }
+}
+
+// Thema bearbeiten
+async function themaBearbeiten(themaId) {
+    if (!window.firebaseFunctions.requireAuth()) return;
+
+    const allThemen = window.firebaseFunctions.getThemenFromCache();
+    const thema = allThemen.find(t => (t.id || t.name) === themaId);
+
+    if (!thema) {
+        alert('Thema nicht gefunden!');
+        return;
+    }
+
+    if (thema.ersteller !== window.firebaseFunctions.getCurrentUserName() && !window.firebaseFunctions.isAdmin()) {
+        alert('Sie können nur eigene Themen bearbeiten!');
+        return;
+    }
+
+    aktuellesThemaEdit = { ...thema };
+    ausgewaehlteFaecher = [...(thema.faecher || [])];
+    zeigeThemenEditModal();
+}
+
+// Edit-Modal anzeigen
+function zeigeThemenEditModal() {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.id = 'themenEditModal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <h3>Thema bearbeiten</h3>
+            <div class="input-group">
+                <label>Name:</label>
+                <input type="text" id="editThemaName" value="${aktuellesThemaEdit.name}">
+            </div>
+            <p style="margin-top:10px;">Klicken Sie auf die Fächer, die zu diesem Thema gehören:</p>
+            <div id="editFaecherGrid" class="faecher-grid">
+                ${createFaecherButtons()}
+            </div>
+            <div class="ausgewaehlte-faecher" id="faecherAnzeigeEdit">
+                <strong>Ausgewählte Fächer:</strong> <span id="faecherListe">${ausgewaehlteFaecher.map(f => getFachName(f)).join(', ') || 'Keine'}</span>
+            </div>
+            <label style="display:flex;align-items:center;gap:5px;margin-bottom:10px;">
+                <input type="checkbox" id="editThemaGlobal"> Für andere Schulen sichtbar
+            </label>
+            <div class="modal-buttons">
+                <button class="btn btn-success" onclick="speichereThemaBearbeitung()">Speichern</button>
+                <button class="btn btn-danger" onclick="schliesseThemenEditModal()">Abbrechen</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Vorselektierte Fächer markieren
+    ausgewaehlteFaecher.forEach(f => {
+        const btn = modal.querySelector(`[data-fach="${f}"]`);
+        if (btn) btn.classList.add('selected');
+    });
+
+    updateFaecherAnzeige();
+
+    document.getElementById('editThemaGlobal').checked = aktuellesThemaEdit.global || false;
+}
+// Thema-Bearbeitung speichern
+async function speichereThemaBearbeitung() {
+    if (!window.firebaseFunctions.requireAuth() || !aktuellesThemaEdit) return;
+
+    const nameInput = document.getElementById('editThemaName');
+    const neuerName = nameInput?.value.trim();
+
+    if (!neuerName) {
+        alert('Bitte geben Sie einen Thema-Namen ein!');
+        return;
+    }
+
+    if (ausgewaehlteFaecher.length === 0) {
+        alert('Bitte wählen Sie mindestens ein Fach aus!');
+        return;
+    }
+
+    const global = document.getElementById('editThemaGlobal')?.checked || false;
+
+    const updated = {
+        ...aktuellesThemaEdit,
+        name: neuerName,
+        faecher: [...ausgewaehlteFaecher],
+        global,
+        lastUpdate: window.firebaseFunctions.getTimestamp()
+    };
+
+    const themaRef = window.firebaseFunctions.getDatabaseRef(`themen/${aktuellesThemaEdit.id}`);
+    await window.firebaseDB.set(themaRef, updated);
+
+    if (window.newsFunctions) {
+        await window.newsFunctions.createNewsForAction('Thema aktualisiert', `Das Thema "${neuerName}" wurde bearbeitet.`);
+    }
+
+    schliesseThemenEditModal();
+}
+
+// Edit-Modal schließen
+function schliesseThemenEditModal() {
+    const modal = document.getElementById('themenEditModal');
+    if (modal) modal.remove();
+    aktuellesThemaEdit = null;
+    ausgewaehlteFaecher = [];
 }
 
 // Themen-Daten für andere Module bereitstellen

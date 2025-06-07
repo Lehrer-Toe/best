@@ -552,6 +552,11 @@ function getThemenFromCache() {
     return Object.values(dataCache.themen || {});
 }
 
+// Aktuelle Schulbezeichnung abrufen
+function getSchoolName() {
+    return dataCache.config?.schule?.name || '';
+}
+
 // Gruppen aus Cache
 function getGruppenFromCache() {
     return Object.values(dataCache.gruppen || {});
@@ -607,6 +612,7 @@ window.firebaseFunctions = {
     getBewertungenFromCache,
     getAllFaecher,
     getFachNameFromGlobal,
+    getSchoolName,
     
     // Utilities
     sanitizeEmail,
