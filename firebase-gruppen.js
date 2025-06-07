@@ -5,6 +5,11 @@ console.log('👥 Firebase Gruppen-System geladen (mit Klassen-Integration)');
 let aktuelleGruppeEdit = null;
 let ausgewaehlteSchueler = [];
 
+// Hilfsfunktion um Namen verlässlich zu vergleichen
+function normalizeName(name) {
+    return (name || '').toString().toLowerCase().replace(/\s+/g, '');
+}
+
 // Gruppen laden und anzeigen
 function loadGruppen() {
     console.log('👥 Lade Gruppen von Firebase...');
@@ -73,6 +78,7 @@ function loadGruppen() {
 function getMeineGruppen() {
     const alleGruppen = window.firebaseFunctions.getGruppenFromCache();
     const currentUserName = window.firebaseFunctions.getCurrentUserName();
+    const normName = normalizeName(currentUserName);
     
     if (window.firebaseFunctions.isAdmin()) {
         return alleGruppen; // Admin sieht alle Gruppen
@@ -83,15 +89,15 @@ function getMeineGruppen() {
     // 2. Gruppen bei denen er Schüler zu bewerten hat
     return alleGruppen.filter(gruppe => {
         // Ersteller-Check
-        if (gruppe.ersteller === currentUserName) {
+        if (normalizeName(gruppe.ersteller) === normName) {
             return true;
         }
-        
+
         // Prüfungs-Check (hat Schüler in der Gruppe)
-        if (gruppe.schueler && gruppe.schueler.some(s => s.lehrer === currentUserName)) {
+        if (gruppe.schueler && gruppe.schueler.some(s => normalizeName(s.lehrer) === normName)) {
             return true;
         }
-        
+
         return false;
     });
 }
