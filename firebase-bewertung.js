@@ -1,5 +1,5 @@
-// Firebase Bewertungs-System - Realtime Database
-console.log('📊 Firebase Bewertungs-System geladen');
+// Firebase Bewertungs-System - Realtime Database - KORRIGIERT
+console.log('📊 Firebase Bewertungs-System geladen - Korrigierte Version');
 
 // Globale Variablen für Bewertung
 let aktuelleBewertung = null;
@@ -19,7 +19,7 @@ function openBewertungTab(tabName) {
     }
 }
 
-// Bewertungen laden und anzeigen
+// Bewertungen laden und anzeigen - KORRIGIERT
 async function loadBewertungen() {
     console.log('📊 Lade Bewertungen von Firebase...');
     
@@ -28,7 +28,7 @@ async function loadBewertungen() {
     const liste = document.getElementById('bewertungsListe');
     if (!liste) return;
     
-    // Sammle alle Schüler des aktuellen Lehrers aus Gruppen
+    // Sammle alle Schüler des aktuellen Lehrers aus Gruppen - KORRIGIERT
     const meineSchueler = [];
     const gruppen = window.firebaseFunctions.getGruppenFromCache();
     const currentUserName = window.firebaseFunctions.getCurrentUserName();
@@ -36,19 +36,19 @@ async function loadBewertungen() {
     gruppen.forEach(gruppe => {
         if (gruppe.schueler && Array.isArray(gruppe.schueler)) {
             gruppe.schueler.forEach(schueler => {
-                if (schueler.lehrer === currentUserName) {
-                    const fachInfo = schueler.fach ? ` (${window.firebaseFunctions.getFachNameFromGlobal(schueler.fach)})` : '';
-                    // NEUE Schüler-ID Generation basierend auf Vor- und Nachname
-                    const schuelerId = `${gruppe.id}-${schueler.vorname}-${schueler.nachname}`.replace(/\s/g, '-');
+                // KORRIGIERT: Verwende Normalisierungsfunktion aus Gruppen-Modul
+                const normalizedSchueler = window.gruppenFunctions.normalizeSchuelerData(schueler);
+                
+                if (normalizedSchueler.lehrer === currentUserName && normalizedSchueler.name) {
+                    const fachInfo = normalizedSchueler.fach ? 
+                        ` (${window.firebaseFunctions.getFachNameFromGlobal(normalizedSchueler.fach)})` : '';
                     
                     meineSchueler.push({
-                        vorname: schueler.vorname,
-                        nachname: schueler.nachname,
-                        name: `${schueler.vorname} ${schueler.nachname}`, // Für Kompatibilität
+                        name: normalizedSchueler.name,
                         thema: gruppe.thema,
                         gruppenId: gruppe.id,
-                        schuelerId: schuelerId,
-                        fach: schueler.fach,
+                        schuelerId: window.gruppenFunctions.generateSchuelerId(gruppe.id, normalizedSchueler.name),
+                        fach: normalizedSchueler.fach,
                         fachInfo: fachInfo
                     });
                 }
@@ -118,7 +118,7 @@ async function loadBewertungen() {
     console.log('📊 Bewertungen geladen:', meineSchueler.length, 'Schüler');
 }
 
-// Vorlagen-Optionen für alle Schüler laden
+// Vorlagen-Optionen für alle Schüler laden - UNVERÄNDERT
 async function loadVorlagenOptionsForAllSchueler() {
     if (!window.firebaseFunctions.requireAuth()) return '';
     
@@ -145,7 +145,7 @@ async function loadVorlagenOptionsForAllSchueler() {
     }
 }
 
-// Bewertungen filtern
+// Bewertungen filtern - UNVERÄNDERT
 function filterBewertungen() {
     const statusFilter = document.getElementById('bewertungsFilter')?.value || 'alle';
     const namenSort = document.getElementById('namenSortierung')?.value || 'az';
@@ -182,7 +182,7 @@ function filterBewertungen() {
     });
 }
 
-// Bewertung starten
+// Bewertung starten - UNVERÄNDERT
 async function bewertungStarten(schuelerId, schuelerName, thema) {
     console.log('📊 Starte Bewertung für:', schuelerName);
     
@@ -228,7 +228,7 @@ async function bewertungStarten(schuelerId, schuelerName, thema) {
     }
 }
 
-// Bewertungsraster anzeigen
+// Bewertungsraster anzeigen - UNVERÄNDERT
 async function showBewertungsRaster() {
     document.getElementById('bewertungsListe').classList.add('hidden');
     const raster = document.getElementById('bewertungsRaster');
@@ -269,7 +269,7 @@ async function showBewertungsRaster() {
     }
 }
 
-// Bewertungs-Tab laden
+// Bewertungs-Tab laden - UNVERÄNDERT
 function loadBewertungsTab(vorhandeneBewertung) {
     const container = document.getElementById('bewertungsRasterContent');
     
@@ -304,7 +304,7 @@ function loadBewertungsTab(vorhandeneBewertung) {
     container.innerHTML = html;
 }
 
-// Stärken-Tab laden (KORRIGIERT - lädt direkt aus Firebase)
+// Stärken-Tab laden (KORRIGIERT - lädt direkt aus Firebase) - UNVERÄNDERT
 async function loadStaerkenTab(vorhandeneBewertung) {
     const container = document.getElementById('staerkenCheckliste');
     
@@ -383,7 +383,7 @@ async function loadStaerkenTab(vorhandeneBewertung) {
     }
 }
 
-// Kategorie-Icons
+// Kategorie-Icons - UNVERÄNDERT
 function getKategorieIcon(kategorie) {
     const icons = {
         'Fachliches Arbeiten': '🧠',
@@ -396,7 +396,7 @@ function getKategorieIcon(kategorie) {
     return icons[kategorie] || '📋';
 }
 
-// Stärke togglen
+// Stärke togglen - UNVERÄNDERT
 function staerkeToggle(kategorie, index, checkbox) {
     if (!aktuelleBewertung.staerken[kategorie]) {
         aktuelleBewertung.staerken[kategorie] = [];
@@ -416,7 +416,7 @@ function staerkeToggle(kategorie, index, checkbox) {
     autosaveStaerken();
 }
 
-// Checkbox per Click auf Text togglen
+// Checkbox per Click auf Text togglen - UNVERÄNDERT
 function toggleCheckbox(kategorie, index) {
     const checkbox = document.querySelector(`.staerken-item input[onchange*="${kategorie}"][onchange*="${index}"]`);
     if (checkbox) {
@@ -425,13 +425,13 @@ function toggleCheckbox(kategorie, index) {
     }
 }
 
-// Freitext geändert
+// Freitext geändert - UNVERÄNDERT
 function freitextChanged(textarea) {
     aktuelleBewertung.freitext = textarea.value;
     autosaveStaerken();
 }
 
-// Stärken automatisch speichern
+// Stärken automatisch speichern - UNVERÄNDERT
 async function autosaveStaerken() {
     if (!window.firebaseFunctions.requireAuth()) return;
     
@@ -463,7 +463,7 @@ async function autosaveStaerken() {
     }
 }
 
-// Noten-Buttons generieren
+// Noten-Buttons generieren - UNVERÄNDERT
 function generateNotenButtons(kategorieIndex, vorhandeneNote) {
     const noten = [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0];
     let html = '';
@@ -478,7 +478,7 @@ function generateNotenButtons(kategorieIndex, vorhandeneNote) {
     return html;
 }
 
-// Note setzen
+// Note setzen - UNVERÄNDERT
 function noteSetzen(kategorieIndex, note) {
     // Alle Buttons der Kategorie zurücksetzen
     const kategorie = document.querySelectorAll('.kategorie')[kategorieIndex];
@@ -499,7 +499,7 @@ function noteSetzen(kategorieIndex, note) {
     berechneDurchschnitt();
 }
 
-// Durchschnitt berechnen
+// Durchschnitt berechnen - UNVERÄNDERT
 function berechneDurchschnitt() {
     const noten = aktuelleBewertung.noten.filter(n => n !== undefined);
     const durchschnittElement = document.getElementById('durchschnittAnzeige');
@@ -533,7 +533,7 @@ function berechneDurchschnitt() {
     }
 }
 
-// Durchschnitt übernehmen
+// Durchschnitt übernehmen - UNVERÄNDERT
 function durchschnittUebernehmen() {
     const durchschnitt = document.getElementById('durchschnittAnzeige')?.textContent;
     const endnoteInput = document.getElementById('endnote');
@@ -543,7 +543,7 @@ function durchschnittUebernehmen() {
     }
 }
 
-// Endnote geändert
+// Endnote geändert - UNVERÄNDERT
 function endnoteGeaendert() {
     // Validation könnte hier hinzugefügt werden
     const endnoteInput = document.getElementById('endnote');
@@ -556,7 +556,7 @@ function endnoteGeaendert() {
     }
 }
 
-// Bewertung speichern
+// Bewertung speichern - UNVERÄNDERT
 async function bewertungSpeichern() {
     console.log('💾 Speichere Bewertung...');
     
@@ -611,7 +611,7 @@ async function bewertungSpeichern() {
     }
 }
 
-// Bewertung abbrechen
+// Bewertung abbrechen - UNVERÄNDERT
 function bewertungAbbrechen() {
     document.getElementById('bewertungsRaster').classList.add('hidden');
     document.getElementById('bewertungsListe').classList.remove('hidden');
@@ -623,7 +623,7 @@ function bewertungAbbrechen() {
     loadBewertungen();
 }
 
-// Vorlagen System (Platzhalter)
+// Vorlagen System (Platzhalter) - UNVERÄNDERT
 function loadVorlagen() {
     console.log('📋 Lade Vorlagen...');
     // Wird später implementiert...
@@ -635,4 +635,4 @@ window.bewertungsFunctions = {
     filterBewertungen
 };
 
-console.log('✅ Firebase Bewertungs-System bereit');
+console.log('✅ Firebase Bewertungs-System bereit - Korrigierte Version');
