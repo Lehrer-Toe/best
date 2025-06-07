@@ -526,11 +526,16 @@ async function loadLehrerListe() {
             
             Object.entries(users).forEach(([key, user]) => {
                 if (user.role === 'lehrer') {
+                    const checked = user.kannGruppenAnlegen !== false ? 'checked' : '';
                     html += `
                         <div class="liste-item">
                             <div>
                                 <strong>${user.name}</strong><br>
-                                <small>E-Mail: ${user.email}</small>
+                                <small>E-Mail: ${user.email}</small><br>
+                                <label style="display:block;margin-top:4px;">
+                                    <input type="checkbox" ${checked} onchange="setLehrerGruppenErlaubnis('${key}', this.checked)">
+                                    Neue Gruppen anlegen
+                                </label>
                             </div>
                             <div>
                                 <button class="btn btn-danger" onclick="lehrerLoeschen('${key}', '${user.name}')">Löschen</button>

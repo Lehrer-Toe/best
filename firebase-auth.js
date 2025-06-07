@@ -273,6 +273,15 @@ function isLehrer() {
     return currentUser && currentUser.role === 'lehrer';
 }
 
+function canCreateGroups() {
+    if (!currentUser) return false;
+    if (currentUser.role === 'admin') return true;
+    if (currentUser.role === 'lehrer') {
+        return currentUser.kannGruppenAnlegen !== false;
+    }
+    return false;
+}
+
 function getCurrentUserName() {
     return currentUser ? currentUser.name : 'Unbekannt';
 }
@@ -331,6 +340,7 @@ window.authFunctions = {
     requireAdmin,
     isAdmin,
     isLehrer,
+    canCreateGroups,
     getCurrentUserName,
     getUserUid,
     getUserEmail,
