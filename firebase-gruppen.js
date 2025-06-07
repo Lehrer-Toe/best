@@ -28,6 +28,17 @@ function loadGruppen() {
         if (gruppen.length === 0) {
             liste.innerHTML = '<div class="card"><p>Keine Gruppen vorhanden oder Sie haben keine Berechtigung.</p></div>';
         } else {
+            // Debug: Gruppen-Struktur ausgeben
+            console.log('🔍 Debug Gruppen-Struktur:');
+            gruppen.forEach((gruppe, i) => {
+                console.log(`Gruppe ${i}:`, gruppe.thema);
+                if (gruppe.schueler) {
+                    gruppe.schueler.forEach((s, j) => {
+                        console.log(`  Schüler ${j}:`, { name: s?.name, lehrer: s?.lehrer, fach: s?.fach });
+                    });
+                }
+            });
+            
             let html = '';
             gruppen.forEach((gruppe) => {
                 // Berechtigung prüfen - Admin oder beteiligte Lehrer können bearbeiten
@@ -44,6 +55,12 @@ function loadGruppen() {
                 
                 if (gruppe.schueler && Array.isArray(gruppe.schueler)) {
                     gruppe.schueler.forEach(schueler => {
+                        // Null-Checks für Schüler-Daten
+                        if (!schueler || !schueler.name || !schueler.lehrer) {
+                            console.warn('⚠️ Unvollständige Schüler-Daten:', schueler);
+                            return; // Überspringe diesen Schüler
+                        }
+                        
                         const fachInfo = schueler.fach ? ` (${window.firebaseFunctions.getFachNameFromGlobal(schueler.fach)})` : '';
                         
                         // Bewertungsstatus prüfen
@@ -401,14 +418,25 @@ async function buildEditSchuelerListe() {
         
         if (aktuelleGruppeEdit.schueler && Array.isArray(aktuelleGruppeEdit.schueler)) {
             aktuelleGruppeEdit.schueler.forEach((schueler, index) => {
+                // Null-Checks für Schüler-Daten
+                if (!schueler) {
+                    console.warn('⚠️ Leeres Schüler-Objekt bei Index:', index);
+                    return;
+                }
+                
+                // Fallback-Werte für fehlende Daten
+                const name = schueler.name || '';
+                const lehrer = schueler.lehrer || '';
+                const fach = schueler.fach || '';
+                
                 html += `
                     <div class="edit-schueler-item">
-                        <input type="text" value="${schueler.name}" class="edit-schueler-name" data-index="${index}">
+                        <input type="text" value="${name}" class="edit-schueler-name" data-index="${index}">
                         <select class="edit-schueler-lehrer" data-index="${index}">
-                            ${lehrerOptions.replace(`value="${schueler.lehrer}"`, `value="${schueler.lehrer}" selected`)}
+                            ${lehrerOptions.replace(`value="${lehrer}"`, `value="${lehrer}" selected`)}
                         </select>
                         <select class="edit-schueler-fach" data-index="${index}">
-                            ${fachOptions.replace(`value="${schueler.fach || ''}"`, `value="${schueler.fach || ''}" selected`)}
+                            ${fachOptions.replace(`value="${fach}"`, `value="${fach}" selected`)}
                         </select>
                         <button class="btn btn-danger" onclick="editSchuelerEntfernen(${index})">Entfernen</button>
                     </div>
