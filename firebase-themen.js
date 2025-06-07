@@ -49,6 +49,7 @@ function loadThemenWithFilter(filterValue) {
     let html = '';
     gefilterte.forEach((thema) => {
         const kannLoeschen = thema.ersteller === window.firebaseFunctions.getCurrentUserName() || window.firebaseFunctions.isAdmin();
+        const kannBearbeiten = kannLoeschen;
         
         // Fächer-Badges erstellen
         let faecherBadges = '';
@@ -66,10 +67,13 @@ function loadThemenWithFilter(filterValue) {
                 <div style="margin-top: 5px;">
                     ${faecherBadges}
                 </div>
-                <small>Erstellt von: ${thema.ersteller} am ${thema.erstellt}</small>
+                <small>Erstellt von: ${(!thema.global || !thema.schule || thema.schule === (window.firebaseFunctions.dataCache.config?.schule?.name || '')) ? thema.ersteller : 'Unbekannt'} am ${thema.erstellt}</small>
             </div>
-            ${kannLoeschen ? 
-                `<button class="btn btn-danger" onclick="event.stopPropagation(); themaLoeschen('${thema.id || thema.name}')">Löschen</button>` : 
+            ${kannBearbeiten ?
+                `<button class="btn" onclick="event.stopPropagation(); zeigeThemaBearbeitenModal('${thema.id || thema.name}')">Bearbeiten</button>` :
+                ''}
+            ${kannLoeschen ?
+                `<button class="btn btn-danger" onclick="event.stopPropagation(); themaLoeschen('${thema.id || thema.name}')">Löschen</button>` :
                 ''}
         </div>`;
     });
@@ -223,6 +227,7 @@ async function speichereThemaMitFaechern(themaName) {
         
         const global = document.getElementById('themaGlobal')?.checked || false;
 
+        const configSchool = window.firebaseFunctions.dataCache.config?.schule?.name || '';
         const neuesThema = {
             id: newThemaRef.key,
             name: themaName,
@@ -230,7 +235,8 @@ async function speichereThemaMitFaechern(themaName) {
             faecher: [...ausgewaehlteFaecher],
             erstellt: window.firebaseFunctions.formatGermanDate(),
             timestamp: window.firebaseFunctions.getTimestamp(),
-            global
+            global,
+            schule: configSchool
         };
         
         await window.firebaseDB.set(newThemaRef, neuesThema);
@@ -321,6 +327,105 @@ async function themaLoeschen(themaId) {
     } catch (error) {
         console.error('❌ Fehler beim Löschen des Themas:', error);
         alert('Fehler beim Löschen des Themas: ' + error.message);
+    }
+}
+
+function updateFaecherButtonsSelection() {
+    document.querySelectorAll('[data-fach]').forEach(btn => {
+        const fach = btn.getAttribute('data-fach');
+        if (ausgewaehlteFaecher.includes(fach)) {
+            btn.classList.add('selected');
+        } else {
+            btn.classList.remove('selected');
+        }
+    });
+}
+
+// Thema bearbeiten Modal anzeigen
+function zeigeThemaBearbeitenModal(themaId) {
+    const thema = window.firebaseFunctions.getThemenFromCache().find(t => (t.id || t.name) === themaId);
+    if (!thema) return;
+
+    ausgewaehlteFaecher = [...(thema.faecher || [])];
+
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.id = 'faecherAuswahlModal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <h3>Thema "${thema.name}" bearbeiten</h3>
+            <p>Name des Themas:</p>
+            <input type="text" id="bearbeitenThemaName" value="${thema.name}" style="width:100%;margin-bottom:10px;">
+            <p>Fächer auswählen:</p>
+            <div id="faecherGrid" class="faecher-grid">
+                ${createFaecherButtons()}
+            </div>
+            <div class="ausgewaehlte-faecher" id="ausgewaehlteFaecherAnzeige">
+                <strong>Ausgewählte Fächer:</strong> <span id="faecherListe">Keine</span>
+            </div>
+            <label style="display:flex;align-items:center;gap:5px;margin-bottom:10px;">
+                <input type="checkbox" id="themaGlobal"> Für andere Schulen sichtbar
+            </label>
+            <div class="modal-buttons">
+                <button class="btn btn-success" onclick="speichereBearbeitetesThema('${thema.id || thema.name}')">Speichern</button>
+                <button class="btn btn-danger" onclick="schließeFaecherModal()">Abbrechen</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    if (thema.global) {
+        document.getElementById('themaGlobal').checked = true;
+    }
+    updateFaecherButtonsSelection();
+    updateFaecherAnzeige();
+    document.querySelectorAll('[data-fach]').forEach(btn => {
+        if (ausgewaehlteFaecher.includes(btn.getAttribute('data-fach'))) {
+            btn.classList.add('selected');
+        }
+    });
+}
+
+// Bearbeitetes Thema speichern
+async function speichereBearbeitetesThema(themaId) {
+    if (!window.firebaseFunctions.requireAuth()) return;
+
+    const newName = document.getElementById('bearbeitenThemaName').value.trim();
+    const global = document.getElementById('themaGlobal')?.checked || false;
+
+    if (!newName) {
+        alert('Bitte geben Sie einen Thema-Namen ein!');
+        return;
+    }
+
+    if (ausgewaehlteFaecher.length === 0) {
+        alert('Bitte wählen Sie mindestens ein Fach aus!');
+        return;
+    }
+
+    const allThemen = window.firebaseFunctions.getThemenFromCache();
+    const thema = allThemen.find(t => (t.id || t.name) === themaId);
+    if (!thema) {
+        alert('Thema nicht gefunden!');
+        return;
+    }
+
+    if (thema.ersteller !== window.firebaseFunctions.getCurrentUserName() && !window.firebaseFunctions.isAdmin()) {
+        alert('Sie können nur eigene Themen bearbeiten!');
+        return;
+    }
+
+    const themaRef = window.firebaseFunctions.getDatabaseRef(`themen/${thema.id || themaId}`);
+    await window.firebaseDB.update(themaRef, {
+        name: newName,
+        faecher: [...ausgewaehlteFaecher],
+        global
+    });
+
+    schließeFaecherModal();
+
+    if (window.newsFunctions) {
+        await window.newsFunctions.createNewsForAction('Thema bearbeitet', `Das Thema "${newName}" wurde aktualisiert.`);
     }
 }
 
