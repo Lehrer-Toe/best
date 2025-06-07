@@ -15,6 +15,7 @@
     <link rel="stylesheet" href="css/bewertung.css">
     <link rel="stylesheet" href="css/staerken.css">
     <link rel="stylesheet" href="css/modal.css">
+    <link rel="stylesheet" href="css/themen.css">      <!-- NEU: Themen-Bearbeitung CSS -->
     <link rel="stylesheet" href="css/admin.css">
     <link rel="stylesheet" href="css/utilities.css">
     <link rel="stylesheet" href="css/responsive.css">
@@ -63,58 +64,73 @@
             padding: 10px;
             border: 1px solid #e1e8ed;
             border-radius: 5px;
+            background: #fafbfc;
         }
 
-        .schueler-auswahl-item {
+        .schueler-checkbox {
+            padding: 8px 12px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
             display: flex;
             align-items: center;
             gap: 8px;
-            padding: 10px;
-            background: #f8f9fa;
-            border: 2px solid #e1e8ed;
-            border-radius: 5px;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.2s;
         }
 
-        .schueler-auswahl-item:hover {
-            background: #e9ecef;
+        .schueler-checkbox:hover {
+            background: #f0f8ff;
             border-color: #667eea;
         }
 
-        .ausgewaehlter-schueler-item {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr auto;
-            gap: 10px;
-            align-items: center;
-            padding: 10px;
-            background: #e8f4fd;
-            border: 1px solid #667eea;
-            border-radius: 5px;
-            margin-bottom: 10px;
+        .schueler-checkbox input[type="checkbox"] {
+            margin: 0;
         }
 
-        .edit-schueler-item-erweitert {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr auto;
-            gap: 10px;
-            align-items: center;
-            padding: 10px;
+        .datei-input-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        .datei-input {
+            position: absolute;
+            left: -9999px;
+            opacity: 0;
+        }
+
+        .datei-input-label {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .datei-input-label:hover {
+            background: #5a6fd8;
+        }
+
+        .upload-vorschau {
             background: #f8f9fa;
-            border-radius: 5px;
-            margin-bottom: 10px;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            border: 2px solid #667eea;
         }
 
-        @media (max-width: 768px) {
-            .ausgewaehlter-schueler-item,
-            .edit-schueler-item-erweitert {
-                grid-template-columns: 1fr;
-                gap: 8px;
-            }
-            
-            .schueler-auswahl-grid {
-                grid-template-columns: 1fr;
-            }
+        .upload-vorschau.hidden {
+            display: none;
+        }
+
+        .upload-vorschau-item {
+            background: white;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border-left: 3px solid #27ae60;
         }
     </style>
 </head>
@@ -146,6 +162,10 @@
                 <div id="errorMessage" class="error-message"></div>
             </form>
             
+            <!-- Firebase Authentication Status -->
+            <div id="authStatus" style="margin-top: 1rem; font-size: 0.9rem; color: #666;">
+                <div id="firebaseStatus">🔄 Firebase wird initialisiert...</div>
+            </div>
         </div>
     </div>
 
@@ -198,7 +218,7 @@
                 </div>
             </div>
 
-            <!-- Themen Tab -->
+            <!-- Themen Tab - ERWEITERT -->
             <div id="themen" class="tab-content">
                 <h2>Themenvorschläge</h2>
                 <div class="card">
@@ -208,6 +228,8 @@
                         <button class="btn btn-success" onclick="themaHinzufuegen()">Fächer auswählen & Thema erstellen</button>
                     </div>
                 </div>
+                
+                <!-- Bearbeitungsbereich - ERWEITERT -->
                 <div class="filter-section">
                     <div class="filter-group">
                         <label>Filter nach Fach:</label>
@@ -216,7 +238,19 @@
                             <!-- Fächer werden dynamisch geladen -->
                         </select>
                     </div>
+                    
+                    <!-- NEU: Bearbeitungsmodus Toggle -->
+                    <div class="filter-group">
+                        <button 
+                            id="bearbeitungsButton" 
+                            class="btn btn-secondary" 
+                            onclick="toggleBearbeitungsmodus()"
+                            title="Nur eigene Themen anzeigen und bearbeiten">
+                            Themen bearbeiten
+                        </button>
+                    </div>
                 </div>
+                
                 <div class="liste" id="themenListe">
                     <!-- Themen werden hier angezeigt -->
                 </div>
@@ -244,94 +278,50 @@
                             <p>Bitte wählen Sie eine Klasse aus.</p>
                         </div>
                         
-                        <h4>3. Lehrer und Fächer zuweisen:</h4>
-                        <div id="ausgewaehlteSchuelerAnzeige">
+                        <h4>3. Ausgewählte Schüler:</h4>
+                        <div id="ausgewaehlteSchueler">
                             <p>Keine Schüler ausgewählt.</p>
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="liste" id="gruppenListe">
                     <!-- Gruppen werden hier angezeigt -->
                 </div>
-                
-                <!-- Gruppen bearbeiten Modal -->
-                <div id="gruppenEditModal" class="modal hidden">
-                    <div class="modal-content">
-                        <h3>Gruppe bearbeiten</h3>
-                        <div class="input-group">
-                            <label>Thema:</label>
-                            <input type="text" id="editGruppenThema">
-                        </div>
-                        <h4>Schüler:</h4>
-                        <div id="editSchuelerListe">
-                            <!-- Schüler werden hier angezeigt -->
-                        </div>
-                        <div class="modal-buttons">
-                            <button class="btn btn-success" onclick="gruppeEditSpeichern()">Speichern</button>
-                            <button class="btn btn-danger" onclick="gruppeEditAbbrechen()">Abbrechen</button>
-                        </div>
-                    </div>
-                </div>
             </div>
 
-            <!-- Klassen verwalten Tab (nur Admin) -->
+            <!-- Klassen Tab (nur Admin) -->
             <div id="klassen" class="tab-content">
                 <h2>Klassen verwalten</h2>
                 
-                <!-- Filter-Bereich -->
-                <div class="klassen-filter-section">
-                    <div class="klassen-filter-group">
-                        <label>Filter nach Klasse:</label>
-                        <select id="klassenFilter" onchange="filterKlassen()">
-                            <option value="">Alle Klassen</option>
-                            <!-- Wird dynamisch geladen -->
-                        </select>
-                        
-                        <label>Filter nach Schuljahr:</label>
-                        <select id="schuljahrFilter" onchange="filterKlassen()">
-                            <!-- Wird dynamisch geladen -->
-                        </select>
-                    </div>
-                </div>
-                
-                <!-- Neue Klasse anlegen -->
+                <!-- Neue Klasse erstellen -->
                 <div class="card">
-                    <h3>Neue Klasse anlegen</h3>
+                    <h3>Neue Klasse erstellen</h3>
                     <div class="input-group">
-                        <input type="text" id="klassenName" placeholder="Klassenname (z.B. 9a, 10b)">
-                        <select id="klassenSchuljahr">
-                            <!-- Wird dynamisch geladen -->
-                        </select>
-                        <button class="btn btn-success" onclick="klasseAnlegen()">Klasse anlegen</button>
+                        <input type="text" id="neueKlasseName" placeholder="Klassenname (z.B. 10a)">
+                        <input type="text" id="neuesSchuljahr" placeholder="Schuljahr (z.B. 2024/25)">
+                        <button class="btn btn-success" onclick="klasseErstellen()">Klasse erstellen</button>
                     </div>
                 </div>
                 
-                <!-- Schüler-Datei hochladen -->
-                <div class="upload-bereich">
-                    <h3>📁 Schüler aus Datei hochladen</h3>
-                    <div class="upload-format-info">
-                        <h5>Unterstützte Formate:</h5>
-                        <ul>
-                            <li><strong>CSV/TXT:</strong> Ein Schüler pro Zeile</li>
-                            <li><strong>Excel (XLSX):</strong> Erste Spalte mit Schülernamen</li>
-                        </ul>
-                        <p><strong>Beispiele:</strong></p>
-                        <ul>
-                            <li>Vorname Nachname: "Max Mustermann"</li>
-                            <li>Nachname, Vorname: "Mustermann, Max"</li>
-                        </ul>
-                    </div>
-                    
-                    <div class="input-group">
-                        <select id="uploadKlasseSelect">
-                            <option value="">Klasse für Upload auswählen...</option>
-                            <!-- Wird dynamisch geladen -->
-                        </select>
+                <!-- Schüler-Upload -->
+                <div class="card">
+                    <h3>Schüler aus Datei hochladen</h3>
+                    <div class="upload-bereich">
+                        <div class="upload-format-info">
+                            <strong>Unterstützte Formate:</strong> CSV, TXT, XLSX<br>
+                            <strong>Format 1:</strong> Vorname Nachname (pro Zeile)<br>
+                            <strong>Format 2:</strong> Nachname, Vorname (pro Zeile)
+                        </div>
                         
-                        <select id="uploadFormat">
+                        <select id="uploadFormat" style="width: 100%; padding: 10px; margin-bottom: 10px;">
                             <option value="vorname-nachname">Vorname Nachname</option>
                             <option value="nachname-vorname">Nachname, Vorname</option>
+                        </select>
+                        
+                        <select id="uploadKlasseSelect" style="width: 100%; padding: 10px; margin-bottom: 10px;">
+                            <option value="">Klasse auswählen...</option>
+                            <!-- Klassen werden dynamisch geladen -->
                         </select>
                         
                         <div class="datei-input-wrapper">
@@ -367,47 +357,21 @@
                 <div id="klasseEditModal" class="modal hidden">
                     <div class="modal-content">
                         <h3>Klasse bearbeiten</h3>
-                        <div class="input-group">
-                            <label>Klassenname:</label>
-                            <input type="text" id="editKlassenName">
-                        </div>
-                        <div class="input-group">
-                            <label>Schuljahr:</label>
-                            <select id="editKlassenSchuljahr">
-                                <!-- Wird dynamisch geladen -->
-                            </select>
-                        </div>
-                        
-                        <h4>Schüler in der Klasse:</h4>
-                        <div id="klasseSchuelerListe">
-                            <!-- Schüler werden hier angezeigt -->
-                        </div>
-                        
-                        <h4>Schüler manuell hinzufügen:</h4>
-                        <div class="input-group">
-                            <input type="text" id="neuerSchuelerVorname" placeholder="Vorname">
-                            <input type="text" id="neuerSchuelerNachname" placeholder="Nachname">
-                            <button class="btn" onclick="schuelerZurKlasseHinzufuegen()">Hinzufügen</button>
-                        </div>
-                        
-                        <div class="modal-buttons">
-                            <button class="btn btn-success" onclick="klasseEditSpeichern()">Speichern</button>
-                            <button class="btn btn-danger" onclick="klasseEditAbbrechen()">Abbrechen</button>
+                        <div id="klasseEditInhalt">
+                            <!-- Wird dynamisch gefüllt -->
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Lehrer verwalten Tab -->
+            <!-- Lehrer Tab -->
             <div id="lehrer" class="tab-content">
                 <h2>Lehrer verwalten</h2>
                 <div class="card">
-                    <h3>Neuen Lehrer anlegen</h3>
+                    <h3>Neuen Lehrer hinzufügen</h3>
                     <div class="input-group">
-                        <input type="text" id="lehrerName" placeholder="Name des Lehrers">
-                        <input type="email" id="lehrerEmail" placeholder="E-Mail">
-                        <input type="password" id="lehrerPasswort" placeholder="Passwort" value="lehrer123">
-                        <button class="btn" onclick="lehrerHinzufuegen()">Lehrer anlegen</button>
+                        <input type="email" id="lehrerEmail" placeholder="E-Mail-Adresse">
+                        <button class="btn" onclick="lehrerHinzufuegen()">Lehrer hinzufügen</button>
                     </div>
                 </div>
                 <div class="liste" id="lehrerListe">
@@ -418,116 +382,77 @@
             <!-- Datenverwaltung Tab -->
             <div id="daten" class="tab-content">
                 <h2>Datenverwaltung</h2>
+                
                 <div class="card">
-                    <h3>Firebase Status</h3>
-                    <div id="firebaseInfo">
-                        <p>Status: <span id="dbStatus">🔄 Verbindung wird geprüft...</span></p>
-                        <p>Benutzer: <span id="dbUser">-</span></p>
-                        <p>Letzter Sync: <span id="lastSync">-</span></p>
-                    </div>
-                </div>
-                <div class="card">
-                    <h3>Schuljahr</h3>
+                    <h3>Daten-Export</h3>
                     <div class="input-group">
-                        <label>Aktuelles Schuljahr:</label>
-                        <input type="text" id="schuljahr" value="2025/26" placeholder="z.B. 2025/26">
-                        <button class="btn" onclick="schuljahrSpeichern()">Speichern</button>
+                        <button class="btn" onclick="exportAllData()">Alle Daten exportieren (JSON)</button>
+                        <button class="btn" onclick="exportBewertungen()">Bewertungen exportieren (CSV)</button>
                     </div>
                 </div>
+
                 <div class="card">
-                    <h3>Datenexport</h3>
+                    <h3>Daten löschen (Vorsicht!)</h3>
                     <div class="input-group">
-                        <button class="btn btn-success" onclick="datenExportieren('alle')">Alle Daten exportieren</button>
-                        <button class="btn btn-success" onclick="datenExportieren('bewertungen')">Nur Bewertungen exportieren</button>
-                        <button class="btn btn-success" onclick="datenExportieren('gruppen')">Nur Gruppen exportieren</button>
+                        <button class="btn btn-danger" onclick="confirmDeleteAllBewertungen()">Alle Bewertungen löschen</button>
+                        <button class="btn btn-danger" onclick="confirmDeleteAllGruppen()">Alle Gruppen löschen</button>
                     </div>
                 </div>
+
+                <!-- Briefvorlage -->
                 <div class="card">
-                    <h3>Daten löschen</h3>
-                    <div class="input-group">
-                        <button class="btn btn-danger" onclick="datenLoeschen('bewertungen')">Alle Bewertungen löschen</button>
-                        <button class="btn btn-danger" onclick="datenLoeschen('gruppen')">Alle Gruppen löschen</button>
-                        <button class="btn btn-danger" onclick="datenLoeschen('news')">Alle News löschen</button>
-                        <button class="btn btn-danger" onclick="datenLoeschen('alle')" style="background: #c0392b;">ALLE DATEN LÖSCHEN</button>
+                    <h3>Briefvorlage</h3>
+                    <p><em>Verwenden Sie [NAME] als Platzhalter für den Schülernamen.</em></p>
+                    <div class="input-group brief-input-group">
+                        <label>Anrede/Einleitung:</label>
+                        <textarea id="briefAnrede" rows="6" placeholder="Liebe/r [NAME]..." class="brief-textarea"></textarea>
                     </div>
-                </div>
-                <div class="card">
-                    <h3>Statistiken</h3>
-                    <div id="statistiken">
-                        <!-- Statistiken werden hier angezeigt -->
+                    <div class="input-group brief-input-group">
+                        <label>Schlussformel:</label>
+                        <textarea id="briefSchluss" rows="6" placeholder="Mit freundlichen Grüßen..." class="brief-textarea"></textarea>
                     </div>
+                    <button class="btn btn-success" onclick="briefvorlageSpeichern()">Speichern</button>
                 </div>
             </div>
 
             <!-- Bewerten Tab -->
             <div id="bewerten" class="tab-content">
                 <h2>Schüler bewerten</h2>
-                <div class="filter-section">
-                    <div class="filter-group">
-                        <label>Filter Status:</label>
-                        <select id="bewertungsFilter" onchange="filterBewertungen()">
-                            <option value="alle">Alle</option>
-                            <option value="bewertet">Bewertet</option>
-                            <option value="nicht-bewertet">Noch nicht bewertet</option>
-                        </select>
-                        <label>Namen sortieren:</label>
-                        <select id="namenSortierung" onchange="filterBewertungen()">
-                            <option value="az">A-Z</option>
-                            <option value="za">Z-A</option>
+                
+                <!-- Schüler-Auswahl -->
+                <div class="card">
+                    <h3>Schüler auswählen</h3>
+                    <div class="input-group">
+                        <select id="schuelerSelect" onchange="schuelerAusgewaehlt()" style="width: 100%; padding: 10px;">
+                            <option value="">Schüler auswählen...</option>
+                            <!-- Schüler werden dynamisch geladen -->
                         </select>
                     </div>
                 </div>
-                <div id="bewertungsListe">
-                    <!-- Zu bewertende Schüler -->
-                </div>
-                <div id="bewertungsRaster" class="bewertung-container hidden">
-                    <!-- Bewertungsbereich mit Tabs -->
-                    <div class="bewertung-tabs">
-                        <button class="bewertung-tab-btn active" onclick="openBewertungTab('bewertung')">Bewertung</button>
-                        <button class="bewertung-tab-btn" onclick="openBewertungTab('staerken')">Stärken</button>
-                    </div>
-                    
-                    <!-- Notenschnitt - bleibt immer sichtbar -->
-                    <div class="durchschnitt-sticky">
-                        Durchschnitt: <span id="durchschnittAnzeige">-</span>
-                    </div>
-                    
-                    <!-- Tab Bewertung -->
-                    <div id="bewertungTab" class="bewertung-tab-content active">
-                        <div id="bewertungsRasterContent">
-                            <!-- Bewertungsraster wird hier angezeigt -->
-                        </div>
-                    </div>
-                    
-                    <!-- Tab Stärken -->
-                    <div id="staerkenTab" class="bewertung-tab-content">
-                        <div id="staerkenCheckliste">
-                            <!-- Stärken-Checkliste wird hier angezeigt -->
-                        </div>
-                    </div>
-                    
-                    <div class="speichern-buttons">
-                        <button class="btn btn-success" onclick="bewertungSpeichern()">Speichern</button>
-                        <button class="btn btn-danger" onclick="bewertungAbbrechen()">Zurück</button>
-                    </div>
+
+                <!-- Bewertungs-Interface -->
+                <div id="bewertungsInterface" class="hidden">
+                    <!-- Wird dynamisch geladen -->
                 </div>
             </div>
 
             <!-- Vorlagen Tab -->
             <div id="vorlagen" class="tab-content">
                 <h2>Bewertungsvorlagen</h2>
+                
                 <div class="card">
                     <h3>Neue Vorlage erstellen</h3>
                     <div class="input-group">
                         <input type="text" id="vorlagenName" placeholder="Name der Vorlage">
-                        <button class="btn" onclick="neueVorlageErstellen()">Erstellen</button>
+                        <button class="btn btn-success" onclick="neueVorlageErstellen()">Erstellen</button>
                     </div>
                 </div>
-                <div id="vorlagenEditor" class="hidden">
-                    <div class="card">
-                        <div class="vorlage-titel" id="vorlagenTitel"></div>
-                        <div class="reflexion-info">
-                            <strong>Reflexion (30% - fest)</strong> ist automatisch in jeder Vorlage enthalten.
+                
+                <div id="vorlagenEditor" class="card hidden">
+                    <div>
+                        <h3>Vorlage konfigurieren</h3>
+                        <div class="input-group">
+                            <span><strong>Reflexion:</strong> 30% (fest)</span>
                         </div>
                         <h3>Weitere Kategorien hinzufügen (max. 70%)</h3>
                         <div class="input-group">
@@ -548,6 +473,37 @@
                 </div>
             </div>
 
+            <!-- Übersicht Tab -->
+            <div id="uebersicht" class="tab-content">
+                <h2>Meine Übersicht</h2>
+                
+                <!-- Filter-Bereich -->
+                <div class="filter-section">
+                    <div class="filter-group">
+                        <label>Sortierung:</label>
+                        <select onchange="updateUebersichtFilter('sortierung', this.value)">
+                            <option value="name-az">Name A-Z</option>
+                            <option value="name-za">Name Z-A</option>
+                            <option value="note-auf">Note aufsteigend</option>
+                            <option value="note-ab">Note absteigend</option>
+                            <option value="datum">Bewertungsdatum</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Filter:</label>
+                        <select onchange="updateUebersichtFilter('filter', this.value)">
+                            <option value="">Alle anzeigen</option>
+                            <option value="bewertet">Nur bewertete</option>
+                            <option value="unbewertet">Nur unbewertete</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="liste" id="uebersichtListe">
+                    <!-- Übersicht wird hier angezeigt -->
+                </div>
+            </div>
+
             <!-- Admin System-Vorlagen Tab (nur Admin) -->
             <div id="adminvorlagen" class="tab-content">
                 <h2>System-Vorlagen bearbeiten</h2>
@@ -565,120 +521,61 @@
                         <!-- Erweiterte Checkpoints-Verwaltung wird hier angezeigt -->
                     </div>
                 </div>
-                
-                <!-- Briefvorlage -->
-                <div class="card">
-                    <h3>Briefvorlage</h3>
-                    <p><em>Verwenden Sie [NAME] als Platzhalter für den Schülernamen.</em></p>
-                    <div class="input-group brief-input-group">
-                        <label>Anrede/Einleitung:</label>
-                        <textarea id="briefAnrede" rows="6" placeholder="Liebe/r [NAME]..." class="brief-textarea"></textarea>
-                    </div>
-                    <div class="input-group brief-input-group">
-                        <label>Schlussformel:</label>
-                        <textarea id="briefSchluss" rows="6" placeholder="Mit freundlichen Grüßen..." class="brief-textarea"></textarea>
-                    </div>
-                    <button class="btn btn-success" onclick="briefvorlageSpeichern()">Speichern</button>
-                </div>
-            </div>
-
-            <!-- Übersicht Tab -->
-            <div id="uebersicht" class="tab-content">
-                <h2>Meine Übersicht</h2>
-                
-                <!-- Filter-Bereich -->
-                <div class="filter-section">
-                    <div class="filter-group">
-                        <label>Sortierung:</label>
-                        <select onchange="updateUebersichtFilter('sortierung', this.value)">
-                            <option value="name-az">Name A-Z</option>
-                            <option value="name-za">Name Z-A</option>
-                            <option value="note-auf">Note aufsteigend</option>
-                            <option value="note-ab">Note absteigend</option>
-                            <option value="datum">Bewertungsdatum</option>
-                        </select>
-                        
-                        <label>Status:</label>
-                        <select onchange="updateUebersichtFilter('status', this.value)">
-                            <option value="alle">Alle</option>
-                            <option value="bewertet">Nur bewertete</option>
-                            <option value="nicht-bewertet">Nur unbewertete</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div class="card">
-                    <h3>Statistiken</h3>
-                    <div id="lehrerStatistiken">
-                        <!-- Statistiken werden hier angezeigt -->
-                    </div>
-                </div>
-                <div class="card">
-                    <h3>Meine Schüler & Bewertungen</h3>
-                    <div class="input-group">
-                        <button class="btn btn-success" onclick="meineSchuelerExportieren()">Meine Daten exportieren</button>
-                        <button class="btn" onclick="druckansichtÖffnen()">Druckansicht</button>
-                    </div>
-                </div>
-                <div class="liste" id="meineSchuelerListe">
-                    <!-- Schüler werden hier angezeigt -->
-                </div>
             </div>
         </div>
     </div>
 
-    <!-- Firebase SDK - v9 (modular) -->
-    <script type="module">
-        // Firebase v9 - modular SDK
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js';
-        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js';
-        import { getDatabase, ref, set, get, push, remove, onValue, off } from 'https://www.gstatic.com/firebasejs/9.15.0/firebase-database.js';
-
-        // KORRIGIERTER IMPORT - richtige Datei
-        import { firebaseConfig } from './firebase-config.js';
-        
-        // Firebase initialisieren
-        try {
-            window.firebaseApp = initializeApp(firebaseConfig);
-            window.auth = getAuth(window.firebaseApp);
-            window.database = getDatabase(window.firebaseApp);
-
-            // Firebase Funktionen global verfügbar machen
-            window.firebaseAuth = { signInWithEmailAndPassword, signOut, onAuthStateChanged };
-            window.firebaseDB = { ref, set, get, push, remove, onValue, off };
-
-            console.log('🔥 Firebase v9 erfolgreich initialisiert');
+    <!-- NEU: Thema-Bearbeitungsmodal -->
+    <div id="themaBearbeitungsModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>Thema bearbeiten</h3>
             
-            // Firebase Status anzeigen
+            <div class="form-group">
+                <label for="bearbeiteTitel">Titel:</label>
+                <input type="text" id="bearbeiteTitel" placeholder="Thema-Titel">
+            </div>
             
-            // Firebase initialisieren und dann App starten
-            if (typeof window.initializeFirebaseApp === 'function') {
-                window.initializeFirebaseApp();
-            }
-        } catch (error) {
-            console.error('❌ KRITISCHER FEHLER bei Firebase-Initialisierung:', error);
+            <div class="form-group">
+                <label>Fächer:</label>
+                <p>Klicken Sie auf die Fächer, die zu diesem Thema gehören:</p>
+                <div id="bearbeiteFaecherGrid" class="faecher-grid">
+                    <!-- Fächer-Buttons werden hier eingefügt -->
+                </div>
+                
+                <div class="ausgewaehlte-faecher">
+                    <strong>Ausgewählte Fächer:</strong> 
+                    <span id="bearbeiteFaecherListe">Keine</span>
+                </div>
+            </div>
             
-            // Fallback anzeigen
-            document.getElementById('loadingScreen').style.display = 'none';
-            document.getElementById('loginScreen').style.display = 'flex';
-            document.getElementById('errorMessage').textContent = 'Firebase konnte nicht initialisiert werden: ' + error.message;
-            document.getElementById('errorMessage').style.display = 'block';
-        }
-    </script>
+            <div class="modal-buttons">
+                <button class="btn btn-success" onclick="themaAenderungenSpeichern()">Änderungen speichern</button>
+                <button class="btn btn-danger" onclick="themaBearbeitungAbbrechen()">Abbrechen</button>
+            </div>
+        </div>
+    </div>
 
-    <!-- Firebase App Scripts - RICHTIGE REIHENFOLGE WICHTIG! -->
-    <script src="firebase-main.js"></script>
-    <script src="firebase-auth.js"></script>
-    <script src="firebase-news.js"></script>
-    <script src="firebase-themen.js"></script>
-    <script src="firebase-klassen.js"></script>
-    <script src="firebase-gruppen.js"></script>
-    <script src="firebase-bewertung.js"></script>
-    <script src="firebase-vorlagen.js"></script>
-    <script src="firebase-admin.js"></script>
-    <script src="firebase-datenverwaltung.js"></script>
-    <script src="firebase-uebersicht.js"></script>
-    <script src="firebase-pdf.js"></script>
-    <script src="firebase-init.js"></script>
+    <!-- Firebase SDKs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.11.0/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.11.0/firebase-auth-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.11.0/firebase-database-compat.min.js"></script>
+
+    <!-- Application Scripts -->
+    <script src="js/firebase-config.js"></script>
+    <script src="js/firebase-auth.js"></script>
+    <script src="js/firebase-functions.js"></script>
+    <script src="js/firebase-news.js"></script>
+    <script src="js/firebase-themen.js"></script>
+    <script src="js/firebase-gruppen.js"></script>
+    <script src="js/firebase-klassen.js"></script>
+    <script src="js/firebase-lehrer.js"></script>
+    <script src="js/firebase-bewertung.js"></script>
+    <script src="js/firebase-staerken.js"></script>
+    <script src="js/firebase-vorlagen.js"></script>
+    <script src="js/firebase-uebersicht.js"></script>
+    <script src="js/firebase-admin.js"></script>
+    <script src="js/firebase-daten.js"></script>
+    <script src="js/firebase-pdf.js"></script>
+    <script src="js/app.js"></script>
 </body>
 </html>
