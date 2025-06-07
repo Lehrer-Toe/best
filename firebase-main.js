@@ -453,15 +453,15 @@ function openTab(tabName, evt) {
     
     // Tab-spezifische Inhalte laden
     try {
-        if (tabName === 'news') loadNews();
-        if (tabName === 'themen') loadThemen();
-        if (tabName === 'gruppen') loadGruppen();
-        if (tabName === 'lehrer') loadLehrer();
-        if (tabName === 'daten') loadDatenverwaltung();
-        if (tabName === 'bewerten') loadBewertungen();
-        if (tabName === 'vorlagen') loadVorlagen();
-        if (tabName === 'uebersicht') loadUebersicht();
-        if (tabName === 'adminvorlagen') loadAdminVorlagen();
+        if (tabName === 'news' && typeof loadNews === 'function') loadNews();
+        if (tabName === 'themen' && typeof loadThemen === 'function') loadThemen();
+        if (tabName === 'gruppen' && typeof loadGruppen === 'function') loadGruppen();
+        if (tabName === 'lehrer' && typeof loadLehrer === 'function') loadLehrer();
+        if (tabName === 'daten' && typeof loadDatenverwaltung === 'function') loadDatenverwaltung();
+        if (tabName === 'bewerten' && typeof loadBewertungen === 'function') loadBewertungen();
+        if (tabName === 'vorlagen' && typeof loadVorlagen === 'function') loadVorlagen();
+        if (tabName === 'uebersicht' && typeof loadUebersicht === 'function') loadUebersicht();
+        if (tabName === 'adminvorlagen' && typeof loadAdminVorlagen === 'function') loadAdminVorlagen();
     } catch (error) {
         console.error('❌ Fehler beim Laden von Tab:', tabName, error);
     }
