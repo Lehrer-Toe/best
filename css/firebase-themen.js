@@ -58,9 +58,11 @@ function loadThemenWithFilter(filterValue) {
             ).join(' ');
         }
         
+        const globalBadge = thema.global ? '<span class="global-badge" title="Für andere Schulen sichtbar">🌐</span>' : '';
+
         html += `<div class="liste-item thema-item" onclick="themaAuswaehlen('${thema.name}')">
             <div>
-                <strong>${thema.name}</strong><br>
+                <strong>${thema.name} ${globalBadge}</strong><br>
                 <div style="margin-top: 5px;">
                     ${faecherBadges}
                 </div>
@@ -137,15 +139,19 @@ function zeigeFaecherAuswahlModal(themaName) {
         <div class="modal-content">
             <h3>Fächer für Thema "${themaName}" auswählen</h3>
             <p>Klicken Sie auf die Fächer, die zu diesem Thema gehören:</p>
-            
+
             <div id="faecherGrid" class="faecher-grid">
                 ${createFaecherButtons()}
             </div>
-            
+
             <div class="ausgewaehlte-faecher" id="ausgewaehlteFaecherAnzeige">
                 <strong>Ausgewählte Fächer:</strong> <span id="faecherListe">Keine</span>
             </div>
-            
+
+            <label style="display:flex;align-items:center;gap:5px;margin-bottom:10px;">
+                <input type="checkbox" id="themaGlobal"> Für andere Schulen sichtbar
+            </label>
+
             <div class="modal-buttons">
                 <button class="btn btn-success" onclick="speichereThemaMitFaechern('${themaName}')">Thema erstellen</button>
                 <button class="btn btn-danger" onclick="schließeFaecherModal()">Abbrechen</button>
@@ -215,13 +221,16 @@ async function speichereThemaMitFaechern(themaName) {
         const themenRef = window.firebaseFunctions.getDatabaseRef('themen');
         const newThemaRef = window.firebaseDB.push(themenRef);
         
-        const neuesThema = { 
+        const global = document.getElementById('themaGlobal')?.checked || false;
+
+        const neuesThema = {
             id: newThemaRef.key,
-            name: themaName, 
+            name: themaName,
             ersteller: window.firebaseFunctions.getCurrentUserName(),
             faecher: [...ausgewaehlteFaecher],
             erstellt: window.firebaseFunctions.formatGermanDate(),
-            timestamp: window.firebaseFunctions.getTimestamp()
+            timestamp: window.firebaseFunctions.getTimestamp(),
+            global
         };
         
         await window.firebaseDB.set(newThemaRef, neuesThema);

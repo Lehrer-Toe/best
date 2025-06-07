@@ -374,6 +374,12 @@ body {
     background: #9b59b6;
 }
 
+/* Kennzeichnung für globale Themen */
+.global-badge {
+    margin-left: 5px;
+    color: #27ae60;
+}
+
 /* Fächer-Grid für Modal */
 .faecher-grid {
     display: grid;
