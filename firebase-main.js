@@ -618,6 +618,7 @@ window.firebaseFunctions = {
     requireAdmin: () => window.authFunctions.requireAdmin(),
     isAdmin: () => window.authFunctions.isAdmin(),
     getCurrentUserName: () => window.authFunctions.getCurrentUserName(),
+    canCreateGroups: () => window.authFunctions.canCreateGroups(),
     
     // Firebase References
     getDatabase: () => window.database,

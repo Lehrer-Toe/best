@@ -8,8 +8,13 @@ let ausgewaehlteSchueler = [];
 // Gruppen laden und anzeigen
 function loadGruppen() {
     console.log('👥 Lade Gruppen von Firebase...');
-    
+
     if (!window.firebaseFunctions.requireAuth()) return;
+
+    const createCard = document.getElementById('gruppenCreateCard');
+    if (createCard) {
+        createCard.style.display = window.firebaseFunctions.canCreateGroups() ? 'block' : 'none';
+    }
     
     const liste = document.getElementById('gruppenListe');
     if (!liste) return;
@@ -325,8 +330,13 @@ function ausgewaehltenSchuelerEntfernen(index) {
 // Neue Gruppe erstellen
 async function gruppeErstellen() {
     console.log('👥 Erstelle neue Gruppe...');
-    
+
     if (!window.firebaseFunctions.requireAuth()) return;
+
+    if (!window.firebaseFunctions.canCreateGroups()) {
+        alert('Sie haben keine Berechtigung, neue Gruppen anzulegen.');
+        return;
+    }
     
     const themaInput = document.getElementById('gruppenThema');
     const thema = themaInput?.value.trim();
