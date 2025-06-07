@@ -7,6 +7,36 @@ let uebersichtFilter = {
     status: 'alle'
 };
 
+// SICHERE Normalisierungsfunktion mit Fallback
+function normalizeSchuelerDataSafe(schueler) {
+    // Prüfe ob Gruppen-Funktionen verfügbar sind
+    if (window.gruppenFunctions && window.gruppenFunctions.normalizeSchuelerData) {
+        return window.gruppenFunctions.normalizeSchuelerData(schueler);
+    }
+    
+    // Fallback-Normalisierung
+    if (!schueler || typeof schueler !== 'object') {
+        return { name: '', lehrer: '', fach: null };
+    }
+    
+    return {
+        name: schueler.name || schueler.schuelerName || 
+              (schueler.vorname && schueler.nachname ? `${schueler.vorname} ${schueler.nachname}` : ''),
+        lehrer: schueler.lehrer || schueler.lehrerName || '',
+        fach: schueler.fach || schueler.fachKuerzel || null
+    };
+}
+
+// SICHERE Schüler-ID Generierung mit Fallback  
+function generateSchuelerIdSafe(gruppenId, schuelerName) {
+    if (window.gruppenFunctions && window.gruppenFunctions.generateSchuelerId) {
+        return window.gruppenFunctions.generateSchuelerId(gruppenId, schuelerName);
+    }
+    
+    // Fallback-ID-Generierung
+    return `${gruppenId}-${schuelerName.replace(/\s/g, '-')}`;
+}
+
 // Übersicht laden
 function loadUebersicht() {
     console.log('📈 Lade Übersicht von Firebase...');
@@ -34,7 +64,7 @@ async function loadLehrerStatistiken() {
         const gruppen = window.firebaseFunctions.getGruppenFromCache();
         const meineGruppen = gruppen.filter(gruppe => 
             gruppe.schueler && gruppe.schueler.some(s => {
-                const normalizedSchueler = window.gruppenFunctions.normalizeSchuelerData(s);
+                const normalizedSchueler = normalizeSchuelerDataSafe(s);
                 return normalizedSchueler.lehrer === currentUserName;
             })
         );
@@ -44,13 +74,13 @@ async function loadLehrerStatistiken() {
         meineGruppen.forEach(gruppe => {
             if (gruppe.schueler && Array.isArray(gruppe.schueler)) {
                 gruppe.schueler.forEach(schueler => {
-                    const normalizedSchueler = window.gruppenFunctions.normalizeSchuelerData(schueler);
+                    const normalizedSchueler = normalizeSchuelerDataSafe(schueler);
                     
                     if (normalizedSchueler.lehrer === currentUserName && normalizedSchueler.name) {
                         meineSchueler.push({
                             name: normalizedSchueler.name,
                             thema: gruppe.thema,
-                            schuelerId: window.gruppenFunctions.generateSchuelerId(gruppe.id, normalizedSchueler.name),
+                            schuelerId: generateSchuelerIdSafe(gruppe.id, normalizedSchueler.name),
                             fach: normalizedSchueler.fach
                         });
                     }
@@ -159,7 +189,7 @@ async function loadMeineSchuelerListe() {
         gruppen.forEach(gruppe => {
             if (gruppe.schueler && Array.isArray(gruppe.schueler)) {
                 gruppe.schueler.forEach(schueler => {
-                    const normalizedSchueler = window.gruppenFunctions.normalizeSchuelerData(schueler);
+                    const normalizedSchueler = normalizeSchuelerDataSafe(schueler);
                     
                     if (normalizedSchueler.lehrer === currentUserName && normalizedSchueler.name) {
                         const fachName = normalizedSchueler.fach ? 
@@ -168,7 +198,7 @@ async function loadMeineSchuelerListe() {
                         meineSchueler.push({
                             name: normalizedSchueler.name,
                             thema: gruppe.thema,
-                            schuelerId: window.gruppenFunctions.generateSchuelerId(gruppe.id, normalizedSchueler.name),
+                            schuelerId: generateSchuelerIdSafe(gruppe.id, normalizedSchueler.name),
                             fach: normalizedSchueler.fach,
                             fachName: fachName
                         });
@@ -302,10 +332,10 @@ async function meineSchuelerExportieren() {
         gruppen.forEach(gruppe => {
             if (gruppe.schueler && Array.isArray(gruppe.schueler)) {
                 gruppe.schueler.forEach(schueler => {
-                    const normalizedSchueler = window.gruppenFunctions.normalizeSchuelerData(schueler);
+                    const normalizedSchueler = normalizeSchuelerDataSafe(schueler);
                     
                     if (normalizedSchueler.lehrer === currentUserName && normalizedSchueler.name) {
-                        const schuelerId = window.gruppenFunctions.generateSchuelerId(gruppe.id, normalizedSchueler.name);
+                        const schuelerId = generateSchuelerIdSafe(gruppe.id, normalizedSchueler.name);
                         const bewertung = bewertungen.find(b => b.schuelerId === schuelerId);
                         
                         const fachName = normalizedSchueler.fach ? 
@@ -385,10 +415,10 @@ async function generateDruckansicht(popup) {
         gruppen.forEach(gruppe => {
             if (gruppe.schueler && Array.isArray(gruppe.schueler)) {
                 gruppe.schueler.forEach(schueler => {
-                    const normalizedSchueler = window.gruppenFunctions.normalizeSchuelerData(schueler);
+                    const normalizedSchueler = normalizeSchuelerDataSafe(schueler);
                     
                     if (normalizedSchueler.lehrer === currentUserName && normalizedSchueler.name) {
-                        const schuelerId = window.gruppenFunctions.generateSchuelerId(gruppe.id, normalizedSchueler.name);
+                        const schuelerId = generateSchuelerIdSafe(gruppe.id, normalizedSchueler.name);
                         const bewertung = bewertungen.find(b => b.schuelerId === schuelerId);
                         
                         const fachName = normalizedSchueler.fach ? 
@@ -583,5 +613,11 @@ window.uebersichtFunctions = {
     meineSchuelerExportieren,
     druckansichtÖffnen
 };
+
+// Globale Funktionen für Backward-Compatibility
+window.loadUebersicht = loadUebersicht;
+window.updateUebersichtFilter = updateUebersichtFilter;
+window.meineSchuelerExportieren = meineSchuelerExportieren;
+window.druckansichtÖffnen = druckansichtÖffnen;
 
 console.log('✅ Firebase Übersicht-System bereit - Korrigierte Version');
