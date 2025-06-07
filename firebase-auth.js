@@ -1,17 +1,26 @@
+// Firebase Authentication System
+console.log('🔐 Firebase Authentication System geladen');
 
+// Globale Variablen
 let currentUser = null;
 let firebaseUser = null;
 let autoLogoutTimer = null;
 
+// Auto-Logout nach 20 Minuten
 const AUTO_LOGOUT_TIME = 20 * 60 * 1000; // 20 Minuten in Millisekunden
 
+// Initialisiere Authentication
 function initializeAuth() {
+    console.log('🔐 Initialisiere Firebase Authentication...');
     
+    // Auth State Listener
     window.firebaseAuth.onAuthStateChanged(window.auth, (user) => {
         if (user) {
+            console.log('✅ Firebase User angemeldet:', user.email);
             firebaseUser = user;
             handleAuthenticatedUser(user);
         } else {
+            console.log('❌ Kein Firebase User angemeldet');
             firebaseUser = null;
             currentUser = null;
             stopAutoLogoutTimer();
@@ -19,13 +28,16 @@ function initializeAuth() {
         }
     });
     
+    // Login Form Event Listener
     const loginForm = document.getElementById('loginForm');
     if (loginForm) {
         loginForm.addEventListener('submit', handleLogin);
     }
     
+    console.log('✅ Firebase Authentication bereit');
 }
 
+// Login Handler
 async function handleLogin(e) {
     e.preventDefault();
     
@@ -37,12 +49,17 @@ async function handleLogin(e) {
         return;
     }
     
+    console.log('🔐 Login-Versuch für:', email);
     
     try {
+        // Firebase Authentication
         const userCredential = await window.firebaseAuth.signInWithEmailAndPassword(window.auth, email, password);
+        console.log('✅ Firebase Login erfolgreich:', userCredential.user.email);
         
+        // onAuthStateChanged wird automatisch ausgelöst
         
     } catch (error) {
+        console.error('❌ Firebase Login Fehler:', error);
         
         let errorMessage = 'Login fehlgeschlagen!';
         switch (error.code) {
@@ -61,69 +78,104 @@ async function handleLogin(e) {
             case 'auth/too-many-requests':
                 errorMessage = 'Zu viele Anmeldeversuche. Bitte später erneut versuchen!';
                 break;
-            default:
-                errorMessage = `Fehler: ${error.message}`;
+            case 'auth/network-request-failed':
+                errorMessage = 'Netzwerkfehler. Bitte Internetverbindung prüfen!';
+                break;
         }
         
         showError(errorMessage);
     }
 }
 
-async function handleAuthenticatedUser(firebaseUser) {
+// Authentifizierten Benutzer verarbeiten
+async function handleAuthenticatedUser(user) {
+    console.log('👤 Verarbeite authentifizierten Benutzer...');
     
     try {
-        const userDataRef = window.firebaseDB.ref(window.database, `users/${sanitizeEmail(firebaseUser.email)}`);
-        const snapshot = await window.firebaseDB.get(userDataRef);
+        // Benutzerdaten aus Database laden
+        const userRef = window.firebaseDB.ref(window.database, `users/${user.email.replace(/[.$#\[\]/]/g, '_')}`);
+        const snapshot = await window.firebaseDB.get(userRef);
         
         if (snapshot.exists()) {
-            const userData = snapshot.val();
-            currentUser = {
-                email: firebaseUser.email,
-                uid: firebaseUser.uid,
-                ...userData
-            };
+            currentUser = snapshot.val();
+            console.log('✅ Benutzerdaten geladen:', currentUser);
             
-            showApp();
-            
+            // Auto-Logout Timer starten
             startAutoLogoutTimer();
             
+            // App anzeigen
+            showApp();
+            
+            // App initialisieren
+            if (typeof initializeAppAfterLogin === 'function') {
+                await initializeAppAfterLogin();
+            }
         } else {
-            showError('Benutzer nicht berechtigt. Bitte kontaktieren Sie den Administrator.');
+            console.error('❌ Keine Benutzerdaten in Database gefunden');
+            showError('Benutzerdaten nicht gefunden. Bitte kontaktieren Sie den Administrator.');
             await firebaseLogout();
         }
         
     } catch (error) {
+        console.error('❌ Fehler beim Laden der Benutzerdaten:', error);
         showError('Fehler beim Laden der Benutzerdaten!');
         await firebaseLogout();
     }
 }
 
+// Logout
+async function firebaseLogout() {
+    console.log('🔐 Logout wird durchgeführt...');
+    
+    try {
+        stopAutoLogoutTimer();
+        await window.firebaseAuth.signOut(window.auth);
+        console.log('✅ Logout erfolgreich');
+        
+        // UI zurücksetzen
+        currentUser = null;
+        firebaseUser = null;
+        showLoginScreen();
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Logout:', error);
+    }
+}
+
+// Auto-Logout Timer starten
 function startAutoLogoutTimer() {
-    stopAutoLogoutTimer(); // Vorherigen Timer stoppen
+    console.log('⏰ Auto-Logout Timer gestartet (20 Minuten)');
+    stopAutoLogoutTimer();
     
     autoLogoutTimer = setTimeout(async () => {
+        console.log('⏰ Auto-Logout nach 20 Minuten');
         await firebaseLogout();
     }, AUTO_LOGOUT_TIME);
 }
 
+// Auto-Logout Timer stoppen
 function stopAutoLogoutTimer() {
     if (autoLogoutTimer) {
         clearTimeout(autoLogoutTimer);
         autoLogoutTimer = null;
+        console.log('⏰ Auto-Logout Timer gestoppt');
     }
 }
 
-function resetAutoLogoutTimer() {
+// Aktivität registrieren
+window.resetAutoLogoutTimer = function() {
     if (currentUser && firebaseUser) {
         startAutoLogoutTimer();
     }
 }
 
+// UI Funktionen
 function showLoginScreen() {
     document.getElementById('loadingScreen').style.display = 'none';
     document.getElementById('loginScreen').style.display = 'flex';
     document.getElementById('appContainer').style.display = 'none';
     
+    // Felder leeren
     document.getElementById('email').value = '';
     document.getElementById('password').value = '';
     hideError();
@@ -131,6 +183,7 @@ function showLoginScreen() {
 
 function showApp() {
     if (!currentUser) {
+        console.error('❌ Kein currentUser beim showApp()');
         return;
     }
     
@@ -138,213 +191,75 @@ function showApp() {
     document.getElementById('appContainer').style.display = 'block';
     document.getElementById('currentUser').textContent = `${currentUser.name} (${currentUser.role})`;
     
+    console.log('👤 App angezeigt für:', currentUser.name, 'Rolle:', currentUser.role);
     
-    const allTabs = [
-        'newsTab', 'themenTab', 'gruppenTab', 'lehrerTab',
-        'datenTab', 'bewertenTab', 'vorlagenTab', 'uebersichtTab',
-        'adminvorlagenTab', 'klassenTab'
-    ];
+    // Tabs je nach Rolle anzeigen
+    const allTabs = {
+        'newsTab': true, // Alle sehen News
+        'themenTab': true, // Alle sehen Themen
+        'gruppenTab': currentUser.role !== 'schueler',
+        'lehrerTab': currentUser.role === 'admin',
+        'datenTab': currentUser.role === 'admin',
+        'bewertenTab': currentUser.role === 'lehrer' || currentUser.role === 'admin',
+        'vorlagenTab': currentUser.role === 'lehrer' || currentUser.role === 'admin',
+        'uebersichtTab': currentUser.role === 'lehrer' || currentUser.role === 'admin',
+        'adminvorlagenTab': currentUser.role === 'admin'
+    };
     
-    allTabs.forEach(tabId => {
+    // Tabs ein-/ausblenden
+    Object.entries(allTabs).forEach(([tabId, visible]) => {
         const tab = document.getElementById(tabId);
         if (tab) {
-            tab.style.display = 'none';
-            tab.classList.remove('active');
+            tab.style.display = visible ? 'block' : 'none';
         }
     });
     
-    document.querySelectorAll('.tab-content').forEach(content => {
-        content.classList.remove('active');
-    });
-    
-    document.getElementById('newsTab').style.display = 'block';
-    document.getElementById('news').classList.add('active');
-    
-    if (currentUser.role === 'admin') {
-        document.getElementById('newsTab').style.display = 'block';
-        document.getElementById('lehrerTab').style.display = 'block';
-        document.getElementById('datenTab').style.display = 'block';
-        document.getElementById('adminvorlagenTab').style.display = 'block';
-        document.getElementById('klassenTab').style.display = 'block';
-        
-        document.getElementById('newsTab').classList.add('active');
-        
-    } else if (currentUser.role === 'lehrer') {
-        document.getElementById('newsTab').style.display = 'block';
-        document.getElementById('themenTab').style.display = 'block';
-        document.getElementById('gruppenTab').style.display = 'block';
-        document.getElementById('bewertenTab').style.display = 'block';
-        document.getElementById('vorlagenTab').style.display = 'block';
-        document.getElementById('uebersichtTab').style.display = 'block';
-        
-        document.getElementById('newsTab').classList.add('active');
-        
-    } else {
-        showError('Unbekannte Benutzerrolle!');
-        return;
-    }
-    
-    if (typeof initializeAppAfterLogin === 'function') {
-        initializeAppAfterLogin();
-    }
-}
-
-async function firebaseLogout() {
-    
-    try {
-        stopAutoLogoutTimer();
-        await window.firebaseAuth.signOut(window.auth);
-        
-        currentUser = null;
-        firebaseUser = null;
-        
-        hideAllTabs();
-        showLoginScreen();
-        
-    } catch (error) {
-        showError('Fehler beim Abmelden!');
-    }
-}
-
-function hideAllTabs() {
-    const allTabs = [
-        'newsTab', 'themenTab', 'gruppenTab', 'lehrerTab',
-        'datenTab', 'bewertenTab', 'vorlagenTab', 'uebersichtTab',
-        'adminvorlagenTab', 'klassenTab'
-    ];
-    
-    allTabs.forEach(tabId => {
-        const tab = document.getElementById(tabId);
-        if (tab) {
-            tab.style.display = 'none';
-            tab.classList.remove('active');
-        }
-    });
-    
-    document.querySelectorAll('.tab-content').forEach(content => {
-        content.classList.remove('active');
-    });
+    // News-Tab aktivieren
+    openTab('news', { target: document.getElementById('newsTab') });
 }
 
 function showError(message) {
-    const errorDiv = document.getElementById('errorMessage');
-    if (errorDiv) {
-        errorDiv.textContent = message;
-        errorDiv.style.display = 'block';
-        errorDiv.style.background = '#fdf2f2';
-        errorDiv.style.color = '#e74c3c';
-    }
-}
-
-function showSuccess(message) {
-    const errorDiv = document.getElementById('errorMessage');
-    if (errorDiv) {
-        errorDiv.textContent = message;
-        errorDiv.style.display = 'block';
-        errorDiv.style.background = '#f0f9ff';
-        errorDiv.style.color = '#27ae60';
+    const errorEl = document.getElementById('errorMessage');
+    if (errorEl) {
+        errorEl.textContent = message;
+        errorEl.style.display = 'block';
     }
 }
 
 function hideError() {
-    const errorDiv = document.getElementById('errorMessage');
-    if (errorDiv) {
-        errorDiv.style.display = 'none';
+    const errorEl = document.getElementById('errorMessage');
+    if (errorEl) {
+        errorEl.style.display = 'none';
     }
 }
 
-function sanitizeEmail(email) {
-    return email.replace(/[.$#\[\]/]/g, '_');
-}
-
-function getUserUid() {
-    return firebaseUser ? firebaseUser.uid : null;
-}
-
-function getUserEmail() {
-    return firebaseUser ? firebaseUser.email : null;
-}
-
-function isAdmin() {
-    return currentUser && currentUser.role === 'admin';
-}
-
-function isLehrer() {
-    return currentUser && currentUser.role === 'lehrer';
-}
-
-function canCreateGroups() {
-    if (!currentUser) return false;
-    if (currentUser.role === 'admin') return true;
-    if (currentUser.role === 'lehrer') {
-        return currentUser.kannGruppenAnlegen !== false;
-    }
-    return false;
-}
-
-function getCurrentUserName() {
-    return currentUser ? currentUser.name : 'Unbekannt';
-}
-
-function requireAuth() {
-    if (!currentUser || !firebaseUser) {
-        showError('Bitte melden Sie sich an!');
-        showLoginScreen();
-        return false;
-    }
-    
-    resetAutoLogoutTimer();
-    return true;
-}
-
-function requireAdmin() {
-    if (!requireAuth()) return false;
-    
-    if (!isAdmin()) {
-        showError('Keine Berechtigung für diese Aktion!');
-        return false;
-    }
-    return true;
-}
-
-function updateFirebaseStatus() {
-    const statusElement = document.getElementById('dbStatus');
-    const userElement = document.getElementById('dbUser');
-    const syncElement = document.getElementById('lastSync');
-    
-    if (statusElement) {
-        if (firebaseUser) {
-            statusElement.innerHTML = '🔥 Verbunden';
-            statusElement.style.color = '#27ae60';
-        } else {
-            statusElement.innerHTML = '❌ Nicht verbunden';
-            statusElement.style.color = '#e74c3c';
-        }
-    }
-    
-    if (userElement) {
-        userElement.textContent = firebaseUser ? firebaseUser.email : '-';
-    }
-    
-    if (syncElement) {
-        syncElement.textContent = new Date().toLocaleString('de-DE');
-    }
-}
-
-document.addEventListener('click', resetAutoLogoutTimer);
-document.addEventListener('keypress', resetAutoLogoutTimer);
-document.addEventListener('scroll', resetAutoLogoutTimer);
-
+// Globale Auth-Funktionen verfügbar machen
 window.authFunctions = {
-    requireAuth,
-    requireAdmin,
-    isAdmin,
-    isLehrer,
-    canCreateGroups,
-    getCurrentUserName,
-    getUserUid,
-    getUserEmail,
-    sanitizeEmail,
-    updateFirebaseStatus
+    initializeAuth,
+    firebaseLogout,
+    getCurrentUser: () => currentUser,
+    getCurrentUserName: () => currentUser?.name || 'Unbekannt',
+    isAdmin: () => currentUser?.role === 'admin',
+    requireAuth: () => {
+        if (!currentUser) {
+            console.error('❌ Nicht authentifiziert!');
+            showLoginScreen();
+            return false;
+        }
+        return true;
+    },
+    requireAdmin: () => {
+        if (!currentUser || currentUser.role !== 'admin') {
+            console.error('❌ Admin-Rechte erforderlich!');
+            alert('Diese Funktion erfordert Admin-Rechte!');
+            return false;
+        }
+        return true;
+    }
 };
 
+// Export für andere Module
+window.currentUser = currentUser;
+window.firebaseLogout = firebaseLogout;
+
+console.log('✅ Firebase Authentication Module bereit');
