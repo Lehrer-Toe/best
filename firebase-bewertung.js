@@ -1,50 +1,9 @@
-// Firebase Bewertungs-System - Realtime Database - KORRIGIERT
-console.log('📊 Firebase Bewertungs-System geladen - Korrigierte Version');
+// Firebase Bewertungs-System - Realtime Database
+console.log('📊 Firebase Bewertungs-System geladen');
 
 // Globale Variablen für Bewertung
 let aktuelleBewertung = null;
 let aktuelleVorlageForBewertung = null;
-
-// SICHERE Normalisierungsfunktion mit Fallback
-function normalizeSchuelerDataSafe(schueler) {
-    // Prüfe ob Gruppen-Funktionen verfügbar sind
-    if (window.gruppenFunctions && window.gruppenFunctions.normalizeSchuelerData) {
-        return window.gruppenFunctions.normalizeSchuelerData(schueler);
-    }
-    
-    // Fallback-Normalisierung
-    if (!schueler || typeof schueler !== 'object') {
-        return { name: '', lehrer: '', fach: null };
-    }
-    
-    // KORRIGIERT: Bessere Name-Zusammenstellung
-    let name = '';
-    if (schueler.name) {
-        name = schueler.name;
-    } else if (schueler.schuelerName) {
-        name = schueler.schuelerName;
-    } else if (schueler.vorname || schueler.nachname) {
-        const vorname = schueler.vorname || '';
-        const nachname = schueler.nachname || '';
-        name = `${vorname} ${nachname}`.trim();
-    }
-    
-    return {
-        name: name,
-        lehrer: schueler.lehrer || schueler.lehrerName || '',
-        fach: schueler.fach || schueler.fachKuerzel || null
-    };
-}
-
-// SICHERE Schüler-ID Generierung mit Fallback  
-function generateSchuelerIdSafe(gruppenId, schuelerName) {
-    if (window.gruppenFunctions && window.gruppenFunctions.generateSchuelerId) {
-        return window.gruppenFunctions.generateSchuelerId(gruppenId, schuelerName);
-    }
-    
-    // Fallback-ID-Generierung
-    return `${gruppenId}-${schuelerName.replace(/\s/g, '-')}`;
-}
 
 // Bewertungs-Tab Navigation
 function openBewertungTab(tabName) {
@@ -60,7 +19,7 @@ function openBewertungTab(tabName) {
     }
 }
 
-// Bewertungen laden und anzeigen - KORRIGIERT
+// Bewertungen laden und anzeigen
 async function loadBewertungen() {
     console.log('📊 Lade Bewertungen von Firebase...');
     
@@ -69,7 +28,7 @@ async function loadBewertungen() {
     const liste = document.getElementById('bewertungsListe');
     if (!liste) return;
     
-    // Sammle alle Schüler des aktuellen Lehrers aus Gruppen - KORRIGIERT
+    // Sammle alle Schüler des aktuellen Lehrers aus Gruppen
     const meineSchueler = [];
     const gruppen = window.firebaseFunctions.getGruppenFromCache();
     const currentUserName = window.firebaseFunctions.getCurrentUserName();
@@ -77,19 +36,19 @@ async function loadBewertungen() {
     gruppen.forEach(gruppe => {
         if (gruppe.schueler && Array.isArray(gruppe.schueler)) {
             gruppe.schueler.forEach(schueler => {
-                // KORRIGIERT: Verwende Normalisierungsfunktion aus Gruppen-Modul mit Fallback
-                const normalizedSchueler = normalizeSchuelerDataSafe(schueler);
-                
-                if (normalizedSchueler.lehrer === currentUserName && normalizedSchueler.name) {
-                    const fachInfo = normalizedSchueler.fach ? 
-                        ` (${window.firebaseFunctions.getFachNameFromGlobal(normalizedSchueler.fach)})` : '';
+                if (schueler.lehrer === currentUserName) {
+                    const fachInfo = schueler.fach ? ` (${window.firebaseFunctions.getFachNameFromGlobal(schueler.fach)})` : '';
+                    // NEUE Schüler-ID Generation basierend auf Vor- und Nachname
+                    const schuelerId = `${gruppe.id}-${schueler.vorname}-${schueler.nachname}`.replace(/\s/g, '-');
                     
                     meineSchueler.push({
-                        name: normalizedSchueler.name,
+                        vorname: schueler.vorname,
+                        nachname: schueler.nachname,
+                        name: `${schueler.vorname} ${schueler.nachname}`, // Für Kompatibilität
                         thema: gruppe.thema,
                         gruppenId: gruppe.id,
-                        schuelerId: generateSchuelerIdSafe(gruppe.id, normalizedSchueler.name),
-                        fach: normalizedSchueler.fach,
+                        schuelerId: schuelerId,
+                        fach: schueler.fach,
                         fachInfo: fachInfo
                     });
                 }
@@ -159,7 +118,7 @@ async function loadBewertungen() {
     console.log('📊 Bewertungen geladen:', meineSchueler.length, 'Schüler');
 }
 
-// Vorlagen-Optionen für alle Schüler laden - UNVERÄNDERT
+// Vorlagen-Optionen für alle Schüler laden
 async function loadVorlagenOptionsForAllSchueler() {
     if (!window.firebaseFunctions.requireAuth()) return '';
     
@@ -186,7 +145,7 @@ async function loadVorlagenOptionsForAllSchueler() {
     }
 }
 
-// Bewertungen filtern - UNVERÄNDERT
+// Bewertungen filtern
 function filterBewertungen() {
     const statusFilter = document.getElementById('bewertungsFilter')?.value || 'alle';
     const namenSort = document.getElementById('namenSortierung')?.value || 'az';
@@ -223,7 +182,7 @@ function filterBewertungen() {
     });
 }
 
-// Bewertung starten - UNVERÄNDERT
+// Bewertung starten
 async function bewertungStarten(schuelerId, schuelerName, thema) {
     console.log('📊 Starte Bewertung für:', schuelerName);
     
@@ -269,7 +228,7 @@ async function bewertungStarten(schuelerId, schuelerName, thema) {
     }
 }
 
-// Bewertungsraster anzeigen - UNVERÄNDERT
+// Bewertungsraster anzeigen
 async function showBewertungsRaster() {
     document.getElementById('bewertungsListe').classList.add('hidden');
     const raster = document.getElementById('bewertungsRaster');
@@ -310,7 +269,7 @@ async function showBewertungsRaster() {
     }
 }
 
-// Bewertungs-Tab laden - UNVERÄNDERT
+// Bewertungs-Tab laden
 function loadBewertungsTab(vorhandeneBewertung) {
     const container = document.getElementById('bewertungsRasterContent');
     
@@ -345,7 +304,7 @@ function loadBewertungsTab(vorhandeneBewertung) {
     container.innerHTML = html;
 }
 
-// Stärken-Tab laden (KORRIGIERT - lädt direkt aus Firebase) - UNVERÄNDERT
+// Stärken-Tab laden (KORRIGIERT - lädt direkt aus Firebase)
 async function loadStaerkenTab(vorhandeneBewertung) {
     const container = document.getElementById('staerkenCheckliste');
     
@@ -424,7 +383,7 @@ async function loadStaerkenTab(vorhandeneBewertung) {
     }
 }
 
-// Kategorie-Icons - UNVERÄNDERT
+// Kategorie-Icons
 function getKategorieIcon(kategorie) {
     const icons = {
         'Fachliches Arbeiten': '🧠',
@@ -437,7 +396,7 @@ function getKategorieIcon(kategorie) {
     return icons[kategorie] || '📋';
 }
 
-// Stärke togglen - UNVERÄNDERT
+// Stärke togglen
 function staerkeToggle(kategorie, index, checkbox) {
     if (!aktuelleBewertung.staerken[kategorie]) {
         aktuelleBewertung.staerken[kategorie] = [];
@@ -457,7 +416,7 @@ function staerkeToggle(kategorie, index, checkbox) {
     autosaveStaerken();
 }
 
-// Checkbox per Click auf Text togglen - UNVERÄNDERT
+// Checkbox per Click auf Text togglen
 function toggleCheckbox(kategorie, index) {
     const checkbox = document.querySelector(`.staerken-item input[onchange*="${kategorie}"][onchange*="${index}"]`);
     if (checkbox) {
@@ -466,13 +425,13 @@ function toggleCheckbox(kategorie, index) {
     }
 }
 
-// Freitext geändert - UNVERÄNDERT
+// Freitext geändert
 function freitextChanged(textarea) {
     aktuelleBewertung.freitext = textarea.value;
     autosaveStaerken();
 }
 
-// Stärken automatisch speichern - UNVERÄNDERT
+// Stärken automatisch speichern
 async function autosaveStaerken() {
     if (!window.firebaseFunctions.requireAuth()) return;
     
@@ -504,7 +463,7 @@ async function autosaveStaerken() {
     }
 }
 
-// Noten-Buttons generieren - UNVERÄNDERT
+// Noten-Buttons generieren
 function generateNotenButtons(kategorieIndex, vorhandeneNote) {
     const noten = [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0];
     let html = '';
@@ -519,7 +478,7 @@ function generateNotenButtons(kategorieIndex, vorhandeneNote) {
     return html;
 }
 
-// Note setzen - UNVERÄNDERT
+// Note setzen
 function noteSetzen(kategorieIndex, note) {
     // Alle Buttons der Kategorie zurücksetzen
     const kategorie = document.querySelectorAll('.kategorie')[kategorieIndex];
@@ -540,7 +499,7 @@ function noteSetzen(kategorieIndex, note) {
     berechneDurchschnitt();
 }
 
-// Durchschnitt berechnen - UNVERÄNDERT
+// Durchschnitt berechnen
 function berechneDurchschnitt() {
     const noten = aktuelleBewertung.noten.filter(n => n !== undefined);
     const durchschnittElement = document.getElementById('durchschnittAnzeige');
@@ -574,7 +533,7 @@ function berechneDurchschnitt() {
     }
 }
 
-// Durchschnitt übernehmen - UNVERÄNDERT
+// Durchschnitt übernehmen
 function durchschnittUebernehmen() {
     const durchschnitt = document.getElementById('durchschnittAnzeige')?.textContent;
     const endnoteInput = document.getElementById('endnote');
@@ -584,7 +543,7 @@ function durchschnittUebernehmen() {
     }
 }
 
-// Endnote geändert - UNVERÄNDERT
+// Endnote geändert
 function endnoteGeaendert() {
     // Validation könnte hier hinzugefügt werden
     const endnoteInput = document.getElementById('endnote');
@@ -597,7 +556,7 @@ function endnoteGeaendert() {
     }
 }
 
-// Bewertung speichern - UNVERÄNDERT
+// Bewertung speichern
 async function bewertungSpeichern() {
     console.log('💾 Speichere Bewertung...');
     
@@ -652,7 +611,7 @@ async function bewertungSpeichern() {
     }
 }
 
-// Bewertung abbrechen - UNVERÄNDERT
+// Bewertung abbrechen
 function bewertungAbbrechen() {
     document.getElementById('bewertungsRaster').classList.add('hidden');
     document.getElementById('bewertungsListe').classList.remove('hidden');
@@ -664,7 +623,7 @@ function bewertungAbbrechen() {
     loadBewertungen();
 }
 
-// Vorlagen System (Platzhalter) - UNVERÄNDERT
+// Vorlagen System (Platzhalter)
 function loadVorlagen() {
     console.log('📋 Lade Vorlagen...');
     // Wird später implementiert...
@@ -676,18 +635,4 @@ window.bewertungsFunctions = {
     filterBewertungen
 };
 
-// Globale Funktionen für Backward-Compatibility
-window.loadBewertungen = loadBewertungen;
-window.filterBewertungen = filterBewertungen;
-window.bewertungStarten = bewertungStarten;
-window.bewertungSpeichern = bewertungSpeichern;
-window.bewertungAbbrechen = bewertungAbbrechen;
-window.openBewertungTab = openBewertungTab;
-window.noteSetzen = noteSetzen;
-window.durchschnittUebernehmen = durchschnittUebernehmen;
-window.endnoteGeaendert = endnoteGeaendert;
-window.staerkeToggle = staerkeToggle;
-window.toggleCheckbox = toggleCheckbox;
-window.freitextChanged = freitextChanged;
-
-console.log('✅ Firebase Bewertungs-System bereit - Korrigierte Version');
+console.log('✅ Firebase Bewertungs-System bereit');

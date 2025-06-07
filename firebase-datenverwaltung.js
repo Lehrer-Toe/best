@@ -428,7 +428,6 @@ async function lehrerHinzufuegen() {
             name,
             email,
             role: 'lehrer',
-            kannGruppenAnlegen: true,
             erstellt: window.firebaseFunctions.formatGermanDate(),
             timestamp: window.firebaseFunctions.getTimestamp()
         });
@@ -525,28 +524,13 @@ async function lehrerLoeschen(userKey, lehrerName) {
     }
 }
 
-// Berechtigung zum Anlegen von Gruppen setzen
-async function setLehrerGruppenErlaubnis(userKey, erlaubt) {
-    if (!window.firebaseFunctions.requireAdmin()) return;
-
-    try {
-        const erlaubnisRef = window.firebaseFunctions.getDatabaseRef(`users/${userKey}/kannGruppenAnlegen`);
-        await window.firebaseDB.set(erlaubnisRef, erlaubt);
-        console.log('✅ Gruppenberechtigung aktualisiert für', userKey, '->', erlaubt);
-    } catch (error) {
-        console.error('❌ Fehler beim Aktualisieren der Gruppenberechtigung:', error);
-        alert('Fehler beim Aktualisieren der Gruppenberechtigung: ' + error.message);
-    }
-}
-
 // Export für andere Module
 window.datenverwaltungFunctions = {
     loadStatistiken,
     datenExportieren,
     datenLoeschen,
     lehrerHinzufuegen,
-    lehrerLoeschen,
-    setLehrerGruppenErlaubnis
+    lehrerLoeschen
 };
 
 console.log('✅ Firebase Datenverwaltung bereit');

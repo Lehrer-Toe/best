@@ -1,8 +1,21 @@
 // Firebase System Initialisierung - Koordiniert alle Module
 console.log('🚀 Firebase System Initialisierung gestartet');
 
-// Globale Variablen
-let currentUser = null;
+// Globale Initialisierungskonfiguration
+const FIREBASE_INIT_CONFIG = {
+    requiredModules: [
+        'firebaseApp', 'auth', 'database',
+        'firebaseAuth', 'firebaseDB',
+        'authFunctions', 'firebaseFunctions'
+    ],
+    loadingSteps: [
+        'Firebase SDK laden',
+        'Authentication initialisieren',
+        'Database verbinden',
+        'System-Daten laden',
+        'Benutzer-Interface vorbereiten'
+    ]
+};
 
 // Hauptinitialisierung
 window.initializeFirebaseApp = async function() {
@@ -17,11 +30,15 @@ window.initializeFirebaseApp = async function() {
         updateLoadingProgress('Authentication initialisieren...', 40);
         await initializeAuthentication();
         
-        // Schritt 3: Database vorbereiten
+        // Schritt 3: Database vorbereiten (OHNE Permission-Test)
         updateLoadingProgress('Database vorbereiten...', 60);
         await prepareDatabaseConnection();
         
-        // Schritt 4: UI vorbereiten
+        // Schritt 4: Grunddaten vorbereiten (OHNE Laden, da kein User angemeldet)
+        updateLoadingProgress('System vorbereiten...', 80);
+        await prepareSystemData();
+        
+        // Schritt 5: UI vorbereiten
         updateLoadingProgress('Benutzer-Interface vorbereiten...', 100);
         await setupUserInterface();
         
@@ -55,25 +72,38 @@ async function initializeAuthentication() {
     }
     
     initializeAuth();
+    
+    // Warte kurz auf Auth-Initialisierung
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
     console.log('✅ Firebase Authentication initialisiert');
 }
 
-// Database-Verbindung vorbereiten
+// Database-Verbindung vorbereiten (OHNE Permission-Test)
 async function prepareDatabaseConnection() {
     try {
+        // Nur prüfen ob Database-Objekt verfügbar ist
         if (!window.database || !window.firebaseDB) {
             throw new Error('Firebase Database Objekte nicht verfügbar');
-        }
-        
-        // Cache initialisieren
-        if (typeof initializeDataCache === 'function') {
-            initializeDataCache();
         }
         
         console.log('✅ Firebase Database vorbereitet');
         
     } catch (error) {
         throw new Error('Firebase Database nicht verfügbar: ' + error.message);
+    }
+}
+
+// System-Daten vorbereiten (OHNE Laden)
+async function prepareSystemData() {
+    try {
+        // Nur Cache initialisieren, aber nicht laden
+        // Daten werden erst nach dem Login geladen
+        console.log('✅ System-Daten vorbereitet (werden nach Login geladen)');
+        
+    } catch (error) {
+        console.error('⚠️ Warnung bei System-Vorbereitung:', error);
+        // Nicht kritisch - weitermachen
     }
 }
 
@@ -86,13 +116,14 @@ async function setupUserInterface() {
         // Tab-Navigation vorbereiten
         setupTabNavigation();
         
-        // Module global verfügbar machen
+        // Alle Module verfügbar machen
         makeModulesGloballyAvailable();
         
         console.log('✅ Benutzer-Interface vorbereitet');
         
     } catch (error) {
         console.error('⚠️ Warnung bei UI-Setup:', error);
+        // Nicht kritisch - weitermachen
     }
 }
 
@@ -106,16 +137,12 @@ function setupGlobalEventListeners() {
     // Tastatur-Shortcuts
     document.addEventListener('keydown', handleKeyboardShortcuts);
     
-    // Aktivitäts-Tracking für Auto-Logout
-    document.addEventListener('click', resetAutoLogoutTimer);
-    document.addEventListener('keypress', resetAutoLogoutTimer);
-    document.addEventListener('mousemove', resetAutoLogoutTimer);
-    
     console.log('✅ Globale Event-Listener gesetzt');
 }
 
 // Tab-Navigation einrichten
 function setupTabNavigation() {
+    // Alle Tab-Buttons finden und Event-Listener hinzufügen
     document.querySelectorAll('.tab-btn').forEach(button => {
         button.addEventListener('click', function(e) {
             e.preventDefault();
@@ -131,120 +158,245 @@ function setupTabNavigation() {
 
 // Module global verfügbar machen
 function makeModulesGloballyAvailable() {
-    // Haupt-Funktionen
+    // Haupt-Funktionen global verfügbar machen
     window.openTab = openTab;
-    window.updateLoadingProgress = updateLoadingProgress;
-    window.showLoginScreen = showLoginScreen;
-    window.showInitError = showInitError;
+    window.firebaseLogout = firebaseLogout;
     
-    console.log('✅ Module global verfügbar');
-}
-
-// === EVENT HANDLERS ===
-
-function handleBeforeUnload(e) {
-    if (currentUser && typeof cleanupListeners === 'function') {
-        cleanupListeners();
+    // Admin-Funktionen
+    if (window.adminFunctions) {
+        Object.assign(window, window.adminFunctions);
     }
-}
-
-function handleOnline() {
-    console.log('🌐 Wieder online');
-    const statusEl = document.getElementById('dbStatus');
-    if (statusEl) statusEl.innerHTML = '🔥 Verbunden';
-}
-
-function handleOffline() {
-    console.log('📵 Offline');
-    const statusEl = document.getElementById('dbStatus');
-    if (statusEl) statusEl.innerHTML = '❌ Offline';
-}
-
-function handleKeyboardShortcuts(e) {
-    // Alt+L für Logout
-    if (e.altKey && e.key === 'l') {
-        e.preventDefault();
-        if (typeof firebaseLogout === 'function') {
-            firebaseLogout();
-        }
+    
+    // Datenverwaltung-Funktionen
+    if (window.datenverwaltungFunctions) {
+        Object.assign(window, window.datenverwaltungFunctions);
     }
-}
-
-function resetAutoLogoutTimer() {
-    if (typeof window.resetAutoLogoutTimer === 'function') {
-        window.resetAutoLogoutTimer();
+    
+    // Übersicht-Funktionen
+    if (window.uebersichtFunctions) {
+        Object.assign(window, window.uebersichtFunctions);
     }
+    
+    // Bewertungs-Funktionen
+    if (window.bewertungsFunctions) {
+        Object.assign(window, window.bewertungsFunctions);
+    }
+    
+    // Gruppen-Funktionen
+    if (window.gruppenFunctions) {
+        Object.assign(window, window.gruppenFunctions);
+    }
+    
+    // Vorlagen-Funktionen
+    if (window.vorlagenFunctions) {
+        Object.assign(window, window.vorlagenFunctions);
+    }
+    
+    // Themen-Funktionen
+    if (window.themenFunctions) {
+        Object.assign(window, window.themenFunctions);
+    }
+    
+    // News-Funktionen
+    if (window.newsFunctions) {
+        Object.assign(window, window.newsFunctions);
+    }
+    
+    // PDF-Funktionen
+    if (window.pdfFunctions) {
+        Object.assign(window, window.pdfFunctions);
+    }
+    
+    console.log('✅ Module global verfügbar gemacht');
 }
 
-// === UI HELPER FUNCTIONS ===
-
-function updateLoadingProgress(message, percent) {
-    const progressEl = document.getElementById('loadingProgress');
-    if (progressEl) {
-        progressEl.innerHTML = `
-            <p>${message}</p>
-            <div style="width: 100%; background: #e0e0e0; border-radius: 5px; overflow: hidden;">
-                <div style="width: ${percent}%; background: #667eea; height: 10px; transition: width 0.3s;"></div>
+// Loading-Progress aktualisieren
+function updateLoadingProgress(message, percentage) {
+    const progressElement = document.getElementById('loadingProgress');
+    if (progressElement) {
+        progressElement.innerHTML = `
+            <div style="margin-bottom: 10px;">${message}</div>
+            <div style="background: #f3f3f3; border-radius: 10px; overflow: hidden;">
+                <div style="background: #667eea; height: 6px; width: ${percentage}%; transition: width 0.3s;"></div>
             </div>
+            <small>${percentage}%</small>
         `;
     }
 }
 
+// Login-Screen anzeigen
 function showLoginScreen() {
     document.getElementById('loadingScreen').style.display = 'none';
     document.getElementById('loginScreen').style.display = 'flex';
     document.getElementById('appContainer').style.display = 'none';
 }
 
+// Initialisierungsfehler anzeigen
 function showInitError(error) {
-    const loadingScreen = document.getElementById('loadingScreen');
-    if (loadingScreen) {
-        loadingScreen.innerHTML = `
-            <div class="loading-card">
-                <h1>❌ Fehler beim Starten</h1>
-                <p style="color: #e74c3c; margin: 1rem 0;">${error.message}</p>
-                <button onclick="location.reload()" class="btn">Neu laden</button>
+    const progressElement = document.getElementById('loadingProgress');
+    if (progressElement) {
+        progressElement.innerHTML = `
+            <div style="color: #e74c3c; font-weight: bold;">❌ Initialisierungsfehler</div>
+            <div style="margin: 10px 0; padding: 10px; background: #fdf2f2; border-radius: 5px;">
+                ${error.message}
             </div>
+            <button onclick="window.location.reload()" style="background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">
+                Seite neu laden
+            </button>
         `;
     }
 }
 
-// Tab Navigation
-function openTab(tabName, evt) {
-    try {
-        const contents = document.querySelectorAll('.tab-content');
-        const buttons = document.querySelectorAll('.tab-btn');
+// === EVENT HANDLER ===
 
-        contents.forEach(content => content.classList.remove('active'));
-        buttons.forEach(button => button.classList.remove('active'));
-
-        const targetContent = document.getElementById(tabName);
-        if (targetContent) {
-            targetContent.classList.add('active');
-        }
-
-        if (evt && evt.target) {
-            evt.target.classList.add('active');
-        }
-        
-        console.log('📑 Tab gewechselt zu:', tabName);
-        
-        // Tab-spezifische Inhalte laden
-        setTimeout(() => {
-            if (tabName === 'news' && typeof loadNews === 'function') loadNews();
-            if (tabName === 'themen' && typeof loadThemen === 'function') loadThemen();
-            if (tabName === 'gruppen' && typeof loadGruppen === 'function') loadGruppen();
-            if (tabName === 'lehrer' && typeof loadLehrer === 'function') loadLehrer();
-            if (tabName === 'daten' && typeof loadDatenverwaltung === 'function') loadDatenverwaltung();
-            if (tabName === 'bewerten' && typeof loadBewertungen === 'function') loadBewertungen();
-            if (tabName === 'vorlagen' && typeof loadVorlagen === 'function') loadVorlagen();
-            if (tabName === 'uebersicht' && typeof loadUebersicht === 'function') loadUebersicht();
-            if (tabName === 'adminvorlagen' && typeof loadAdminVorlagen === 'function') loadAdminVorlagen();
-        }, 100);
-        
-    } catch (error) {
-        console.error('❌ Fehler bei Tab-Wechsel:', error);
+// Vor dem Schließen
+function handleBeforeUnload(e) {
+    if (currentUser) {
+        e.preventDefault();
+        e.returnValue = 'Möchten Sie die Anwendung wirklich schließen?';
     }
 }
 
-console.log('✅ Firebase Init Module geladen');
+// Online/Offline Events
+function handleOnline() {
+    console.log('🌐 Verbindung wiederhergestellt');
+    if (window.authFunctions && window.authFunctions.updateFirebaseStatus) {
+        window.authFunctions.updateFirebaseStatus();
+    }
+}
+
+function handleOffline() {
+    console.log('📴 Verbindung verloren');
+    if (window.authFunctions && window.authFunctions.updateFirebaseStatus) {
+        window.authFunctions.updateFirebaseStatus();
+    }
+}
+
+// Tastatur-Shortcuts
+function handleKeyboardShortcuts(e) {
+    // Nur für eingeloggte Benutzer
+    if (!currentUser) return;
+    
+    // Ctrl+Alt+Kombinationen
+    if (e.ctrlKey && e.altKey) {
+        switch (e.key) {
+            case '1':
+                e.preventDefault();
+                openTab('news');
+                break;
+            case '2':
+                e.preventDefault();
+                if (window.firebaseFunctions.isLehrer()) openTab('themen');
+                break;
+            case '3':
+                e.preventDefault();
+                if (window.firebaseFunctions.isLehrer()) openTab('gruppen');
+                break;
+            case '4':
+                e.preventDefault();
+                if (window.firebaseFunctions.isLehrer()) openTab('bewerten');
+                break;
+            case '5':
+                e.preventDefault();
+                if (window.firebaseFunctions.isLehrer()) openTab('uebersicht');
+                break;
+            case 'l':
+                e.preventDefault();
+                firebaseLogout();
+                break;
+        }
+    }
+}
+
+// === HELPER FUNKTIONEN ===
+
+// Fehlerbehandlung für Module
+function safeModuleExecution(moduleName, func, ...args) {
+    try {
+        return func(...args);
+    } catch (error) {
+        console.error(`❌ Fehler in Modul ${moduleName}:`, error);
+        return null;
+    }
+}
+
+// System-Status prüfen
+function checkSystemHealth() {
+    const health = {
+        firebase: !!window.firebaseApp,
+        auth: !!window.auth,
+        database: !!window.database,
+        user: !!currentUser,
+        modules: {
+            auth: typeof window.authFunctions === 'object',
+            firebase: typeof window.firebaseFunctions === 'object',
+            news: typeof window.newsFunctions === 'object',
+            themen: typeof window.themenFunctions === 'object',
+            gruppen: typeof window.gruppenFunctions === 'object',
+            bewertungen: typeof window.bewertungsFunctions === 'object',
+            pdf: typeof window.pdfFunctions === 'object',
+            vorlagen: typeof window.vorlagenFunctions === 'object',
+            admin: typeof window.adminFunctions === 'object',
+            datenverwaltung: typeof window.datenverwaltungFunctions === 'object',
+            uebersicht: typeof window.uebersichtFunctions === 'object'
+        }
+    };
+    
+    console.log('🔍 System-Status:', health);
+    return health;
+}
+
+// Debug-Modus
+function enableDebugMode() {
+    window.debugMode = true;
+    window.systemHealth = checkSystemHealth;
+    window.firebaseConfig = {
+        app: window.firebaseApp,
+        auth: window.auth,
+        database: window.database
+    };
+    
+    console.log('🐛 Debug-Modus aktiviert');
+    console.log('Verfügbare Debug-Funktionen: systemHealth(), firebaseConfig');
+}
+
+// Bei Development automatisch Debug-Modus aktivieren
+if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    enableDebugMode();
+}
+
+// === EXPORT FÜR ANDERE MODULE ===
+
+window.systemInit = {
+    checkSystemHealth,
+    enableDebugMode,
+    safeModuleExecution,
+    updateLoadingProgress
+};
+
+console.log('✅ Firebase System Initialisierung bereit');
+
+// Auto-Start bei DOM Ready
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('📄 DOM bereit - warte auf Firebase SDK...');
+    
+    // Prüfe ob Firebase SDK geladen ist
+    const checkFirebaseReady = setInterval(() => {
+        if (window.firebaseApp && window.auth && window.database) {
+            clearInterval(checkFirebaseReady);
+            console.log('🔥 Firebase SDK erkannt - starte Initialisierung');
+            // initializeFirebaseApp wird durch das module script aufgerufen
+        }
+    }, 100);
+    
+    // Timeout nach 10 Sekunden
+    setTimeout(() => {
+        clearInterval(checkFirebaseReady);
+        if (!window.firebaseApp) {
+            showInitError(new Error('Firebase SDK konnte nicht geladen werden. Prüfen Sie Ihre Internetverbindung.'));
+        }
+    }, 10000);
+});
+
+// Finale Bestätigung
+console.log('🎉 Firebase System vollständig geladen und bereit!');

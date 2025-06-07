@@ -1,5 +1,5 @@
-// Firebase Übersicht-System - Realtime Database - KORRIGIERT
-console.log('📈 Firebase Übersicht-System geladen - Korrigierte Version');
+// Firebase Übersicht-System - Realtime Database
+console.log('📈 Firebase Übersicht-System geladen');
 
 // Globale Variablen für Filter
 let uebersichtFilter = {
@@ -7,34 +7,16 @@ let uebersichtFilter = {
     status: 'alle'
 };
 
-// SICHERE Normalisierungsfunktion mit Fallback
-function normalizeSchuelerDataSafe(schueler) {
-    // Prüfe ob Gruppen-Funktionen verfügbar sind
-    if (window.gruppenFunctions && window.gruppenFunctions.normalizeSchuelerData) {
-        return window.gruppenFunctions.normalizeSchuelerData(schueler);
-    }
-    
-    // Fallback-Normalisierung
-    if (!schueler || typeof schueler !== 'object') {
-        return { name: '', lehrer: '', fach: null };
-    }
-    
-    return {
-        name: schueler.name || schueler.schuelerName || 
-              (schueler.vorname && schueler.nachname ? `${schueler.vorname} ${schueler.nachname}` : ''),
-        lehrer: schueler.lehrer || schueler.lehrerName || '',
-        fach: schueler.fach || schueler.fachKuerzel || null
-    };
+// Hilfsfunktionen für neue Namensstruktur
+function getFullName(schueler) {
+    return schueler.name || `${schueler.vorname} ${schueler.nachname}`.trim();
 }
 
-// SICHERE Schüler-ID Generierung mit Fallback  
-function generateSchuelerIdSafe(gruppenId, schuelerName) {
-    if (window.gruppenFunctions && window.gruppenFunctions.generateSchuelerId) {
-        return window.gruppenFunctions.generateSchuelerId(gruppenId, schuelerName);
+function buildSchuelerId(gruppenId, schueler) {
+    if (schueler.vorname && schueler.nachname) {
+        return `${gruppenId}-${schueler.vorname}-${schueler.nachname}`.replace(/\s/g, '-');
     }
-    
-    // Fallback-ID-Generierung
-    return `${gruppenId}-${schuelerName.replace(/\s/g, '-')}`;
+    return `${gruppenId}-${(schueler.name || '').replace(/\s/g, '-')}`;
 }
 
 // Übersicht laden
@@ -50,7 +32,7 @@ function loadUebersicht() {
     loadMeineSchuelerListe();
 }
 
-// Lehrer-Statistiken laden - KORRIGIERT
+// Lehrer-Statistiken laden
 async function loadLehrerStatistiken() {
     console.log('📊 Lade Lehrer-Statistiken...');
     
@@ -63,29 +45,22 @@ async function loadLehrerStatistiken() {
         // Gruppen des Lehrers sammeln
         const gruppen = window.firebaseFunctions.getGruppenFromCache();
         const meineGruppen = gruppen.filter(gruppe => 
-            gruppe.schueler && gruppe.schueler.some(s => {
-                const normalizedSchueler = normalizeSchuelerDataSafe(s);
-                return normalizedSchueler.lehrer === currentUserName;
-            })
+            gruppe.schueler && gruppe.schueler.some(s => s.lehrer === currentUserName)
         );
         
-        // Schüler sammeln - KORRIGIERT
+        // Schüler sammeln
         let meineSchueler = [];
         meineGruppen.forEach(gruppe => {
-            if (gruppe.schueler && Array.isArray(gruppe.schueler)) {
-                gruppe.schueler.forEach(schueler => {
-                    const normalizedSchueler = normalizeSchuelerDataSafe(schueler);
-                    
-                    if (normalizedSchueler.lehrer === currentUserName && normalizedSchueler.name) {
-                        meineSchueler.push({
-                            name: normalizedSchueler.name,
-                            thema: gruppe.thema,
-                            schuelerId: generateSchuelerIdSafe(gruppe.id, normalizedSchueler.name),
-                            fach: normalizedSchueler.fach
-                        });
-                    }
-                });
-            }
+            gruppe.schueler.forEach(schueler => {
+                if (schueler.lehrer === currentUserName) {
+                    meineSchueler.push({
+                        name: getFullName(schueler),
+                        thema: gruppe.thema,
+                        schuelerId: buildSchuelerId(gruppe.id, schueler),
+                        fach: schueler.fach
+                    });
+                }
+            });
         });
         
         // Bewertungen sammeln
@@ -100,7 +75,7 @@ async function loadLehrerStatistiken() {
             notendurchschnitt = (notenSumme / bewertungen.length).toFixed(1);
         }
         
-        // Fächer-Verteilung - KORRIGIERT
+        // Fächer-Verteilung
         const faecherCount = {};
         meineSchueler.forEach(schueler => {
             if (schueler.fach) {
@@ -158,9 +133,9 @@ async function loadLehrerStatistiken() {
             <div style="margin-top: 2rem;">
                 <h4>📈 Bewertungsfortschritt</h4>
                 <div style="background: #f8f9fa; border-radius: 10px; overflow: hidden;">
-                    <div style="background: #27ae60; height: 20px; width: ${meineSchueler.length > 0 ? (bewertet / meineSchueler.length * 100) : 0}%; transition: width 0.3s;"></div>
+                    <div style="background: #27ae60; height: 20px; width: ${(bewertet / meineSchueler.length * 100)}%; transition: width 0.3s;"></div>
                 </div>
-                <small>${meineSchueler.length > 0 ? Math.round(bewertet / meineSchueler.length * 100) : 0}% abgeschlossen</small>
+                <small>${Math.round(bewertet / meineSchueler.length * 100)}% abgeschlossen</small>
             </div>
         `;
         
@@ -172,7 +147,7 @@ async function loadLehrerStatistiken() {
     }
 }
 
-// Meine Schüler-Liste laden - KORRIGIERT
+// Meine Schüler-Liste laden
 async function loadMeineSchuelerListe() {
     console.log('👥 Lade meine Schüler-Liste...');
     
@@ -182,25 +157,20 @@ async function loadMeineSchuelerListe() {
     try {
         const currentUserName = window.firebaseFunctions.getCurrentUserName();
         
-        // Schüler aus Gruppen sammeln - KORRIGIERT
+        // Schüler aus Gruppen sammeln
         const gruppen = window.firebaseFunctions.getGruppenFromCache();
         let meineSchueler = [];
         
         gruppen.forEach(gruppe => {
-            if (gruppe.schueler && Array.isArray(gruppe.schueler)) {
+            if (gruppe.schueler) {
                 gruppe.schueler.forEach(schueler => {
-                    const normalizedSchueler = normalizeSchuelerDataSafe(schueler);
-                    
-                    if (normalizedSchueler.lehrer === currentUserName && normalizedSchueler.name) {
-                        const fachName = normalizedSchueler.fach ? 
-                            window.firebaseFunctions.getFachNameFromGlobal(normalizedSchueler.fach) : 'Allgemein';
-                        
+                    if (schueler.lehrer === currentUserName) {
                         meineSchueler.push({
-                            name: normalizedSchueler.name,
+                            name: getFullName(schueler),
                             thema: gruppe.thema,
-                            schuelerId: generateSchuelerIdSafe(gruppe.id, normalizedSchueler.name),
-                            fach: normalizedSchueler.fach,
-                            fachName: fachName
+                            schuelerId: buildSchuelerId(gruppe.id, schueler),
+                            fach: schueler.fach,
+                            fachName: schueler.fach ? window.firebaseFunctions.getFachNameFromGlobal(schueler.fach) : 'Allgemein'
                         });
                     }
                 });
@@ -256,7 +226,7 @@ async function loadMeineSchuelerListe() {
     }
 }
 
-// Schüler filtern - UNVERÄNDERT
+// Schüler filtern
 function filterSchueler(schueler) {
     let gefiltert = [...schueler];
     
@@ -299,7 +269,7 @@ function filterSchueler(schueler) {
     return gefiltert;
 }
 
-// Übersicht-Filter aktualisieren - UNVERÄNDERT
+// Übersicht-Filter aktualisieren
 function updateUebersichtFilter(filterType, value) {
     uebersichtFilter[filterType] = value;
     console.log('🔍 Filter aktualisiert:', filterType, '=', value);
@@ -308,7 +278,7 @@ function updateUebersichtFilter(filterType, value) {
     loadMeineSchuelerListe();
 }
 
-// Meine Schüler exportieren - KORRIGIERT
+// Meine Schüler exportieren
 async function meineSchuelerExportieren() {
     console.log('📤 Exportiere meine Schüler-Daten...');
     
@@ -328,24 +298,19 @@ async function meineSchuelerExportieren() {
             statistiken: {}
         };
         
-        // Schüler sammeln - KORRIGIERT
+        // Schüler sammeln
         gruppen.forEach(gruppe => {
-            if (gruppe.schueler && Array.isArray(gruppe.schueler)) {
+            if (gruppe.schueler) {
                 gruppe.schueler.forEach(schueler => {
-                    const normalizedSchueler = normalizeSchuelerDataSafe(schueler);
-                    
-                    if (normalizedSchueler.lehrer === currentUserName && normalizedSchueler.name) {
-                        const schuelerId = generateSchuelerIdSafe(gruppe.id, normalizedSchueler.name);
+                    if (schueler.lehrer === currentUserName) {
+                        const schuelerId = buildSchuelerId(gruppe.id, schueler);
                         const bewertung = bewertungen.find(b => b.schuelerId === schuelerId);
-                        
-                        const fachName = normalizedSchueler.fach ? 
-                            window.firebaseFunctions.getFachNameFromGlobal(normalizedSchueler.fach) : 'Allgemein';
-                        
+
                         exportData.schüler.push({
-                            name: normalizedSchueler.name,
+                            name: getFullName(schueler),
                             thema: gruppe.thema,
-                            fach: normalizedSchueler.fach,
-                            fachName: fachName,
+                            fach: schueler.fach,
+                            fachName: schueler.fach ? window.firebaseFunctions.getFachNameFromGlobal(schueler.fach) : 'Allgemein',
                             bewertung: bewertung || null
                         });
                     }
@@ -363,7 +328,7 @@ async function meineSchuelerExportieren() {
             gesamt,
             bewertet,
             nichtBewertet: gesamt - bewertet,
-            fortschritt: gesamt > 0 ? Math.round((bewertet / gesamt) * 100) : 0,
+            fortschritt: Math.round((bewertet / gesamt) * 100),
             notendurchschnitt
         };
         
@@ -390,7 +355,7 @@ async function meineSchuelerExportieren() {
     }
 }
 
-// Druckansicht öffnen - KORRIGIERT für bessere Schüler-Daten
+// Druckansicht öffnen
 function druckansichtÖffnen() {
     console.log('🖨️ Öffne Druckansicht...');
     
@@ -402,7 +367,7 @@ function druckansichtÖffnen() {
     generateDruckansicht(popup);
 }
 
-// Druckansicht generieren - KORRIGIERT
+// Druckansicht generieren
 async function generateDruckansicht(popup) {
     try {
         const currentUserName = window.firebaseFunctions.getCurrentUserName();
@@ -413,21 +378,16 @@ async function generateDruckansicht(popup) {
         
         let meineSchueler = [];
         gruppen.forEach(gruppe => {
-            if (gruppe.schueler && Array.isArray(gruppe.schueler)) {
+            if (gruppe.schueler) {
                 gruppe.schueler.forEach(schueler => {
-                    const normalizedSchueler = normalizeSchuelerDataSafe(schueler);
-                    
-                    if (normalizedSchueler.lehrer === currentUserName && normalizedSchueler.name) {
-                        const schuelerId = generateSchuelerIdSafe(gruppe.id, normalizedSchueler.name);
+                    if (schueler.lehrer === currentUserName) {
+                        const schuelerId = buildSchuelerId(gruppe.id, schueler);
                         const bewertung = bewertungen.find(b => b.schuelerId === schuelerId);
-                        
-                        const fachName = normalizedSchueler.fach ? 
-                            window.firebaseFunctions.getFachNameFromGlobal(normalizedSchueler.fach) : 'Allgemein';
-                        
+
                         meineSchueler.push({
-                            name: normalizedSchueler.name,
+                            name: getFullName(schueler),
                             thema: gruppe.thema,
-                            fach: fachName,
+                            fach: schueler.fach ? window.firebaseFunctions.getFachNameFromGlobal(schueler.fach) : 'Allgemein',
                             bewertung
                         });
                     }
@@ -614,10 +574,4 @@ window.uebersichtFunctions = {
     druckansichtÖffnen
 };
 
-// Globale Funktionen für Backward-Compatibility
-window.loadUebersicht = loadUebersicht;
-window.updateUebersichtFilter = updateUebersichtFilter;
-window.meineSchuelerExportieren = meineSchuelerExportieren;
-window.druckansichtÖffnen = druckansichtÖffnen;
-
-console.log('✅ Firebase Übersicht-System bereit - Korrigierte Version');
+console.log('✅ Firebase Übersicht-System bereit');

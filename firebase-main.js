@@ -7,6 +7,7 @@ let dataCache = {
     faecher: {},
     bewertungsCheckpoints: {},
     themen: {},
+    klassen: {},
     gruppen: {},
     bewertungen: {},
     vorlagen: {},
@@ -19,7 +20,7 @@ let dataCache = {
 // Realtime Listeners für automatische Updates
 let activeListeners = {};
 
-// Firebase App Initialisierung
+// Firebase App Initialisierung (KORRIGIERT - lädt keine Daten mehr)
 async function initializeFirebaseApp() {
     console.log('🚀 Initialisiere Firebase App...');
     
@@ -27,7 +28,7 @@ async function initializeFirebaseApp() {
         // Auth System starten
         initializeAuth();
         
-        // Cache initialisieren
+        // Cache initialisieren (aber keine Daten laden)
         initializeDataCache();
         
         // Erfolg
@@ -41,35 +42,17 @@ async function initializeFirebaseApp() {
     }
 }
 
-// Cache initialisieren
+// Cache initialisieren (OHNE Daten zu laden)
 function initializeDataCache() {
     console.log('📂 Initialisiere Daten-Cache...');
     
+    // Cache mit leeren Objekten initialisieren
     dataCache = {
         users: {},
-        faecher: {
-            'D': 'Deutsch',
-            'M': 'Mathematik',
-            'E': 'Englisch',
-            'Ph': 'Physik',
-            'Ch': 'Chemie',
-            'Bio': 'Biologie',
-            'G': 'Geschichte',
-            'Geo': 'Geographie',
-            'Gk': 'Gemeinschaftskunde',
-            'Rel': 'Religion',
-            'Eth': 'Ethik',
-            'BK': 'Bildende Kunst',
-            'Mu': 'Musik',
-            'Sp': 'Sport',
-            'Inf': 'Informatik',
-            'T': 'Technik',
-            'AES': 'AES',
-            'F': 'Französisch',
-            'WBS': 'WBS'
-        },
+        faecher: {},
         bewertungsCheckpoints: {},
         themen: {},
+        klassen: {},
         gruppen: {},
         bewertungen: {},
         vorlagen: {},
@@ -88,57 +71,73 @@ async function loadSystemData() {
     
     try {
         // Config laden
-        await loadConfigSafe();
+        await loadConfig();
         
+        // Fächer laden
+        await loadFaecher();
+
+        // Klassen laden
+        await loadKlassen();
+
         // Bewertungs-Checkpoints laden
-        await loadBewertungsCheckpointsSafe();
+        await loadBewertungsCheckpoints();
         
         // Briefvorlage laden
-        await loadBriefvorlageSafe();
+        await loadBriefvorlage();
         
         // Stärken-Formulierungen laden
-        await loadStaerkenFormulierungenSafe();
+        await loadStaerkenFormulierungen();
         
         console.log('✅ System-Grunddaten geladen');
         
     } catch (error) {
         console.error('❌ Fehler beim Laden der Grunddaten:', error);
+        // Nicht kritisch - App kann trotzdem funktionieren
     }
 }
 
-// App nach Login initialisieren
+// App nach Login initialisieren (KORRIGIERT)
 async function initializeAppAfterLogin() {
     console.log('🚀 Initialisiere App nach Login...');
     
-    if (!window.currentUser) {
+    if (!currentUser) {
         console.error('❌ Kein Benutzer angemeldet!');
         return;
     }
     
-    console.log('👤 Benutzer:', window.currentUser.name, 'Rolle:', window.currentUser.role);
+    console.log('👤 Benutzer:', currentUser.name, 'Rolle:', currentUser.role);
     
     try {
-        // System-Daten laden
+        // ERST System-Daten laden
         await loadSystemData();
         
-        // Realtime Listeners für benutzerspezifische Daten
+        // DANN Realtime Listeners für benutzerspezifische Daten
         setupRealtimeListeners();
         
         // Lade Inhalte der aktiven Tabs
-        if (typeof loadNews === 'function') loadNews();
-        if (typeof loadThemen === 'function') loadThemen();
-        
+        loadNews();
+        loadThemen();
         updateFirebaseStatus();
         
         console.log('✅ App-Interface geladen');
         
     } catch (error) {
         console.error('❌ Fehler beim Laden der App-Inhalte:', error);
+        // Nicht kritisch - versuche trotzdem fortzufahren
+        try {
+            setupRealtimeListeners();
+            loadNews();
+            loadThemen();
+        } catch (fallbackError) {
+            console.error('❌ Auch Fallback fehlgeschlagen:', fallbackError);
+        }
     }
 }
 
-// Sichere Daten-Lade-Funktionen
-async function loadConfigSafe() {
+// === DATEN LADEN ===
+
+// Config laden
+async function loadConfig() {
     try {
         const configRef = window.firebaseDB.ref(window.database, 'config/system');
         const snapshot = await window.firebaseDB.get(configRef);
@@ -147,8 +146,8 @@ async function loadConfigSafe() {
             dataCache.config = snapshot.val();
             console.log('✅ Config geladen');
         } else {
-            // Default Config
-            dataCache.config = {
+            // Default Config erstellen
+            const defaultConfig = {
                 schuljahr: '2025/26',
                 appName: 'Zeig, was du kannst!',
                 schule: {
@@ -158,126 +157,307 @@ async function loadConfigSafe() {
                     email: 'info@rs-badschoenborn.de'
                 }
             };
-            console.log('✅ Default Config verwendet');
+            
+            await window.firebaseDB.set(configRef, defaultConfig);
+            dataCache.config = defaultConfig;
+            console.log('✅ Default Config erstellt');
         }
     } catch (error) {
-        console.error('❌ Config Fehler:', error);
-        // Fallback Config
+        console.error('❌ Fehler beim Laden der Config:', error);
+        // Fallback Config setzen
         dataCache.config = {
             schuljahr: '2025/26',
-            appName: 'Zeig, was du kannst!'
+            appName: 'Zeig, was du kannst!',
+            schule: {
+                name: 'Realschule Bad Schönborn',
+                adresse: 'Schulstraße 12 • 76669 Bad Schönborn',
+                telefon: '07253/12345',
+                email: 'info@rs-badschoenborn.de'
+            }
         };
     }
 }
 
-async function loadBewertungsCheckpointsSafe() {
+// Fächer laden
+async function loadFaecher() {
     try {
-        const ref = window.firebaseDB.ref(window.database, 'config/bewertungsCheckpoints');
-        const snapshot = await window.firebaseDB.get(ref);
+        const faecherRef = window.firebaseDB.ref(window.database, 'system/faecher');
+        const snapshot = await window.firebaseDB.get(faecherRef);
+        
+        if (snapshot.exists()) {
+            dataCache.faecher = snapshot.val();
+            console.log('✅ Fächer geladen:', Object.keys(dataCache.faecher).length);
+        } else {
+            // Default Fächer erstellen
+            const defaultFaecher = {
+                "D": "Deutsch",
+                "M": "Mathematik",
+                "E": "Englisch",
+                "FR": "Französisch",
+                "T": "Technik",
+                "AES": "AES",
+                "G": "Geschichte",
+                "GK": "Gemeinschaftskunde",
+                "BIO": "Biologie",
+                "PH": "Physik",
+                "SP": "Sport",
+                "BK": "Bildende Kunst",
+                "IT": "Informatik",
+                "WBS": "WBS",
+                "REL": "Religion",
+                "ETH": "Ethik",
+                "ALL": "Allgemein"
+            };
+            
+            await window.firebaseDB.set(faecherRef, defaultFaecher);
+            dataCache.faecher = defaultFaecher;
+            console.log('✅ Default Fächer erstellt');
+        }
+    } catch (error) {
+        console.error('❌ Fehler beim Laden der Fächer:', error);
+        // Fallback Fächer
+        dataCache.faecher = {
+            "D": "Deutsch",
+            "M": "Mathematik",
+            "E": "Englisch",
+            "ALL": "Allgemein"
+        };
+    }
+}
+
+// Bewertungs-Checkpoints laden
+async function loadBewertungsCheckpoints() {
+    try {
+        const checkpointsRef = window.firebaseDB.ref(window.database, 'system/bewertungsCheckpoints');
+        const snapshot = await window.firebaseDB.get(checkpointsRef);
         
         if (snapshot.exists()) {
             dataCache.bewertungsCheckpoints = snapshot.val();
             console.log('✅ Bewertungs-Checkpoints geladen');
         } else {
-            // Default Checkpoints
-            dataCache.bewertungsCheckpoints = {
-                'Fachliches Arbeiten': [
-                    'Arbeitet konzentriert und ausdauernd',
-                    'Zeigt Interesse am Fach',
-                    'Beteiligt sich aktiv am Unterricht',
-                    'Erledigt Aufgaben selbstständig',
-                    'Arbeitet sorgfältig und genau'
+            // Default Checkpoints erstellen
+            const defaultCheckpoints = {
+                "Fachliches Arbeiten": [
+                    "Du arbeitest konzentriert und ausdauernd",
+                    "Du sammelst Informationen zielgerichtet",
+                    "Du setzt dein Wissen sinnvoll ein",
+                    "Du denkst kreativ und lösungsorientiert",
+                    "Du strukturierst deine Arbeit logisch und klar",
+                    "Du zeigst Verantwortungsbewusstsein beim Arbeiten"
                 ],
-                'Soziale Kompetenzen': [
-                    'Arbeitet gut im Team',
-                    'Hilft anderen Schülern',
-                    'Verhält sich respektvoll',
-                    'Löst Konflikte friedlich',
-                    'Übernimmt Verantwortung'
+                "Zusammenarbeit": [
+                    "Du arbeitest konstruktiv im Team",
+                    "Du übernimmst Verantwortung in der Gruppe",
+                    "Du hörst anderen zu und respektierst Meinungen",
+                    "Du unterstützt andere aktiv",
+                    "Du löst Konflikte fair und eigenständig"
                 ],
-                'Methodische Kompetenzen': [
-                    'Organisiert Arbeitsmaterial gut',
-                    'Plant Arbeitsschritte sinnvoll',
-                    'Nutzt verschiedene Lernmethoden',
-                    'Kann Informationen gut strukturieren',
-                    'Präsentiert Ergebnisse verständlich'
+                "Kommunikation": [
+                    "Du drückst dich klar und verständlich aus",
+                    "Du hältst Blickkontakt und sprichst sicher",
+                    "Du kannst Feedback geben und annehmen",
+                    "Du nimmst aktiv an Gesprächen teil",
+                    "Du kannst Inhalte gut präsentieren"
+                ],
+                "Eigenständigkeit": [
+                    "Du arbeitest selbstständig und zielgerichtet",
+                    "Du zeigst Eigeninitiative",
+                    "Du triffst Entscheidungen und stehst dazu",
+                    "Du erkennst Probleme und gehst sie an"
+                ],
+                "Reflexionsfähigkeit": [
+                    "Du kannst deine Stärken und Schwächen benennen",
+                    "Du denkst über deinen Lernprozess nach",
+                    "Du lernst aus Fehlern und verbesserst dich",
+                    "Du beschreibst, was gut lief und was nicht"
+                ],
+                "Persönlichkeitsentwicklung": [
+                    "Du zeigst Mut, neue Wege zu gehen",
+                    "Du bleibst auch bei Schwierigkeiten dran",
+                    "Du entwickelst dich im Laufe des Projekts spürbar weiter",
+                    "Du nutzt Rückmeldungen zur Verbesserung"
                 ]
             };
-            console.log('✅ Default Checkpoints verwendet');
+            
+            await window.firebaseDB.set(checkpointsRef, defaultCheckpoints);
+            dataCache.bewertungsCheckpoints = defaultCheckpoints;
+            console.log('✅ Default Bewertungs-Checkpoints erstellt');
         }
     } catch (error) {
-        console.error('❌ Checkpoint Fehler:', error);
-        dataCache.bewertungsCheckpoints = {};
+        console.error('❌ Fehler beim Laden der Bewertungs-Checkpoints:', error);
+        // Fallback Checkpoints
+        dataCache.bewertungsCheckpoints = {
+            "Fachliches Arbeiten": ["Du arbeitest konzentriert"],
+            "Zusammenarbeit": ["Du arbeitest gut im Team"],
+            "Kommunikation": ["Du drückst dich klar aus"]
+        };
     }
 }
 
-async function loadBriefvorlageSafe() {
+// Briefvorlage laden
+async function loadBriefvorlage() {
     try {
-        const ref = window.firebaseDB.ref(window.database, 'config/briefvorlage');
-        const snapshot = await window.firebaseDB.get(ref);
+        const briefRef = window.firebaseDB.ref(window.database, 'system/briefvorlage');
+        const snapshot = await window.firebaseDB.get(briefRef);
         
         if (snapshot.exists()) {
             dataCache.briefvorlage = snapshot.val();
             console.log('✅ Briefvorlage geladen');
         } else {
-            dataCache.briefvorlage = {};
-            console.log('✅ Leere Briefvorlage verwendet');
+            // Default Briefvorlage erstellen
+            const defaultBrief = {
+                anrede: "Liebe/r [NAME],\n\nim Rahmen des Projekts \"Zeig, was du kannst!\" hast du folgende Stärken gezeigt:",
+                schluss: "Wir gratulieren dir zu diesen Leistungen und freuen uns auf weitere erfolgreiche Projekte.\n\nMit freundlichen Grüßen\nDein Lehrerteam"
+            };
+            
+            await window.firebaseDB.set(briefRef, defaultBrief);
+            dataCache.briefvorlage = defaultBrief;
+            console.log('✅ Default Briefvorlage erstellt');
         }
     } catch (error) {
-        console.error('❌ Briefvorlage Fehler:', error);
-        dataCache.briefvorlage = {};
+        console.error('❌ Fehler beim Laden der Briefvorlage:', error);
+        // Fallback Briefvorlage
+        dataCache.briefvorlage = {
+            anrede: "Liebe/r [NAME],\n\nDu hast folgende Stärken gezeigt:",
+            schluss: "Mit freundlichen Grüßen\nDein Lehrerteam"
+        };
     }
 }
 
-async function loadStaerkenFormulierungenSafe() {
+// Stärken-Formulierungen laden
+async function loadStaerkenFormulierungen() {
     try {
-        const ref = window.firebaseDB.ref(window.database, 'config/staerkenFormulierungen');
-        const snapshot = await window.firebaseDB.get(ref);
+        const staerkenRef = window.firebaseDB.ref(window.database, 'system/staerkenFormulierungen');
+        const snapshot = await window.firebaseDB.get(staerkenRef);
         
         if (snapshot.exists()) {
             dataCache.staerkenFormulierungen = snapshot.val();
             console.log('✅ Stärken-Formulierungen geladen');
         } else {
-            dataCache.staerkenFormulierungen = {};
-            console.log('✅ Leere Stärken-Formulierungen verwendet');
+            // Default Formulierungen erstellen (basierend auf Checkpoints)
+            const defaultFormulierungen = {};
+            
+            Object.entries(dataCache.bewertungsCheckpoints).forEach(([kategorie, checkpoints]) => {
+                checkpoints.forEach((text, index) => {
+                    const key = `${kategorie}_${index}`;
+                    defaultFormulierungen[key] = text;
+                });
+            });
+            
+            await window.firebaseDB.set(staerkenRef, defaultFormulierungen);
+            dataCache.staerkenFormulierungen = defaultFormulierungen;
+            console.log('✅ Default Stärken-Formulierungen erstellt');
         }
     } catch (error) {
-        console.error('❌ Stärken Fehler:', error);
+        console.error('❌ Fehler beim Laden der Stärken-Formulierungen:', error);
         dataCache.staerkenFormulierungen = {};
     }
 }
 
-// Realtime Listeners einrichten
-function setupRealtimeListeners() {
-    console.log('🔄 Richte Realtime Listeners ein...');
-    
-    // News Listener
-    const newsRef = window.firebaseDB.ref(window.database, 'news');
-    activeListeners.news = window.firebaseDB.onValue(newsRef, (snapshot) => {
-        dataCache.news = snapshot.val() || {};
-        if (typeof updateNewsDisplay === 'function') updateNewsDisplay();
-    });
-    
-    // Themen Listener
-    const themenRef = window.firebaseDB.ref(window.database, 'themen');
-    activeListeners.themen = window.firebaseDB.onValue(themenRef, (snapshot) => {
-        dataCache.themen = snapshot.val() || {};
-        if (typeof updateThemenDisplay === 'function') updateThemenDisplay();
-    });
-    
-    // Gruppen Listener
-    const gruppenRef = window.firebaseDB.ref(window.database, 'gruppen');
-    activeListeners.gruppen = window.firebaseDB.onValue(gruppenRef, (snapshot) => {
-        dataCache.gruppen = snapshot.val() || {};
-        if (typeof updateGruppenDisplay === 'function') updateGruppenDisplay();
-    });
-    
-    console.log('✅ Realtime Listeners aktiv');
+// Klassen laden
+async function loadKlassen() {
+    try {
+        const klassenRef = window.firebaseDB.ref(window.database, 'klassen');
+        const snapshot = await window.firebaseDB.get(klassenRef);
+
+        if (snapshot.exists()) {
+            dataCache.klassen = Object.values(snapshot.val());
+            console.log('✅ Klassen geladen:', dataCache.klassen.length);
+        } else {
+            dataCache.klassen = [];
+            console.log('ℹ️ Keine Klassen gefunden');
+        }
+    } catch (error) {
+        console.error('❌ Fehler beim Laden der Klassen:', error);
+        dataCache.klassen = [];
+    }
 }
 
-// Cleanup Listeners
+// === REALTIME LISTENERS ===
+
+// Realtime Listeners einrichten
+function setupRealtimeListeners() {
+    console.log('👂 Richte Realtime Listeners ein...');
+    
+    try {
+        // News Listener
+        const newsRef = window.firebaseDB.ref(window.database, 'news');
+        activeListeners.news = window.firebaseDB.onValue(newsRef, (snapshot) => {
+            if (snapshot.exists()) {
+                dataCache.news = snapshot.val();
+                console.log('🔄 News Update erhalten');
+                if (typeof loadNews === 'function') {
+                    loadNews();
+                }
+            }
+        });
+        
+        // Themen Listener
+        const themenRef = window.firebaseDB.ref(window.database, 'themen');
+        activeListeners.themen = window.firebaseDB.onValue(themenRef, (snapshot) => {
+            if (snapshot.exists()) {
+                dataCache.themen = snapshot.val();
+                console.log('🔄 Themen Update erhalten');
+                if (typeof loadThemen === 'function') {
+                    loadThemen();
+                }
+            }
+        });
+        
+        // Gruppen Listener
+        const gruppenRef = window.firebaseDB.ref(window.database, 'gruppen');
+        activeListeners.gruppen = window.firebaseDB.onValue(gruppenRef, (snapshot) => {
+            if (snapshot.exists()) {
+                dataCache.gruppen = snapshot.val();
+                console.log('🔄 Gruppen Update erhalten');
+                if (typeof loadGruppen === 'function') {
+                    loadGruppen();
+                }
+            }
+        });
+
+        // Klassen Listener
+        const klassenRef = window.firebaseDB.ref(window.database, 'klassen');
+        activeListeners.klassen = window.firebaseDB.onValue(klassenRef, (snapshot) => {
+            if (snapshot.exists()) {
+                dataCache.klassen = Object.values(snapshot.val());
+                console.log('🔄 Klassen Update erhalten');
+                if (typeof updateKlassenSelects === 'function') {
+                    updateKlassenSelects();
+                }
+                if (typeof loadKlassenListe === 'function') {
+                    loadKlassenListe();
+                }
+                if (typeof updateKlassenauswahlForGruppen === 'function') {
+                    updateKlassenauswahlForGruppen();
+                }
+            }
+        });
+        
+        // Bewertungen Listener (nur für den aktuellen Lehrer)
+        if (currentUser && currentUser.role === 'lehrer') {
+            const bewertungenRef = window.firebaseDB.ref(window.database, `bewertungen/${sanitizeEmail(currentUser.email)}`);
+            activeListeners.bewertungen = window.firebaseDB.onValue(bewertungenRef, (snapshot) => {
+                if (snapshot.exists()) {
+                    dataCache.bewertungen[currentUser.email] = snapshot.val();
+                    console.log('🔄 Bewertungen Update erhalten');
+                    if (typeof loadBewertungen === 'function') {
+                        loadBewertungen();
+                    }
+                }
+            });
+        }
+        
+        console.log('✅ Realtime Listeners aktiv');
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Einrichten der Listeners:', error);
+    }
+}
+
+// Listeners aufräumen (bei Logout)
 function cleanupListeners() {
-    console.log('🧹 Räume Listeners auf...');
+    console.log('🧹 Räume Realtime Listeners auf...');
     
     Object.entries(activeListeners).forEach(([key, unsubscribe]) => {
         if (typeof unsubscribe === 'function') {
@@ -289,46 +469,104 @@ function cleanupListeners() {
     console.log('✅ Listeners aufgeräumt');
 }
 
-// Hilfsfunktionen
+// === HILFSFUNKTIONEN ===
+
+// Tab Navigation
+function openTab(tabName, evt) {
+    if (tabName === 'klassen' && !window.firebaseFunctions.requireAdmin()) {
+        return;
+    }
+    const contents = document.querySelectorAll('.tab-content');
+    const buttons = document.querySelectorAll('.tab-btn');
+
+    contents.forEach(content => content.classList.remove('active'));
+    buttons.forEach(button => button.classList.remove('active'));
+
+    const targetContent = document.getElementById(tabName);
+    if (targetContent) {
+        targetContent.classList.add('active');
+    }
+
+    if (evt && evt.target) {
+        evt.target.classList.add('active');
+    } else {
+        const fallbackBtn = document.querySelector(`.tab-btn[onclick*="openTab('${tabName}')"]`);
+        if (fallbackBtn) fallbackBtn.classList.add('active');
+    }
+    
+    console.log('📑 Tab gewechselt zu:', tabName);
+    
+    // Tab-spezifische Inhalte laden
+    try {
+        if (tabName === 'news') loadNews();
+        if (tabName === 'themen') loadThemen();
+        if (tabName === 'gruppen') loadGruppen();
+        if (tabName === 'lehrer') loadLehrer();
+        if (tabName === 'daten') loadDatenverwaltung();
+        if (tabName === 'bewerten') loadBewertungen();
+        if (tabName === 'vorlagen') loadVorlagen();
+        if (tabName === 'uebersicht') loadUebersicht();
+        if (tabName === 'adminvorlagen') loadAdminVorlagen();
+        if (tabName === 'klassen') loadKlassen();
+    } catch (error) {
+        console.error('❌ Fehler beim Laden von Tab:', tabName, error);
+    }
+}
+
+// Fächer-Name aus Cache holen
 function getFachNameFromGlobal(fachKuerzel) {
     return dataCache.faecher[fachKuerzel] || fachKuerzel;
 }
 
+// Alle Fächer aus Cache holen
 function getAllFaecher() {
     return dataCache.faecher;
 }
 
+// Email für Firebase Key sanitieren
 function sanitizeEmail(email) {
     return email.replace(/[.$#\[\]/]/g, '_');
 }
 
+// Timestamp generieren
 function getTimestamp() {
     return new Date().toISOString();
 }
 
+// Deutsche Datumsformatierung
 function formatGermanDate(date = new Date()) {
     return date.toLocaleDateString('de-DE');
 }
 
-// Data Access Functions
+// === DATA ACCESS FUNCTIONS ===
+
+// News aus Cache
 function getNewsFromCache() {
     return Object.values(dataCache.news || {}).sort((a, b) => 
         new Date(b.datum || b.timestamp) - new Date(a.datum || a.timestamp)
     );
 }
 
+// Themen aus Cache
 function getThemenFromCache() {
     return Object.values(dataCache.themen || {});
 }
 
+// Gruppen aus Cache
 function getGruppenFromCache() {
     return Object.values(dataCache.gruppen || {});
 }
 
+// Klassen aus Cache
+function getKlassenFromCache() {
+    return Array.isArray(dataCache.klassen) ? dataCache.klassen : [];
+}
+
+// Bewertungen aus Cache (für aktuellen Lehrer)
 function getBewertungenFromCache() {
-    if (!window.currentUser) return [];
+    if (!currentUser) return [];
     
-    const lehrerBewertungen = dataCache.bewertungen[window.currentUser.email] || {};
+    const lehrerBewertungen = dataCache.bewertungen[currentUser.email] || {};
     return Object.values(lehrerBewertungen);
 }
 
@@ -339,7 +577,7 @@ function updateFirebaseStatus() {
     const syncElement = document.getElementById('lastSync');
     
     if (statusElement) {
-        if (window.currentUser) {
+        if (currentUser) {
             statusElement.innerHTML = '🔥 Verbunden';
             statusElement.style.color = '#27ae60';
         } else {
@@ -349,7 +587,7 @@ function updateFirebaseStatus() {
     }
     
     if (userElement) {
-        userElement.textContent = window.currentUser ? window.currentUser.email : '-';
+        userElement.textContent = currentUser ? currentUser.email : '-';
     }
     
     if (syncElement) {
@@ -357,12 +595,15 @@ function updateFirebaseStatus() {
     }
 }
 
+// === GLOBAL VERFÜGBAR MACHEN ===
+
 // Globale Funktionen für andere Module
 window.firebaseFunctions = {
     // Data Access
     getNewsFromCache,
     getThemenFromCache,
     getGruppenFromCache,
+    getKlassenFromCache,
     getBewertungenFromCache,
     getAllFaecher,
     getFachNameFromGlobal,
@@ -373,10 +614,10 @@ window.firebaseFunctions = {
     formatGermanDate,
     
     // Auth
-    requireAuth: () => window.authFunctions?.requireAuth() || false,
-    requireAdmin: () => window.authFunctions?.requireAdmin() || false,
-    isAdmin: () => window.authFunctions?.isAdmin() || false,
-    getCurrentUserName: () => window.authFunctions?.getCurrentUserName() || 'Unbekannt',
+    requireAuth: () => window.authFunctions.requireAuth(),
+    requireAdmin: () => window.authFunctions.requireAdmin(),
+    isAdmin: () => window.authFunctions.isAdmin(),
+    getCurrentUserName: () => window.authFunctions.getCurrentUserName(),
     
     // Firebase References
     getDatabase: () => window.database,
@@ -386,14 +627,9 @@ window.firebaseFunctions = {
     dataCache
 };
 
-// Event Listeners
+// Window Event Listeners
 window.addEventListener('beforeunload', () => {
     cleanupListeners();
 });
-
-// Export functions
-window.initializeDataCache = initializeDataCache;
-window.initializeAppAfterLogin = initializeAppAfterLogin;
-window.updateFirebaseStatus = updateFirebaseStatus;
 
 console.log('✅ Firebase Main System bereit');
