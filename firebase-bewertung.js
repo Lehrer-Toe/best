@@ -1,638 +1,583 @@
-// Firebase Bewertungs-System - Realtime Database - KORRIGIERT
-console.log('📊 Firebase Bewertungs-System geladen - Korrigierte Version');
+// Firebase Hauptsystem - Realtime Database - KORRIGIERT
+console.log('🚀 Firebase Main System geladen - Stabile Version');
 
-// Globale Variablen für Bewertung
-let aktuelleBewertung = null;
-let aktuelleVorlageForBewertung = null;
+// Globale Daten-Cache für bessere Performance
+let dataCache = {
+    users: {},
+    faecher: {},
+    bewertungsCheckpoints: {},
+    themen: {},
+    gruppen: {},
+    bewertungen: {},
+    vorlagen: {},
+    news: {},
+    config: {},
+    briefvorlage: {},
+    staerkenFormulierungen: {}
+};
 
-// Bewertungs-Tab Navigation
-function openBewertungTab(tabName) {
-    const contents = document.querySelectorAll('.bewertung-tab-content');
-    const buttons = document.querySelectorAll('.bewertung-tab-btn');
+// Realtime Listeners für automatische Updates
+let activeListeners = {};
+
+// Firebase App Initialisierung (KORRIGIERT - lädt keine Daten mehr)
+async function initializeFirebaseApp() {
+    console.log('🚀 Initialisiere Firebase App...');
     
-    contents.forEach(content => content.classList.remove('active'));
-    buttons.forEach(button => button.classList.remove('active'));
-    
-    document.getElementById(tabName + 'Tab').classList.add('active');
-    if (event && event.target) {
-        event.target.classList.add('active');
+    try {
+        // Auth System starten
+        initializeAuth();
+        
+        // Cache initialisieren (aber keine Daten laden)
+        initializeDataCache();
+        
+        // Erfolg
+        document.getElementById('loadingScreen').style.display = 'none';
+        console.log('✅ Firebase App erfolgreich initialisiert');
+        
+    } catch (error) {
+        console.error('❌ Fehler bei Firebase Initialisierung:', error);
+        document.getElementById('loadingProgress').innerHTML = 
+            '<p style="color: #e74c3c;">Fehler: ' + error.message + '</p>';
     }
 }
 
-// Bewertungen laden und anzeigen - KORRIGIERT
-async function loadBewertungen() {
-    console.log('📊 Lade Bewertungen von Firebase...');
+// Cache initialisieren (OHNE Daten zu laden)
+function initializeDataCache() {
+    console.log('📂 Initialisiere Daten-Cache...');
     
-    if (!window.firebaseFunctions.requireAuth()) return;
+    // Cache mit leeren Objekten initialisieren
+    dataCache = {
+        users: {},
+        faecher: {},
+        bewertungsCheckpoints: {},
+        themen: {},
+        gruppen: {},
+        bewertungen: {},
+        vorlagen: {},
+        news: {},
+        config: {},
+        briefvorlage: {},
+        staerkenFormulierungen: {}
+    };
     
-    const liste = document.getElementById('bewertungsListe');
-    if (!liste) return;
+    console.log('✅ Daten-Cache initialisiert');
+}
+
+// System-Grunddaten laden (NACH LOGIN) - KORRIGIERT mit besserer Fehlerbehandlung
+async function loadSystemData() {
+    console.log('📂 Lade System-Grunddaten nach Login...');
     
-    // Sammle alle Schüler des aktuellen Lehrers aus Gruppen - KORRIGIERT
-    const meineSchueler = [];
-    const gruppen = window.firebaseFunctions.getGruppenFromCache();
-    const currentUserName = window.firebaseFunctions.getCurrentUserName();
+    try {
+        // Config laden
+        await loadConfigSafe();
+        
+        // Fächer laden
+        await loadFaecherSafe();
+        
+        // Bewertungs-Checkpoints laden
+        await loadBewertungsCheckpointsSafe();
+        
+        // Briefvorlage laden
+        await loadBriefvorlageSafe();
+        
+        // Stärken-Formulierungen laden
+        await loadStaerkenFormulierungenSafe();
+        
+        console.log('✅ System-Grunddaten geladen (mit Fallbacks bei Fehlern)');
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Laden der Grunddaten:', error);
+        // Nicht kritisch - App kann trotzdem funktionieren
+    }
+}
+
+// App nach Login initialisieren (KORRIGIERT)
+async function initializeAppAfterLogin() {
+    console.log('🚀 Initialisiere App nach Login...');
     
-    gruppen.forEach(gruppe => {
-        if (gruppe.schueler && Array.isArray(gruppe.schueler)) {
-            gruppe.schueler.forEach(schueler => {
-                // KORRIGIERT: Verwende Normalisierungsfunktion aus Gruppen-Modul
-                const normalizedSchueler = window.gruppenFunctions.normalizeSchuelerData(schueler);
-                
-                if (normalizedSchueler.lehrer === currentUserName && normalizedSchueler.name) {
-                    const fachInfo = normalizedSchueler.fach ? 
-                        ` (${window.firebaseFunctions.getFachNameFromGlobal(normalizedSchueler.fach)})` : '';
-                    
-                    meineSchueler.push({
-                        name: normalizedSchueler.name,
-                        thema: gruppe.thema,
-                        gruppenId: gruppe.id,
-                        schuelerId: window.gruppenFunctions.generateSchuelerId(gruppe.id, normalizedSchueler.name),
-                        fach: normalizedSchueler.fach,
-                        fachInfo: fachInfo
-                    });
+    if (!currentUser) {
+        console.error('❌ Kein Benutzer angemeldet!');
+        return;
+    }
+    
+    console.log('👤 Benutzer:', currentUser.name, 'Rolle:', currentUser.role);
+    
+    try {
+        // ERST System-Daten laden
+        await loadSystemData();
+        
+        // DANN Realtime Listeners für benutzerspezifische Daten
+        setupRealtimeListeners();
+        
+        // Lade Inhalte der aktiven Tabs
+        loadNews();
+        loadThemen();
+        updateFirebaseStatus();
+        
+        console.log('✅ App-Interface geladen');
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Laden der App-Inhalte:', error);
+        // Nicht kritisch - versuche trotzdem fortzufahren
+        try {
+            setupRealtimeListeners();
+            loadNews();
+            loadThemen();
+        } catch (fallbackError) {
+            console.error('❌ Auch Fallback fehlgeschlagen:', fallbackError);
+        }
+    }
+}
+
+// === SICHERE DATEN-LADE-FUNKTIONEN ===
+
+// Config laden - SICHER
+async function loadConfigSafe() {
+    try {
+        const configRef = window.firebaseDB.ref(window.database, 'config/system');
+        const snapshot = await window.firebaseDB.get(configRef);
+        
+        if (snapshot.exists()) {
+            dataCache.config = snapshot.val();
+            console.log('✅ Config geladen');
+        } else {
+            // Default Config erstellen
+            const defaultConfig = {
+                schuljahr: '2025/26',
+                appName: 'Zeig, was du kannst!',
+                schule: {
+                    name: 'Realschule Bad Schönborn',
+                    adresse: 'Schulstraße 12 • 76669 Bad Schönborn',
+                    telefon: '07253/12345',
+                    email: 'info@rs-badschoenborn.de'
+                }
+            };
+            
+            await window.firebaseDB.set(configRef, defaultConfig);
+            dataCache.config = defaultConfig;
+            console.log('✅ Default Config erstellt');
+        }
+    } catch (error) {
+        console.error('❌ Config Fallback verwendet:', error.message);
+        // Fallback Config setzen
+        dataCache.config = {
+            schuljahr: '2025/26',
+            appName: 'Zeig, was du kannst!',
+            schule: {
+                name: 'Realschule Bad Schönborn',
+                adresse: 'Schulstraße 12 • 76669 Bad Schönborn',
+                telefon: '07253/12345',
+                email: 'info@rs-badschoenborn.de'
+            }
+        };
+    }
+}
+
+// Fächer laden - SICHER
+async function loadFaecherSafe() {
+    try {
+        const faecherRef = window.firebaseDB.ref(window.database, 'system/faecher');
+        const snapshot = await window.firebaseDB.get(faecherRef);
+        
+        if (snapshot.exists()) {
+            dataCache.faecher = snapshot.val();
+            console.log('✅ Fächer geladen:', Object.keys(dataCache.faecher).length);
+        } else {
+            // Default Fächer erstellen
+            const defaultFaecher = {
+                "D": "Deutsch",
+                "M": "Mathematik",
+                "E": "Englisch",
+                "FR": "Französisch",
+                "T": "Technik",
+                "AES": "AES",
+                "G": "Geschichte",
+                "GK": "Gemeinschaftskunde",
+                "BIO": "Biologie",
+                "PH": "Physik",
+                "SP": "Sport",
+                "BK": "Bildende Kunst",
+                "IT": "Informatik",
+                "WBS": "WBS",
+                "REL": "Religion",
+                "ETH": "Ethik",
+                "ALL": "Allgemein"
+            };
+            
+            await window.firebaseDB.set(faecherRef, defaultFaecher);
+            dataCache.faecher = defaultFaecher;
+            console.log('✅ Default Fächer erstellt');
+        }
+    } catch (error) {
+        console.error('❌ Fächer Fallback verwendet:', error.message);
+        // Fallback Fächer
+        dataCache.faecher = {
+            "D": "Deutsch",
+            "M": "Mathematik",
+            "E": "Englisch",
+            "ALL": "Allgemein"
+        };
+    }
+}
+
+// Bewertungs-Checkpoints laden - SICHER
+async function loadBewertungsCheckpointsSafe() {
+    try {
+        const checkpointsRef = window.firebaseDB.ref(window.database, 'system/bewertungsCheckpoints');
+        const snapshot = await window.firebaseDB.get(checkpointsRef);
+        
+        if (snapshot.exists()) {
+            dataCache.bewertungsCheckpoints = snapshot.val();
+            console.log('✅ Bewertungs-Checkpoints geladen');
+        } else {
+            // Default Checkpoints erstellen
+            const defaultCheckpoints = {
+                "Fachliches Arbeiten": [
+                    "Du arbeitest konzentriert und ausdauernd",
+                    "Du sammelst Informationen zielgerichtet",
+                    "Du setzt dein Wissen sinnvoll ein",
+                    "Du denkst kreativ und lösungsorientiert",
+                    "Du strukturierst deine Arbeit logisch und klar",
+                    "Du zeigst Verantwortungsbewusstsein beim Arbeiten"
+                ],
+                "Zusammenarbeit": [
+                    "Du arbeitest konstruktiv im Team",
+                    "Du übernimmst Verantwortung in der Gruppe",
+                    "Du hörst anderen zu und respektierst Meinungen",
+                    "Du unterstützt andere aktiv",
+                    "Du löst Konflikte fair und eigenständig"
+                ],
+                "Kommunikation": [
+                    "Du drückst dich klar und verständlich aus",
+                    "Du hältst Blickkontakt und sprichst sicher",
+                    "Du kannst Feedback geben und annehmen",
+                    "Du nimmst aktiv an Gesprächen teil",
+                    "Du kannst Inhalte gut präsentieren"
+                ],
+                "Eigenständigkeit": [
+                    "Du arbeitest selbstständig und zielgerichtet",
+                    "Du zeigst Eigeninitiative",
+                    "Du triffst Entscheidungen und stehst dazu",
+                    "Du erkennst Probleme und gehst sie an"
+                ],
+                "Reflexionsfähigkeit": [
+                    "Du kannst deine Stärken und Schwächen benennen",
+                    "Du denkst über deinen Lernprozess nach",
+                    "Du lernst aus Fehlern und verbesserst dich",
+                    "Du beschreibst, was gut lief und was nicht"
+                ],
+                "Persönlichkeitsentwicklung": [
+                    "Du zeigst Mut, neue Wege zu gehen",
+                    "Du bleibst auch bei Schwierigkeiten dran",
+                    "Du entwickelst dich im Laufe des Projekts spürbar weiter",
+                    "Du nutzt Rückmeldungen zur Verbesserung"
+                ]
+            };
+            
+            await window.firebaseDB.set(checkpointsRef, defaultCheckpoints);
+            dataCache.bewertungsCheckpoints = defaultCheckpoints;
+            console.log('✅ Default Bewertungs-Checkpoints erstellt');
+        }
+    } catch (error) {
+        console.error('❌ Bewertungs-Checkpoints Fallback verwendet:', error.message);
+        // Fallback Checkpoints
+        dataCache.bewertungsCheckpoints = {
+            "Fachliches Arbeiten": ["Du arbeitest konzentriert"],
+            "Zusammenarbeit": ["Du arbeitest gut im Team"],
+            "Kommunikation": ["Du drückst dich klar aus"]
+        };
+    }
+}
+
+// Briefvorlage laden - SICHER
+async function loadBriefvorlageSafe() {
+    try {
+        const briefRef = window.firebaseDB.ref(window.database, 'system/briefvorlage');
+        const snapshot = await window.firebaseDB.get(briefRef);
+        
+        if (snapshot.exists()) {
+            dataCache.briefvorlage = snapshot.val();
+            console.log('✅ Briefvorlage geladen');
+        } else {
+            // Default Briefvorlage erstellen
+            const defaultBrief = {
+                anrede: "Liebe/r [NAME],\n\nim Rahmen des Projekts \"Zeig, was du kannst!\" hast du folgende Stärken gezeigt:",
+                schluss: "Wir gratulieren dir zu diesen Leistungen und freuen uns auf weitere erfolgreiche Projekte.\n\nMit freundlichen Grüßen\nDein Lehrerteam"
+            };
+            
+            await window.firebaseDB.set(briefRef, defaultBrief);
+            dataCache.briefvorlage = defaultBrief;
+            console.log('✅ Default Briefvorlage erstellt');
+        }
+    } catch (error) {
+        console.error('❌ Briefvorlage Fallback verwendet:', error.message);
+        // Fallback Briefvorlage
+        dataCache.briefvorlage = {
+            anrede: "Liebe/r [NAME],\n\nDu hast folgende Stärken gezeigt:",
+            schluss: "Mit freundlichen Grüßen\nDein Lehrerteam"
+        };
+    }
+}
+
+// Stärken-Formulierungen laden - SICHER
+async function loadStaerkenFormulierungenSafe() {
+    try {
+        const staerkenRef = window.firebaseDB.ref(window.database, 'system/staerkenFormulierungen');
+        const snapshot = await window.firebaseDB.get(staerkenRef);
+        
+        if (snapshot.exists()) {
+            dataCache.staerkenFormulierungen = snapshot.val();
+            console.log('✅ Stärken-Formulierungen geladen');
+        } else {
+            // Default Formulierungen erstellen (basierend auf Checkpoints)
+            const defaultFormulierungen = {};
+            
+            Object.entries(dataCache.bewertungsCheckpoints).forEach(([kategorie, checkpoints]) => {
+                checkpoints.forEach((text, index) => {
+                    const key = `${kategorie}_${index}`;
+                    defaultFormulierungen[key] = text;
+                });
+            });
+            
+            await window.firebaseDB.set(staerkenRef, defaultFormulierungen);
+            dataCache.staerkenFormulierungen = defaultFormulierungen;
+            console.log('✅ Default Stärken-Formulierungen erstellt');
+        }
+    } catch (error) {
+        console.error('❌ Stärken-Formulierungen Fallback verwendet:', error.message);
+        dataCache.staerkenFormulierungen = {};
+    }
+}
+
+// === REALTIME LISTENERS ===
+
+// Realtime Listeners einrichten
+function setupRealtimeListeners() {
+    console.log('👂 Richte Realtime Listeners ein...');
+    
+    try {
+        // News Listener
+        const newsRef = window.firebaseDB.ref(window.database, 'news');
+        activeListeners.news = window.firebaseDB.onValue(newsRef, (snapshot) => {
+            if (snapshot.exists()) {
+                dataCache.news = snapshot.val();
+                console.log('🔄 News Update erhalten');
+                if (typeof loadNews === 'function') {
+                    loadNews();
+                }
+            }
+        });
+        
+        // Themen Listener
+        const themenRef = window.firebaseDB.ref(window.database, 'themen');
+        activeListeners.themen = window.firebaseDB.onValue(themenRef, (snapshot) => {
+            if (snapshot.exists()) {
+                dataCache.themen = snapshot.val();
+                console.log('🔄 Themen Update erhalten');
+                if (typeof loadThemen === 'function') {
+                    loadThemen();
+                }
+            }
+        });
+        
+        // Gruppen Listener
+        const gruppenRef = window.firebaseDB.ref(window.database, 'gruppen');
+        activeListeners.gruppen = window.firebaseDB.onValue(gruppenRef, (snapshot) => {
+            if (snapshot.exists()) {
+                dataCache.gruppen = snapshot.val();
+                console.log('🔄 Gruppen Update erhalten');
+                if (typeof loadGruppen === 'function') {
+                    loadGruppen();
+                }
+            }
+        });
+        
+        // Bewertungen Listener (nur für den aktuellen Lehrer)
+        if (currentUser && currentUser.role === 'lehrer') {
+            const bewertungenRef = window.firebaseDB.ref(window.database, `bewertungen/${sanitizeEmail(currentUser.email)}`);
+            activeListeners.bewertungen = window.firebaseDB.onValue(bewertungenRef, (snapshot) => {
+                if (snapshot.exists()) {
+                    dataCache.bewertungen[currentUser.email] = snapshot.val();
+                    console.log('🔄 Bewertungen Update erhalten');
+                    if (typeof loadBewertungen === 'function') {
+                        loadBewertungen();
+                    }
                 }
             });
         }
-    });
-    
-    if (meineSchueler.length === 0) {
-        liste.innerHTML = '<div class="card"><p>Keine Schüler zugewiesen.</p></div>';
-        return;
-    }
-
-    // Bewertungen aus Cache holen
-    const bewertungen = window.firebaseFunctions.getBewertungenFromCache();
-    
-    // Vorlagen-Optionen laden
-    const vorlagenOptions = await loadVorlagenOptionsForAllSchueler();
-    
-    let html = '';
-    meineSchueler.forEach(schueler => {
-        const bewertung = bewertungen.find(b => b.schuelerId === schueler.schuelerId);
-        const status = bewertung ? 'bewertet' : 'nicht-bewertet';
         
-        // PDF-Button Status bestimmen
-        const pdfVerfuegbar = bewertung && bewertung.endnote && bewertung.staerken && Object.keys(bewertung.staerken).length > 0;
-        const pdfButtonClass = pdfVerfuegbar ? 'pdf-btn-enabled' : 'pdf-btn-disabled';
-        const pdfButtonDisabled = pdfVerfuegbar ? '' : 'disabled';
-        
-        // Vorlagen-Select mit korrigierter Auswahl
-        const selectedVorlage = bewertung?.vorlage || '';
-        const vorlagenSelectOptions = vorlagenOptions.replace(
-            `value="${selectedVorlage}"`, 
-            `value="${selectedVorlage}" selected`
-        );
-        
-        html += `<div class="bewertung-liste-item" data-status="${status}" data-name="${schueler.name}">
-            <div class="bewertung-header">
-                <div class="bewertung-info">
-                    <strong>${schueler.name}</strong>${schueler.fachInfo}<br>
-                    Thema: ${schueler.thema}<br>
-                    Status: <span class="status-badge ${status}">${bewertung ? 'Bewertet' : 'Noch nicht bewertet'}</span>
-                    ${bewertung ? `<br>Note: ${bewertung.endnote}` : ''}
-                    ${bewertung ? `<br><small>Bewertet am: ${bewertung.datum}</small>` : ''}
-                </div>
-                <div class="bewertung-actions">
-                    <select class="vorlage-select" id="vorlage-${schueler.schuelerId}">
-                        <option value="">Bewertungsvorlage wählen...</option>
-                        ${vorlagenSelectOptions}
-                    </select>
-                    <button class="btn" onclick="bewertungStarten('${schueler.schuelerId}', '${schueler.name}', '${schueler.thema}')">
-                        ${bewertung ? 'Bewertung bearbeiten' : 'Bewerten'}
-                    </button>
-                    <button class="btn ${pdfButtonClass}" 
-                            onclick="window.pdfFunctions.createPDF('${schueler.schuelerId}')" 
-                            ${pdfButtonDisabled}>
-                        PDF
-                    </button>
-                </div>
-            </div>
-        </div>`;
-    });
-    liste.innerHTML = html;
-    
-    // Filter anwenden
-    filterBewertungen();
-    
-    console.log('📊 Bewertungen geladen:', meineSchueler.length, 'Schüler');
-}
-
-// Vorlagen-Optionen für alle Schüler laden - UNVERÄNDERT
-async function loadVorlagenOptionsForAllSchueler() {
-    if (!window.firebaseFunctions.requireAuth()) return '';
-    
-    try {
-        const userEmail = window.authFunctions.getUserEmail();
-        const sanitizedEmail = window.firebaseFunctions.sanitizeEmail(userEmail);
-        
-        const vorlagenRef = window.firebaseFunctions.getDatabaseRef(`vorlagen/${sanitizedEmail}`);
-        const snapshot = await window.firebaseDB.get(vorlagenRef);
-        
-        let options = '';
-        if (snapshot.exists()) {
-            const vorlagen = snapshot.val();
-            Object.values(vorlagen).forEach(vorlage => {
-                options += `<option value="${vorlage.name}">${vorlage.name}</option>`;
-            });
-        }
-        
-        return options;
+        console.log('✅ Realtime Listeners aktiv');
         
     } catch (error) {
-        console.error('❌ Fehler beim Laden der Vorlagen:', error);
-        return '';
+        console.error('❌ Fehler beim Einrichten der Listeners:', error);
     }
 }
 
-// Bewertungen filtern - UNVERÄNDERT
-function filterBewertungen() {
-    const statusFilter = document.getElementById('bewertungsFilter')?.value || 'alle';
-    const namenSort = document.getElementById('namenSortierung')?.value || 'az';
-    const items = Array.from(document.querySelectorAll('.bewertung-liste-item'));
+// Listeners aufräumen (bei Logout)
+function cleanupListeners() {
+    console.log('🧹 Räume Realtime Listeners auf...');
     
-    // Sortierung anwenden
-    items.sort((a, b) => {
-        const nameA = a.getAttribute('data-name');
-        const nameB = b.getAttribute('data-name');
-        
-        if (namenSort === 'za') {
-            return nameB.localeCompare(nameA);
-        } else {
-            return nameA.localeCompare(nameB);
+    Object.entries(activeListeners).forEach(([key, unsubscribe]) => {
+        if (typeof unsubscribe === 'function') {
+            unsubscribe();
         }
     });
     
-    // Elemente neu anordnen
-    const container = document.getElementById('bewertungsListe');
-    if (container) {
-        items.forEach(item => {
-            container.appendChild(item);
-        });
-    }
-    
-    // Filter anwenden
-    items.forEach(item => {
-        const status = item.getAttribute('data-status');
-        if (statusFilter === 'alle' || statusFilter === status) {
-            item.style.display = 'block';
-        } else {
-            item.style.display = 'none';
-        }
-    });
+    activeListeners = {};
+    console.log('✅ Listeners aufgeräumt');
 }
 
-// Bewertung starten - UNVERÄNDERT
-async function bewertungStarten(schuelerId, schuelerName, thema) {
-    console.log('📊 Starte Bewertung für:', schuelerName);
-    
-    if (!window.firebaseFunctions.requireAuth()) return;
-    
-    const vorlageSelect = document.getElementById(`vorlage-${schuelerId}`);
-    const vorlageName = vorlageSelect?.value;
-    
-    if (!vorlageName) {
-        alert('Bitte wählen Sie eine Bewertungsvorlage aus!');
-        return;
-    }
-    
-    try {
-        // Vorlage aus Firebase laden
-        const userEmail = window.authFunctions.getUserEmail();
-        const sanitizedEmail = window.firebaseFunctions.sanitizeEmail(userEmail);
-        
-        const vorlagenRef = window.firebaseFunctions.getDatabaseRef(`vorlagen/${sanitizedEmail}`);
-        const snapshot = await window.firebaseDB.get(vorlagenRef);
-        
-        if (!snapshot.exists()) {
-            alert('Keine Vorlagen gefunden!');
-            return;
-        }
-        
-        const vorlagen = snapshot.val();
-        const vorlageData = Object.values(vorlagen).find(v => v.name === vorlageName);
-        
-        if (!vorlageData) {
-            alert('Bewertungsvorlage nicht gefunden!');
-            return;
-        }
-        
-        aktuelleBewertung = { schuelerId, schuelerName, thema };
-        aktuelleVorlageForBewertung = vorlageData;
-        
-        await showBewertungsRaster();
-        
-    } catch (error) {
-        console.error('❌ Fehler beim Laden der Vorlage:', error);
-        alert('Fehler beim Laden der Vorlage: ' + error.message);
-    }
-}
+// === HILFSFUNKTIONEN ===
 
-// Bewertungsraster anzeigen - UNVERÄNDERT
-async function showBewertungsRaster() {
-    document.getElementById('bewertungsListe').classList.add('hidden');
-    const raster = document.getElementById('bewertungsRaster');
-    raster.classList.remove('hidden');
-    
-    try {
-        // Vorhandene Bewertung aus Firebase laden
-        const userEmail = window.authFunctions.getUserEmail();
-        const sanitizedEmail = window.firebaseFunctions.sanitizeEmail(userEmail);
-        
-        const bewertungRef = window.firebaseFunctions.getDatabaseRef(`bewertungen/${sanitizedEmail}/${aktuelleBewertung.schuelerId}`);
-        const snapshot = await window.firebaseDB.get(bewertungRef);
-        
-        let vorhandeneBewertung = null;
-        if (snapshot.exists()) {
-            vorhandeneBewertung = snapshot.val();
-        }
-        
-        // Bewertungsraster aufbauen
-        loadBewertungsTab(vorhandeneBewertung);
-        await loadStaerkenTab(vorhandeneBewertung); // ASYNC gemacht
-        
-        // Durchschnitt initial berechnen
-        if (vorhandeneBewertung) {
-            aktuelleBewertung.noten = [...(vorhandeneBewertung.noten || [])];
-            aktuelleBewertung.staerken = vorhandeneBewertung.staerken || {};
-            aktuelleBewertung.freitext = vorhandeneBewertung.freitext || '';
-            berechneDurchschnitt();
-        } else {
-            aktuelleBewertung.noten = new Array(aktuelleVorlageForBewertung.kategorien.length);
-            aktuelleBewertung.staerken = {};
-            aktuelleBewertung.freitext = '';
-        }
-        
-    } catch (error) {
-        console.error('❌ Fehler beim Laden der Bewertung:', error);
-        alert('Fehler beim Laden der Bewertung: ' + error.message);
+// Tab Navigation
+function openTab(tabName, evt) {
+    const contents = document.querySelectorAll('.tab-content');
+    const buttons = document.querySelectorAll('.tab-btn');
+
+    contents.forEach(content => content.classList.remove('active'));
+    buttons.forEach(button => button.classList.remove('active'));
+
+    const targetContent = document.getElementById(tabName);
+    if (targetContent) {
+        targetContent.classList.add('active');
     }
-}
 
-// Bewertungs-Tab laden - UNVERÄNDERT
-function loadBewertungsTab(vorhandeneBewertung) {
-    const container = document.getElementById('bewertungsRasterContent');
-    
-    let html = `
-        <div class="vorlage-titel">Bewertungsvorlage: ${aktuelleVorlageForBewertung.name}</div>
-        <h3>Bewertung: ${aktuelleBewertung.schuelerName}</h3>
-        <p>Thema: ${aktuelleBewertung.thema}</p>
-        
-        <div class="endnote-section">
-            <span>Endnote:</span>
-            <input type="number" id="endnote" class="endnote-input" min="1" max="6" step="0.1" 
-                   value="${vorhandeneBewertung ? vorhandeneBewertung.endnote || '' : ''}"
-                   onchange="endnoteGeaendert()">
-            <button class="btn" onclick="durchschnittUebernehmen()">Durchschnitt übernehmen</button>
-        </div>
-    `;
-    
-    aktuelleVorlageForBewertung.kategorien.forEach((kategorie, index) => {
-        const vorhandeneNote = vorhandeneBewertung?.noten?.[index];
-        html += `
-            <div class="kategorie">
-                <div class="kategorie-titel">${kategorie.name} (${kategorie.gewichtung}%)</div>
-                <div class="noten-buttons">
-                    ${generateNotenButtons(index, vorhandeneNote)}
-                    <button class="nicht-bewertet-btn ${vorhandeneNote === undefined ? 'selected' : ''}" 
-                            onclick="noteSetzen(${index}, undefined)">–</button>
-                </div>
-            </div>
-        `;
-    });
-    
-    container.innerHTML = html;
-}
-
-// Stärken-Tab laden (KORRIGIERT - lädt direkt aus Firebase) - UNVERÄNDERT
-async function loadStaerkenTab(vorhandeneBewertung) {
-    const container = document.getElementById('staerkenCheckliste');
-    
-    // Loading-Anzeige
-    container.innerHTML = '<h3>Stärken bewerten</h3><p>🔄 Lade Bewertungskriterien...</p>';
-    
-    try {
-        // Bewertungs-Checkpoints direkt aus Firebase laden
-        let bewertungsCheckpoints = window.firebaseFunctions.dataCache.bewertungsCheckpoints;
-        
-        // Falls nicht im Cache, direkt aus Firebase laden
-        if (!bewertungsCheckpoints || Object.keys(bewertungsCheckpoints).length === 0) {
-            console.log('📋 Lade Bewertungs-Checkpoints direkt aus Firebase...');
-            
-            const checkpointsRef = window.firebaseFunctions.getDatabaseRef('system/bewertungsCheckpoints');
-            const snapshot = await window.firebaseDB.get(checkpointsRef);
-            
-            if (snapshot.exists()) {
-                bewertungsCheckpoints = snapshot.val();
-                // Cache aktualisieren
-                window.firebaseFunctions.dataCache.bewertungsCheckpoints = bewertungsCheckpoints;
-                console.log('✅ Bewertungs-Checkpoints aus Firebase geladen');
-            } else {
-                console.warn('⚠️ Keine Bewertungs-Checkpoints in Firebase gefunden');
-                container.innerHTML = '<h3>Stärken bewerten</h3><p style="color: #e74c3c;">❌ Bewertungskriterien konnten nicht geladen werden.</p>';
-                return;
-            }
-        }
-        
-        let html = '<h3>Stärken bewerten</h3>';
-        
-        Object.keys(bewertungsCheckpoints).forEach(kategorie => {
-            const aktivierte = vorhandeneBewertung?.staerken?.[kategorie] || [];
-            
-            html += `
-                <div class="staerken-kategorie">
-                    <div class="staerken-kategorie-titel">
-                        ${getKategorieIcon(kategorie)} ${kategorie}
-                    </div>
-                    <div class="staerken-liste">
-            `;
-            
-            bewertungsCheckpoints[kategorie].forEach((text, index) => {
-                const checked = aktivierte.includes(index) ? 'checked' : '';
-                const itemClass = aktivierte.includes(index) ? 'checked' : '';
-                
-                html += `
-                    <div class="staerken-item ${itemClass}">
-                        <input type="checkbox" class="staerken-checkbox" 
-                               ${checked}
-                               onchange="staerkeToggle('${kategorie}', ${index}, this)">
-                        <span class="staerken-text" onclick="toggleCheckbox('${kategorie}', ${index})">${text}</span>
-                    </div>
-                `;
-            });
-            
-            html += '</div></div>';
-        });
-        
-        html += `
-            <div class="freitext-bereich">
-                <label><strong>📝 Weitere Beobachtungen oder individuelle Stärken:</strong></label>
-                <textarea class="freitext-textarea" 
-                          placeholder="Hier können Sie weitere Beobachtungen eintragen..."
-                          onchange="freitextChanged(this)">${vorhandeneBewertung?.freitext || ''}</textarea>
-            </div>
-        `;
-        
-        container.innerHTML = html;
-        
-        console.log('✅ Stärken-Tab geladen');
-        
-    } catch (error) {
-        console.error('❌ Fehler beim Laden der Stärken-Checkpoints:', error);
-        container.innerHTML = '<h3>Stärken bewerten</h3><p style="color: #e74c3c;">❌ Fehler beim Laden der Bewertungskriterien.</p>';
-    }
-}
-
-// Kategorie-Icons - UNVERÄNDERT
-function getKategorieIcon(kategorie) {
-    const icons = {
-        'Fachliches Arbeiten': '🧠',
-        'Zusammenarbeit': '🤝',
-        'Kommunikation': '🗣️',
-        'Eigenständigkeit': '🎯',
-        'Reflexionsfähigkeit': '🔁',
-        'Persönlichkeitsentwicklung': '🌱'
-    };
-    return icons[kategorie] || '📋';
-}
-
-// Stärke togglen - UNVERÄNDERT
-function staerkeToggle(kategorie, index, checkbox) {
-    if (!aktuelleBewertung.staerken[kategorie]) {
-        aktuelleBewertung.staerken[kategorie] = [];
-    }
-    
-    if (checkbox.checked) {
-        if (!aktuelleBewertung.staerken[kategorie].includes(index)) {
-            aktuelleBewertung.staerken[kategorie].push(index);
-        }
-        checkbox.parentElement.classList.add('checked');
+    if (evt && evt.target) {
+        evt.target.classList.add('active');
     } else {
-        aktuelleBewertung.staerken[kategorie] = aktuelleBewertung.staerken[kategorie].filter(i => i !== index);
-        checkbox.parentElement.classList.remove('checked');
+        const fallbackBtn = document.querySelector(`.tab-btn[onclick*="openTab('${tabName}')"]`);
+        if (fallbackBtn) fallbackBtn.classList.add('active');
     }
     
-    // Automatisch speichern
-    autosaveStaerken();
-}
-
-// Checkbox per Click auf Text togglen - UNVERÄNDERT
-function toggleCheckbox(kategorie, index) {
-    const checkbox = document.querySelector(`.staerken-item input[onchange*="${kategorie}"][onchange*="${index}"]`);
-    if (checkbox) {
-        checkbox.checked = !checkbox.checked;
-        staerkeToggle(kategorie, index, checkbox);
-    }
-}
-
-// Freitext geändert - UNVERÄNDERT
-function freitextChanged(textarea) {
-    aktuelleBewertung.freitext = textarea.value;
-    autosaveStaerken();
-}
-
-// Stärken automatisch speichern - UNVERÄNDERT
-async function autosaveStaerken() {
-    if (!window.firebaseFunctions.requireAuth()) return;
+    console.log('📑 Tab gewechselt zu:', tabName);
     
+    // Tab-spezifische Inhalte laden
     try {
-        const userEmail = window.authFunctions.getUserEmail();
-        const sanitizedEmail = window.firebaseFunctions.sanitizeEmail(userEmail);
-        
-        const bewertungRef = window.firebaseFunctions.getDatabaseRef(`bewertungen/${sanitizedEmail}/${aktuelleBewertung.schuelerId}`);
-        
-        // Nur Stärken und Freitext aktualisieren
-        const updates = {
-            staerken: aktuelleBewertung.staerken,
-            freitext: aktuelleBewertung.freitext,
-            lastUpdate: window.firebaseFunctions.getTimestamp()
-        };
-        
-        // Prüfen ob Bewertung schon existiert
-        const snapshot = await window.firebaseDB.get(bewertungRef);
-        if (snapshot.exists()) {
-            // Update nur die geänderten Felder
-            const updateRef = window.firebaseFunctions.getDatabaseRef(`bewertungen/${sanitizedEmail}/${aktuelleBewertung.schuelerId}`);
-            await window.firebaseDB.set(updateRef, { ...snapshot.val(), ...updates });
-        }
-        
-        console.log('💾 Stärken automatisch gespeichert');
-        
+        if (tabName === 'news' && typeof loadNews === 'function') loadNews();
+        if (tabName === 'themen' && typeof loadThemen === 'function') loadThemen();
+        if (tabName === 'gruppen' && typeof loadGruppen === 'function') loadGruppen();
+        if (tabName === 'lehrer' && typeof loadLehrer === 'function') loadLehrer();
+        if (tabName === 'daten' && typeof loadDatenverwaltung === 'function') loadDatenverwaltung();
+        if (tabName === 'bewerten' && typeof loadBewertungen === 'function') loadBewertungen();
+        if (tabName === 'vorlagen' && typeof loadVorlagen === 'function') loadVorlagen();
+        if (tabName === 'uebersicht' && typeof loadUebersicht === 'function') loadUebersicht();
+        if (tabName === 'adminvorlagen' && typeof loadAdminVorlagen === 'function') loadAdminVorlagen();
     } catch (error) {
-        console.error('❌ Fehler beim Autosave der Stärken:', error);
+        console.error('❌ Fehler beim Laden von Tab:', tabName, error);
     }
 }
 
-// Noten-Buttons generieren - UNVERÄNDERT
-function generateNotenButtons(kategorieIndex, vorhandeneNote) {
-    const noten = [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0];
-    let html = '';
-    
-    noten.forEach(note => {
-        const noteStr = note.toString().replace('.', '-');
-        const isSelected = vorhandeneNote === note ? 'selected' : '';
-        html += `<button class="note-btn note-${noteStr} ${isSelected}" 
-                       onclick="noteSetzen(${kategorieIndex}, ${note})">${note}</button>`;
-    });
-    
-    return html;
+// Fächer-Name aus Cache holen
+function getFachNameFromGlobal(fachKuerzel) {
+    return dataCache.faecher[fachKuerzel] || fachKuerzel;
 }
 
-// Note setzen - UNVERÄNDERT
-function noteSetzen(kategorieIndex, note) {
-    // Alle Buttons der Kategorie zurücksetzen
-    const kategorie = document.querySelectorAll('.kategorie')[kategorieIndex];
-    kategorie.querySelectorAll('.note-btn, .nicht-bewertet-btn').forEach(btn => {
-        btn.classList.remove('selected');
-    });
-    
-    // Neuen Button markieren
-    if (note === undefined) {
-        kategorie.querySelector('.nicht-bewertet-btn').classList.add('selected');
-    } else {
-        const noteStr = note.toString().replace('.', '-');
-        kategorie.querySelector(`.note-${noteStr}`).classList.add('selected');
-    }
-    
-    // Note speichern und Durchschnitt berechnen
-    aktuelleBewertung.noten[kategorieIndex] = note;
-    berechneDurchschnitt();
+// Alle Fächer aus Cache holen
+function getAllFaecher() {
+    return dataCache.faecher;
 }
 
-// Durchschnitt berechnen - UNVERÄNDERT
-function berechneDurchschnitt() {
-    const noten = aktuelleBewertung.noten.filter(n => n !== undefined);
-    const durchschnittElement = document.getElementById('durchschnittAnzeige');
+// Email für Firebase Key sanitieren
+function sanitizeEmail(email) {
+    return email.replace(/[.$#\[\]/]/g, '_');
+}
+
+// Timestamp generieren
+function getTimestamp() {
+    return new Date().toISOString();
+}
+
+// Deutsche Datumsformatierung
+function formatGermanDate(date = new Date()) {
+    return date.toLocaleDateString('de-DE');
+}
+
+// === DATA ACCESS FUNCTIONS ===
+
+// News aus Cache
+function getNewsFromCache() {
+    return Object.values(dataCache.news || {}).sort((a, b) => 
+        new Date(b.datum || b.timestamp) - new Date(a.datum || a.timestamp)
+    );
+}
+
+// Themen aus Cache
+function getThemenFromCache() {
+    return Object.values(dataCache.themen || {});
+}
+
+// Gruppen aus Cache
+function getGruppenFromCache() {
+    return Object.values(dataCache.gruppen || {});
+}
+
+// Bewertungen aus Cache (für aktuellen Lehrer)
+function getBewertungenFromCache() {
+    if (!currentUser) return [];
     
-    if (!durchschnittElement) return;
+    const lehrerBewertungen = dataCache.bewertungen[currentUser.email] || {};
+    return Object.values(lehrerBewertungen);
+}
+
+// Firebase Status aktualisieren
+function updateFirebaseStatus() {
+    const statusElement = document.getElementById('dbStatus');
+    const userElement = document.getElementById('dbUser');
+    const syncElement = document.getElementById('lastSync');
     
-    if (noten.length === 0) {
-        durchschnittElement.textContent = '-';
-        return;
-    }
-    
-    // Gewichteter Durchschnitt
-    let summe = 0;
-    let gewichtungSumme = 0;
-    
-    aktuelleBewertung.noten.forEach((note, index) => {
-        if (note !== undefined) {
-            const gewichtung = aktuelleVorlageForBewertung.kategorien[index].gewichtung;
-            summe += note * gewichtung;
-            gewichtungSumme += gewichtung;
+    if (statusElement) {
+        if (currentUser) {
+            statusElement.innerHTML = '🔥 Verbunden';
+            statusElement.style.color = '#27ae60';
+        } else {
+            statusElement.innerHTML = '❌ Nicht angemeldet';
+            statusElement.style.color = '#e74c3c';
         }
-    });
+    }
     
-    const durchschnitt = gewichtungSumme > 0 ? summe / gewichtungSumme : 0;
-    durchschnittElement.textContent = durchschnitt.toFixed(1);
+    if (userElement) {
+        userElement.textContent = currentUser ? currentUser.email : '-';
+    }
     
-    // Endnote automatisch setzen wenn leer
-    const endnoteInput = document.getElementById('endnote');
-    if (endnoteInput && !endnoteInput.value) {
-        endnoteInput.value = durchschnitt.toFixed(1);
+    if (syncElement) {
+        syncElement.textContent = new Date().toLocaleString('de-DE');
     }
 }
 
-// Durchschnitt übernehmen - UNVERÄNDERT
-function durchschnittUebernehmen() {
-    const durchschnitt = document.getElementById('durchschnittAnzeige')?.textContent;
-    const endnoteInput = document.getElementById('endnote');
-    
-    if (durchschnitt && durchschnitt !== '-' && endnoteInput) {
-        endnoteInput.value = durchschnitt;
-    }
-}
+// === GLOBAL VERFÜGBAR MACHEN ===
 
-// Endnote geändert - UNVERÄNDERT
-function endnoteGeaendert() {
-    // Validation könnte hier hinzugefügt werden
-    const endnoteInput = document.getElementById('endnote');
-    const value = parseFloat(endnoteInput.value);
+// Globale Funktionen für andere Module
+window.firebaseFunctions = {
+    // Data Access
+    getNewsFromCache,
+    getThemenFromCache,
+    getGruppenFromCache,
+    getBewertungenFromCache,
+    getAllFaecher,
+    getFachNameFromGlobal,
     
-    if (value && (value < 1 || value > 6)) {
-        endnoteInput.style.borderColor = '#e74c3c';
-    } else {
-        endnoteInput.style.borderColor = '#e1e8ed';
-    }
-}
-
-// Bewertung speichern - UNVERÄNDERT
-async function bewertungSpeichern() {
-    console.log('💾 Speichere Bewertung...');
+    // Utilities
+    sanitizeEmail,
+    getTimestamp,
+    formatGermanDate,
     
-    if (!window.firebaseFunctions.requireAuth()) return;
+    // Auth
+    requireAuth: () => window.authFunctions.requireAuth(),
+    requireAdmin: () => window.authFunctions.requireAdmin(),
+    isAdmin: () => window.authFunctions.isAdmin(),
+    getCurrentUserName: () => window.authFunctions.getCurrentUserName(),
     
-    const endnoteInput = document.getElementById('endnote');
-    const endnote = parseFloat(endnoteInput.value);
+    // Firebase References
+    getDatabase: () => window.database,
+    getDatabaseRef: (path) => window.firebaseDB.ref(window.database, path),
     
-    if (!endnote || endnote < 1 || endnote > 6) {
-        alert('Bitte geben Sie eine gültige Endnote (1.0-6.0) ein!');
-        endnoteInput.focus();
-        return;
-    }
-    
-    try {
-        const userEmail = window.authFunctions.getUserEmail();
-        const sanitizedEmail = window.firebaseFunctions.sanitizeEmail(userEmail);
-        
-        const bewertungData = {
-            schuelerId: aktuelleBewertung.schuelerId,
-            schuelerName: aktuelleBewertung.schuelerName,
-            thema: aktuelleBewertung.thema,
-            lehrer: window.firebaseFunctions.getCurrentUserName(),
-            vorlage: aktuelleVorlageForBewertung.name,
-            noten: [...aktuelleBewertung.noten],
-            endnote: endnote,
-            datum: window.firebaseFunctions.formatGermanDate(),
-            timestamp: window.firebaseFunctions.getTimestamp(),
-            staerken: { ...aktuelleBewertung.staerken },
-            freitext: aktuelleBewertung.freitext
-        };
-        
-        const bewertungRef = window.firebaseFunctions.getDatabaseRef(`bewertungen/${sanitizedEmail}/${aktuelleBewertung.schuelerId}`);
-        await window.firebaseDB.set(bewertungRef, bewertungData);
-        
-        // News erstellen
-        if (window.newsFunctions) {
-            await window.newsFunctions.createNewsForAction(
-                'Bewertung gespeichert', 
-                `${aktuelleBewertung.schuelerName} wurde mit ${endnote} bewertet.`
-            );
-        }
-        
-        console.log('✅ Bewertung gespeichert:', aktuelleBewertung.schuelerName, 'Note:', endnote);
-        
-        alert(`Bewertung für ${aktuelleBewertung.schuelerName} erfolgreich gespeichert!`);
-        bewertungAbbrechen();
-        
-    } catch (error) {
-        console.error('❌ Fehler beim Speichern der Bewertung:', error);
-        alert('Fehler beim Speichern der Bewertung: ' + error.message);
-    }
-}
-
-// Bewertung abbrechen - UNVERÄNDERT
-function bewertungAbbrechen() {
-    document.getElementById('bewertungsRaster').classList.add('hidden');
-    document.getElementById('bewertungsListe').classList.remove('hidden');
-    
-    aktuelleBewertung = null;
-    aktuelleVorlageForBewertung = null;
-    
-    // Bewertungsliste neu laden
-    loadBewertungen();
-}
-
-// Vorlagen System (Platzhalter) - UNVERÄNDERT
-function loadVorlagen() {
-    console.log('📋 Lade Vorlagen...');
-    // Wird später implementiert...
-}
-
-// Export für andere Module
-window.bewertungsFunctions = {
-    loadBewertungen,
-    filterBewertungen
+    // Cache Access
+    dataCache
 };
 
-console.log('✅ Firebase Bewertungs-System bereit - Korrigierte Version');
+// Window Event Listeners
+window.addEventListener('beforeunload', () => {
+    cleanupListeners();
+});
+
+console.log('✅ Firebase Main System bereit - Stabile Version');
