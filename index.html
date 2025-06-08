@@ -1,16 +1,4 @@
-<script>
-        // Toggle-Funktionalität für News
-        document.addEventListener('DOMContentLoaded', function() {
-            const zeitbegrenztToggle = document.getElementById('newsZeitbegrenzt');
-            const ablaufField = document.getElementById('newsAblauf');
-            
-            if (zeitbegrenztToggle && ablaufField) {
-                zeitbegrenztToggle.addEventListener('change', function() {
-                    ablaufField.style.display = this.checked ? 'block' : 'none';
-                });
-            }
-        });
-    </script><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
@@ -117,68 +105,6 @@
             margin-bottom: 10px;
         }
 
-        /* Modernes Toggle-Design */
-        .toggle-switch {
-            position: relative;
-            display: inline-block;
-            width: 60px;
-            height: 30px;
-        }
-
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .toggle-slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: #ccc;
-            transition: 0.3s;
-            border-radius: 30px;
-        }
-
-        .toggle-slider:before {
-            position: absolute;
-            content: "";
-            height: 22px;
-            width: 22px;
-            left: 4px;
-            bottom: 4px;
-            background: white;
-            transition: 0.3s;
-            border-radius: 50%;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-
-        input:checked + .toggle-slider {
-            background: #2196F3;
-        }
-
-        input:focus + .toggle-slider {
-            box-shadow: 0 0 1px #2196F3;
-        }
-
-        input:checked + .toggle-slider:before {
-            transform: translateX(30px);
-        }
-
-        .toggle-container {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .toggle-label {
-            font-weight: 500;
-            color: #2c3e50;
-        }
-
         @media (max-width: 768px) {
             .ausgewaehlter-schueler-item,
             .edit-schueler-item-erweitert {
@@ -257,20 +183,12 @@
                         <textarea id="newsText" placeholder="Nachrichtentext" rows="3" style="flex: 2; resize: vertical;"></textarea>
                     </div>
                     <div class="input-group">
-                        <div class="toggle-container">
-                            <span class="toggle-label">Als wichtig markieren:</span>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="newsWichtig">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-                        <div class="toggle-container">
-                            <span class="toggle-label">Zeitbegrenzt:</span>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="newsZeitbegrenzt">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
+                        <label style="display: flex; align-items: center; gap: 5px;">
+                            <input type="checkbox" id="newsWichtig"> Als wichtig markieren
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 5px;">
+                            <input type="checkbox" id="newsZeitbegrenzt"> Zeitbegrenzt
+                        </label>
                         <input type="date" id="newsAblauf" style="display: none;">
                         <button class="btn" onclick="adminNewsErstellen()">Nachricht veröffentlichen</button>
                     </div>
