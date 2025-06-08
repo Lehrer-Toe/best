@@ -12,15 +12,15 @@ async function createPDF(schuelerId) {
     // Sicherstellen, dass der Benutzer authentifiziert ist (Funktion muss in window.firebaseFunctions existieren)
     if (!window.firebaseFunctions || typeof window.firebaseFunctions.requireAuth !== 'function' || !window.firebaseFunctions.requireAuth()) {
         console.warn('Authentifizierung erforderlich oder firebaseFunctions.requireAuth nicht verfügbar.');
-        // Optional: Hier eine spezifischere Fehlermeldung oder Umleitung hinzufügen
         alert('Für diese Aktion ist eine Authentifizierung erforderlich.');
         return;
     }
 
-    // Externe Bibliotheken sicherstellen (PizZip, docxtemplater, docx-preview)
+    // Externe Bibliotheken sicherstellen (PizZip, docxtemplater)
+    // docx-preview wird nicht mehr benötigt, da wir direkt herunterladen
     try {
         await loadDocxLibraries();
-        console.log('✅ DOCX-Bibliotheken erfolgreich geladen.');
+        console.log('✅ DOCX-Bibliotheken (PizZip, docxtemplater) erfolgreich geladen.');
     } catch (libErr) {
         console.error('❌ Konnte DOCX-Bibliotheken nicht laden:', libErr);
         alert('Fehler beim Laden der erforderlichen Word-Bibliotheken. Bitte versuchen Sie es später erneut oder überprüfen Sie Ihre Internetverbindung/Ad-Blocker.');
@@ -42,12 +42,14 @@ async function createPDF(schuelerId) {
     try {
         // DOCX-Datei aus Vorlage generieren
         const docxBlob = await generateDocxFromTemplate(docxData);
-        // Generiertes DOCX im neuen Fenster anzeigen und Drucken ermöglichen
-        displayDocxPDF(docxBlob, docxData);
-        console.log('✅ PDF (DOCX-Vorschau) erfolgreich erstellt für:', bewertung.schuelerName);
+        
+        // Generiertes DOCX direkt herunterladen
+        downloadDocx(docxBlob, bewertung.schuelerName);
+        
+        console.log('✅ DOCX-Datei erfolgreich generiert und zum Download angeboten für:', bewertung.schuelerName);
     } catch (err) {
-        console.error('❌ Fehler bei der DOCX-Erstellung oder Anzeige:', err);
-        alert('Fehler beim Erstellen oder Anzeigen des PDFs. Detaillierte Fehlerinformationen finden Sie in der Browser-Konsole.');
+        console.error('❌ Fehler bei der DOCX-Erstellung oder dem Download:', err);
+        alert('Fehler beim Erstellen oder Herunterladen des Dokuments. Detaillierte Fehlerinformationen finden Sie in der Browser-Konsole.');
     }
 }
 
@@ -203,153 +205,30 @@ async function generateDocxFromTemplate(data) {
 }
 
 /**
- * Zeigt eine generierte DOCX-Datei (als Blob) in einem neuen Browserfenster an
- * und ermöglicht das Drucken. Verwendet die docx-preview Bibliothek.
+ * Bietet eine generierte DOCX-Datei (als Blob) direkt zum Download an.
  * @param {Blob} blob - Der Blob der DOCX-Datei.
- * @param {object} data - Zusätzliche Daten, z.B. für den Titel des Popup-Fensters.
+ * @param {string} schuelerName - Der Name des Schülers zur Benennung der Datei.
  */
-function displayDocxPDF(blob, data) {
-    const popup = window.open('', '_blank', 'width=800,height=1000');
-
-    // HTML-Struktur für das Popup-Fenster OHNE das docx-preview Skript im head
-    const html = `
-        <!DOCTYPE html>
-        <html lang="de">
-        <head>
-            <meta charset="UTF-8">
-            <title>${data.betreff || 'Dokument Vorschau'}</title>
-            <style>
-                body { margin:0; padding:20px; font-family:'Times New Roman', serif; }
-                .print-btn { position:fixed; top:10px; right:10px; background:#667eea; color:#fff; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; z-index:1000; }
-                @media print {
-                    .print-btn { display: none; }
-                }
-            </style>
-        </head>
-        <body>
-            <button class="print-btn" onclick="window.print()">🖨️ Drucken</button>
-            <div id="docx-container" style="width: 100%; height: auto; min-height: 800px; border: 1px solid #ddd; padding: 20px;"></div>
-        </body>
-        </html>`;
-
-    popup.document.write(html);
-    popup.document.close(); // Wichtig, um das Dokument zu schließen und das Parsen zu beenden
-
-    // docx-preview Skript dynamisch laden, NACHDEM das Popup-HTML geschrieben wurde
-    const script = popup.document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/docx-preview@0.3.5/dist/docx-preview.min.js';
-    
-    script.onload = () => {
-        // Jetzt, da das Skript geladen ist, können wir es verwenden
-        const docxPreviewOptions = {
-            className: "docx-wrapper",
-            inWrapper: true,
-            ignoreStyles: false,
-            breakPages: true,
-            debug: false
-        };
-        // Sicherstellen, dass docx und das Container-Element im Popup verfügbar sind
-        if (popup.docx && popup.document.getElementById('docx-container')) {
-            popup.docx.renderAsync(blob, popup.document.getElementById('docx-container'), null, docxPreviewOptions)
-                .then(() => console.log('DOCX-Preview erfolgreich gerendert.'))
-                .catch(err => console.error('Fehler beim Rendern des DOCX-Previews:', err));
-        } else {
-            console.error('Popup-Elemente für DOCX-Preview nicht bereit oder docx-Preview-Objekt fehlt.');
-        }
-    };
-    
-    script.onerror = (err) => {
-        console.error('Fehler beim Laden von docx-preview.min.js im Popup:', err);
-        alert('Fehler beim Laden der DOCX-Vorschau. Bitte versuchen Sie es erneut.');
-    };
-    
-    // Das Skript zum Head des Popup-Dokuments hinzufügen
-    popup.document.head.appendChild(script);
-}
-
-/**
- * Bereitet die Daten für die DOCX-Vorlage vor.
- * Enthält Logik zur Formatierung von Stärken und Freitext.
- * @param {object} bewertung - Das Bewertungsobjekt des Schülers.
- * @returns {object} Ein Objekt mit vorbereiteten Daten für die DOCX-Vorlage.
- */
-function generateDocxData(bewertung) {
-    const briefvorlage = window.firebaseFunctions.dataCache.briefvorlage;
-    const staerkenFormulierungen = window.firebaseFunctions.dataCache.staerkenFormulierungen;
-    const bewertungsCheckpoints = window.firebaseFunctions.dataCache.bewertungsCheckpoints;
-
-    const defaultBriefvorlage = {
-        anrede: 'Liebe/r [NAME],\n\nim Rahmen des Projekts "Zeig, was du kannst!" hast du folgende Stärken gezeigt:',
-        schluss: 'Wir gratulieren dir zu diesen Leistungen und freuen uns auf weitere erfolgreiche Projekte.\n\nMit freundlichen Grüßen\nDein Lehrerteam'
-    };
-
-    const vorlage = briefvorlage || defaultBriefvorlage;
-
-    const anrede = ersetzePlatzhalter(vorlage.anrede, bewertung.schuelerName);
-    const grussformel = ersetzePlatzhalter(vorlage.schluss, bewertung.schuelerName);
-
-    let textbox = ''; // Dies wird der Haupttextbereich in der DOCX-Vorlage
-    const saetze = [];
-
-    Object.keys(bewertung.staerken).forEach(kategorie => {
-        const aktivierte = bewertung.staerken[kategorie];
-        if (aktivierte && aktivierte.length > 0) {
-            aktivierte.forEach(index => {
-                const key = `${kategorie}_${index}`;
-                let formulierung = staerkenFormulierungen ? staerkenFormulierungen[key] : null;
-                if (!formulierung) {
-                    if (bewertungsCheckpoints && bewertungsCheckpoints[kategorie] && bewertungsCheckpoints[kategorie][index]) {
-                        formulierung = bewertungsCheckpoints[kategorie][index];
-                    } else {
-                        formulierung = `Du zeigst Stärken im Bereich ${kategorie}`;
-                    }
-                }
-
-                if (formulierung) {
-                    let satz = ersetzePlatzhalter(formulierung, bewertung.schuelerName);
-                    if (!satz.endsWith('.') && !satz.endsWith('!') && !satz.endsWith('?')) {
-                        satz += '.';
-                    }
-                    saetze.push(satz);
-                }
-            });
-        }
-    });
-
-    if (saetze.length > 0) {
-        // Trennen der Sätze mit Linebreaks für die DOCX-Textbox
-        textbox += saetze.join('\n') + '\n\n';
-    }
-
-    if (bewertung.freitext) {
-        const formatierterFreitext = ersetzePlatzhalter(bewertung.freitext, bewertung.schuelerName);
-        textbox += formatierterFreitext + '\n\n';
-    }
-
-    textbox += `Gesamtnote: ${bewertung.endnote}`;
-
-    // Rückgabe der Daten, die in die DOCX-Vorlage eingefügt werden sollen
-    return {
-        betreff: `Projektbewertung - ${bewertung.schuelerName}`,
-        anrede,
-        textbox,
-        grussformel,
-        datum: window.firebaseFunctions.formatGermanDate(),
-        thema: bewertung.thema,
-        lehrer: bewertung.lehrer,
-        schueler: bewertung.schuelerName
-    };
+function downloadDocx(blob, schuelerName) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    // Dateiname formatieren (z.B. "Bewertung_Max_Mustermann.docx")
+    a.download = `Bewertung_${schuelerName.replace(/ /g, '_')}.docx`; // Leerzeichen durch Unterstriche ersetzen
+    document.body.appendChild(a); // Element dem DOM hinzufügen (kurzzeitig)
+    a.click(); // Klick simulieren, um den Download auszulösen
+    document.body.removeChild(a); // Element wieder entfernen
+    URL.revokeObjectURL(url); // URL-Objekt freigeben, um Speicherlecks zu vermeiden
+    console.log(`DOCX-Datei "${a.download}" zum Download angeboten.`);
 }
 
 
-// WICHTIG: Die Funktion `displayPDF` wird nicht mehr direkt von `createPDF` aufgerufen,
-// da `createPDF` jetzt `displayDocxPDF` verwendet.
-// `displayPDF` ist nur noch für den Fall nützlich, dass du eine HTML-basierte PDF-Vorschau
-// (nicht basierend auf der DOCX-Vorlage) anzeigen möchtest.
-// Ich lasse sie hier, da sie Teil deines ursprünglichen Codes war.
+// WICHTIG: Die Funktion `displayPDF` ist nur noch für den Fall nützlich,
+// dass du eine HTML-basierte PDF-Vorschau (nicht basierend auf der DOCX-Vorlage)
+// anzeigen möchtest.
 /**
  * Zeigt einen PDF-Inhalt in einem neuen Fenster an, mit Briefkopf und Formatierung.
- * Diese Funktion ist für eine HTML-basierte PDF-Vorschau, nicht für DOCX-generierte PDFs.
+ * Diese Funktion ist für eine HTML-basierte PDF-Vorschau.
  * @param {object} content - Der Inhalt des PDFs (Titel, Inhaltstext, etc.).
  * @param {string} schuelerName - Der Name des Schülers zur Personalisierung.
  */
@@ -672,10 +551,8 @@ function loadDocxLibraries() {
     if (typeof window.docxtemplater === 'undefined') {
         tasks.push(add('https://cdnjs.cloudflare.com/ajax/libs/docxtemplater/3.37.2/docxtemplater.min.js'));
     }
-    // docx-preview wird jetzt nicht mehr hier geladen, sondern dynamisch im Popup selbst
-    // if (typeof window.docx === 'undefined') {
-    //     tasks.push(add('https://cdn.jsdelivr.net/npm/docx-preview@0.3.5/dist/docx-preview.min.js'));
-    // }
+    // docx-preview wird nicht mehr benötigt und nicht mehr hier geladen.
+    // Es gab auch keine Probleme mit dem Laden von docxtemplater und PizZip im Hauptfenster.
 
     return Promise.all(tasks);
 }
@@ -739,12 +616,12 @@ window.pdfFunctions = {
     createPDF,
     updatePDFButtonStatus,
     updateAllPDFButtons,
-    // Falls displayPDF noch extern genutzt werden soll
+    // displayPDF bleibt, falls du es für andere Zwecke brauchst, aber es wird nicht mehr von createPDF verwendet
     displayPDF, 
     // Intern genutzte Funktionen können auch bei Bedarf exportiert werden
     generateDocxData,
     generateDocxFromTemplate,
-    displayDocxPDF
+    downloadDocx // downloadDocx ist jetzt die öffentliche Funktion
 };
 
 console.log('✅ Firebase PDF System bereit');
