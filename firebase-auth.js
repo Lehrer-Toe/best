@@ -1,4 +1,3 @@
-
 let currentUser = null;
 let firebaseUser = null;
 // Aktuellen Benutzer auch im globalen Window verfügbar machen,
@@ -20,6 +19,10 @@ function initializeAuth() {
             window.currentUser = null;
             stopAutoLogoutTimer();
             showLoginScreen();
+            // Beim Logout auch den Toggle verstecken
+            if (typeof window.showGroupCreationToggleIfAuthorized === 'function') {
+                window.showGroupCreationToggleIfAuthorized(false);
+            }
         }
     });
     
@@ -92,6 +95,14 @@ async function handleAuthenticatedUser(firebaseUser) {
             showApp();
             
             startAutoLogoutTimer();
+
+            // === WICHTIG: Hier wird die Sichtbarkeit des Toggles gesteuert ===
+            // Wenn der Benutzer Admin oder Lehrer ist, zeige den Toggle an.
+            const isAuthorizedForGroupCreation = currentUser.role === 'admin' || currentUser.role === 'lehrer';
+            if (typeof window.showGroupCreationToggleIfAuthorized === 'function') {
+                window.showGroupCreationToggleIfAuthorized(isAuthorizedForGroupCreation);
+            }
+            // ================================================================
             
         } else {
             showError('Benutzer nicht berechtigt. Bitte kontaktieren Sie den Administrator.');
@@ -207,6 +218,11 @@ async function firebaseLogout() {
         
         hideAllTabs();
         showLoginScreen();
+
+        // Beim Logout auch den Toggle für Gruppenerstellung verstecken
+        if (typeof window.showGroupCreationToggleIfAuthorized === 'function') {
+            window.showGroupCreationToggleIfAuthorized(false);
+        }
         
     } catch (error) {
         showError('Fehler beim Abmelden!');
@@ -329,6 +345,14 @@ function updateFirebaseStatus() {
     }
 }
 
+// Neue Funktion für die Berechtigungsprüfung des Gruppen-Toggles
+function checkGruppenAnlegenBerechtigung() {
+    if (typeof window.showGroupCreationToggleIfAuthorized === 'function') {
+        const isAuthorized = currentUser && (currentUser.role === 'admin' || currentUser.role === 'lehrer');
+        window.showGroupCreationToggleIfAuthorized(isAuthorized);
+    }
+}
+
 document.addEventListener('click', resetAutoLogoutTimer);
 document.addEventListener('keypress', resetAutoLogoutTimer);
 document.addEventListener('scroll', resetAutoLogoutTimer);
@@ -342,6 +366,6 @@ window.authFunctions = {
     getUserUid,
     getUserEmail,
     sanitizeEmail,
-    updateFirebaseStatus
+    updateFirebaseStatus,
+    checkGruppenAnlegenBerechtigung // Neu hinzugefügt
 };
-
