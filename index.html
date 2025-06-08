@@ -106,7 +106,7 @@
 
         /* Toggle-Switch Styles */
         .toggle-container {
-            display: flex;
+            display: flex; /* Dies ist der Standard für ein Flex-Container. Wird durch inline-style überschrieben. */
             align-items: center;
             justify-content: space-between;
             margin-bottom: 20px;
@@ -683,8 +683,6 @@
 
             console.log('🔥 Firebase v9 erfolgreich initialisiert');
             
-            // Firebase Status anzeigen
-            
             // Firebase initialisieren und dann App starten
             if (typeof window.initializeFirebaseApp === 'function') {
                 window.initializeFirebaseApp();
@@ -720,37 +718,28 @@
             const bereich = document.getElementById('gruppenErstellungBereich');
             
             if (toggle.checked) {
-                bereich.classList.add('active');
+                bereich.classList.add('active'); // Macht den Bereich sichtbar und interaktiv
             } else {
-                bereich.classList.remove('active');
+                bereich.classList.remove('active'); // Macht den Bereich halb-transparent und nicht interaktiv
             }
         }
 
-        // Diese Funktion sollte aufgerufen werden, nachdem der Berechtigungsstatus des Benutzers ermittelt wurde
-        // (z.B. nach erfolgreichem Login und Laden der Benutzerrolle aus Firebase).
-        // Für Demonstrationszwecke ist hier eine isUserAuthorized Variable angenommen.
-        window.showGroupCreationToggleIfAuthorized = function(isUserAuthorized) {
+        /**
+         * Steuert die Sichtbarkeit des Toggles für die Gruppenerstellung basierend auf der Berechtigung.
+         * Diese Funktion wird von firebase-auth.js aufgerufen, nachdem der Benutzer angemeldet ist
+         * und seine Rolle bekannt ist.
+         * @param {boolean} isAuthorized - True, wenn der Benutzer berechtigt ist, den Toggle zu sehen, sonst false.
+         */
+        window.showGroupCreationToggleIfAuthorized = function(isAuthorized) {
             const toggleContainer = document.getElementById('gruppenToggleContainer');
             if (toggleContainer) {
-                if (isUserAuthorized) {
-                    toggleContainer.style.display = 'flex'; 
+                if (isAuthorized) {
+                    toggleContainer.style.display = 'flex'; // Macht den Toggle-Container sichtbar
                 } else {
-                    toggleContainer.style.display = 'none';
+                    toggleContainer.style.display = 'none'; // Macht den Toggle-Container unsichtbar
                 }
             }
         };
-
-        // Beispielaufruf, der in einer realen Anwendung durch die Authentifizierungslogik ausgelöst werden sollte:
-        // onAuthStateChanged(auth, (user) => {
-        //   if (user) {
-        //     // Annahme: Benutzerrollen werden aus Firestore oder Realtime Database geladen
-        //     // und in 'isUserAuthorizedForGroupCreation' gespeichert.
-        //     // Beispiel: const userIsAdmin = checkUserRole(user.uid); 
-        //     // showGroupCreationToggleIfAuthorized(userIsAdmin); 
-        //   } else {
-        //     showGroupCreationToggleIfAuthorized(false); // Benutzer ist abgemeldet
-        //   }
-        // });
     </script>
 </body>
 </html>
