@@ -1,5 +1,5 @@
-// Firebase Gruppen-System - Realtime Database mit Klassen-Integration
-console.log('👥 Firebase Gruppen-System geladen (mit Klassen-Integration)');
+// Firebase Gruppen-System - Realtime Database mit Klassen-Integration und Berechtigungen
+console.log('👥 Firebase Gruppen-System geladen (mit Berechtigungsprüfung)');
 
 // Globale Variablen für Gruppenbearbeitung
 let aktuelleGruppeEdit = null;
@@ -10,6 +10,9 @@ function loadGruppen() {
     console.log('👥 Lade Gruppen von Firebase...');
     
     if (!window.firebaseFunctions.requireAuth()) return;
+    
+    // Berechtigungen prüfen und UI anpassen
+    checkGruppenAnlegenBerechtigung();
     
     const liste = document.getElementById('gruppenListe');
     if (!liste) return;
@@ -61,91 +64,111 @@ function loadGruppen() {
     // Klassen-Auswahl für neue Gruppen aktualisieren
     updateKlassenauswahlForGruppen();
     
-    // UI-Elemente basierend auf Berechtigungen anzeigen/verstecken
-    checkGruppenAnlegenBerechtigung();
-    
     console.log('👥 Gruppen geladen:', meineGruppen.length, 'für aktuellen Benutzer');
 }
 
-// Prüfen und Aktualisieren der UI-Berechtigung zum Erstellen von Gruppen
+// Berechtigungsprüfung für Gruppen anlegen
 async function checkGruppenAnlegenBerechtigung() {
-    // Prüfe und aktualisiere die UI basierend auf der Berechtigung
-    try {
-        const darfGruppenAnlegen = await kannLehrerGruppenAnlegen();
-        console.log('🔒 Berechtigung zum Gruppen anlegen:', darfGruppenAnlegen);
-        
-        // Finde die Karte zum Erstellen neuer Gruppen
-        const gruppenTab = document.getElementById('gruppen');
-        if (!gruppenTab) return;
-        
-        const erstellenKarte = gruppenTab.querySelector('.card');
-        if (!erstellenKarte) return;
-        
-        // Finde oder erstelle den Berechtigungshinweis
-        let berechtigungsHinweis = document.getElementById('gruppenAnlegenHinweis');
-        if (!berechtigungsHinweis) {
-            berechtigungsHinweis = document.createElement('div');
-            berechtigungsHinweis.id = 'gruppenAnlegenHinweis';
-            berechtigungsHinweis.className = 'card';
-            berechtigungsHinweis.style.backgroundColor = '#fef2f2';
-            berechtigungsHinweis.style.borderLeft = '4px solid #e74c3c';
-            berechtigungsHinweis.innerHTML = `
-                <h3 style="color: #e74c3c;">Keine Berechtigung</h3>
-                <p>Sie haben keine Berechtigung, neue Gruppen anzulegen. Bitte wenden Sie sich an einen Administrator.</p>
-            `;
-            // Füge den Hinweis vor der Erstellenkarte ein
-            erstellenKarte.parentNode.insertBefore(berechtigungsHinweis, erstellenKarte);
-        }
-        
-        // Aktualisiere die Sichtbarkeit basierend auf der Berechtigung
-        if (darfGruppenAnlegen) {
-            erstellenKarte.style.display = 'block';
-            berechtigungsHinweis.style.display = 'none';
-            console.log('✅ UI für Gruppenanlegen aktiviert');
-        } else {
-            erstellenKarte.style.display = 'none';
-            berechtigungsHinweis.style.display = 'block';
-            console.log('❌ UI für Gruppenanlegen deaktiviert');
-        }
-    } catch (error) {
-        console.error('❌ Fehler bei der Berechtigungsprüfung:', error);
-    }
-}
-
-// Prüfen ob Lehrer Gruppen anlegen darf
-async function kannLehrerGruppenAnlegen() {
-    // Admins können immer Gruppen anlegen
-    if (window.firebaseFunctions.isAdmin()) {
-        return true;
-    }
+    console.log('🔐 Prüfe Berechtigung zum Anlegen von Gruppen...');
     
     try {
-        // Hole die Benutzerinformationen direkt aus der Datenbank
-        const userEmail = window.authFunctions.getUserEmail();
-        if (!userEmail) return false;
+        // Admin hat immer Berechtigung
+        if (window.firebaseFunctions.isAdmin()) {
+            console.log('✅ Admin - volle Berechtigung');
+            showGruppenAnlegenUI(true);
+            return true;
+        }
         
+        // Für Lehrer: Berechtigung aus Firebase prüfen
+        const currentUser = window.currentUser;
+        if (!currentUser || currentUser.role !== 'lehrer') {
+            console.log('❌ Kein Lehrer eingeloggt');
+            showGruppenAnlegenUI(false);
+            return false;
+        }
+        
+        // Benutzer-Daten aus Firebase laden
+        const userEmail = window.authFunctions.getUserEmail();
         const sanitizedEmail = window.firebaseFunctions.sanitizeEmail(userEmail);
         const userRef = window.firebaseFunctions.getDatabaseRef(`users/${sanitizedEmail}`);
         const snapshot = await window.firebaseDB.get(userRef);
         
-        if (snapshot.exists()) {
-            const userData = snapshot.val();
-            console.log('👤 Benutzer-Daten für Berechtigung:', userData);
-            
-            // Wenn die Eigenschaft explizit auf false gesetzt ist, keine Berechtigung
-            if (userData.kannGruppenAnlegen === false) {
-                return false;
-            }
-            
-            // Standardmäßig dürfen Lehrer Gruppen anlegen
-            return true;
-        } else {
-            console.warn('⚠️ Benutzer nicht in der Datenbank gefunden');
+        if (!snapshot.exists()) {
+            console.log('❌ Benutzerdaten nicht gefunden');
+            showGruppenAnlegenUI(false);
             return false;
         }
+        
+        const userData = snapshot.val();
+        const kannGruppenAnlegen = userData.berechtigungen?.kannGruppenAnlegen !== false;
+        
+        console.log('🔐 Berechtigung zum Gruppen anlegen:', kannGruppenAnlegen);
+        showGruppenAnlegenUI(kannGruppenAnlegen);
+        
+        return kannGruppenAnlegen;
+        
     } catch (error) {
-        console.error('❌ Fehler beim Prüfen der Gruppenanlagen-Berechtigung:', error);
+        console.error('❌ Fehler bei Berechtigungsprüfung:', error);
+        // Im Fehlerfall: Sicherheitshalber verbieten
+        showGruppenAnlegenUI(false);
         return false;
+    }
+}
+
+// UI für Gruppen anlegen anzeigen/verstecken
+function showGruppenAnlegenUI(berechtigt) {
+    console.log('🎨 Aktualisiere Gruppen-UI, berechtigt:', berechtigt);
+    
+    try {
+        // Suche die Card mit der Gruppenanlage
+        const cards = document.querySelectorAll('#gruppen .card');
+        let gruppenAnlegenCard = null;
+        
+        cards.forEach(card => {
+            const h3 = card.querySelector('h3');
+            if (h3 && h3.textContent === 'Neue Gruppe anlegen') {
+                gruppenAnlegenCard = card;
+            }
+        });
+        
+        if (gruppenAnlegenCard) {
+            if (berechtigt) {
+                // Zeige normale UI
+                gruppenAnlegenCard.style.display = 'block';
+                console.log('✅ Gruppen-Anlegen UI angezeigt');
+            } else {
+                // Verstecke UI und zeige Hinweis
+                gruppenAnlegenCard.style.display = 'none';
+                
+                // Prüfe ob Hinweis schon existiert
+                if (!document.getElementById('keineGruppenBerechtigung')) {
+                    const hinweis = document.createElement('div');
+                    hinweis.id = 'keineGruppenBerechtigung';
+                    hinweis.className = 'card';
+                    hinweis.style.background = '#fff3cd';
+                    hinweis.style.border = '1px solid #ffeaa7';
+                    hinweis.innerHTML = `
+                        <h3 style="color: #856404;">🚫 Keine Berechtigung</h3>
+                        <p style="color: #856404;">
+                            Sie haben keine Berechtigung, neue Gruppen anzulegen. 
+                            Bitte wenden Sie sich an Ihren Administrator, wenn Sie diese Funktion benötigen.
+                        </p>
+                    `;
+                    
+                    // Füge Hinweis vor der Gruppenliste ein
+                    const gruppenListe = document.getElementById('gruppenListe');
+                    if (gruppenListe && gruppenListe.parentNode) {
+                        gruppenListe.parentNode.insertBefore(hinweis, gruppenListe);
+                    }
+                }
+                console.log('⚠️ Hinweis angezeigt: Keine Berechtigung');
+            }
+        } else {
+            console.warn('⚠️ Gruppen-Anlegen Card nicht gefunden');
+        }
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Aktualisieren der UI:', error);
     }
 }
 
@@ -413,10 +436,11 @@ async function gruppeErstellen() {
     
     if (!window.firebaseFunctions.requireAuth()) return;
     
-    // Berechtigung prüfen
-    const darfGruppenAnlegen = await kannLehrerGruppenAnlegen();
+    // Berechtigungsprüfung
+    const darfGruppenAnlegen = await checkGruppenAnlegenBerechtigung();
     if (!darfGruppenAnlegen) {
-        alert('Sie haben keine Berechtigung, neue Gruppen anzulegen. Bitte wenden Sie sich an einen Administrator.');
+        alert('Sie haben keine Berechtigung, neue Gruppen anzulegen.');
+        console.log('❌ Gruppenerstellung abgebrochen - keine Berechtigung');
         return;
     }
     
@@ -758,8 +782,7 @@ function getGruppenForUser() {
 window.gruppenFunctions = {
     getGruppenForUser,
     updateKlassenauswahlForGruppen,
-    kannLehrerGruppenAnlegen,
     checkGruppenAnlegenBerechtigung
 };
 
-console.log('✅ Firebase Gruppen-System bereit (mit Klassen-Integration)');
+console.log('✅ Firebase Gruppen-System bereit (mit Berechtigungsprüfung)');
