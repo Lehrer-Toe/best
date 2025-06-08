@@ -132,13 +132,13 @@ function showGruppenAnlegenUI(berechtigt) {
         });
         
         if (gruppenAnlegenCard) {
-            // Toggle-Button holen
-            const toggleBtn = document.getElementById('gruppenToggleBtn');
+            // Container für den Toggle holen
+            const toggleContainer = document.getElementById('gruppenToggleContainer');
 
             if (berechtigt) {
                 // Zeige normale UI
                 gruppenAnlegenCard.style.display = 'block';
-                if (toggleBtn) toggleBtn.style.display = '';
+                if (toggleContainer) toggleContainer.style.display = 'flex';
 
                 // Eventuellen Hinweis entfernen
                 const hinweis = document.getElementById('keineGruppenBerechtigung');
@@ -148,10 +148,10 @@ function showGruppenAnlegenUI(berechtigt) {
             } else {
                 // Verstecke UI und Toggle-Button
                 gruppenAnlegenCard.style.display = 'none';
-                if (toggleBtn) toggleBtn.style.display = 'none';
+                if (toggleContainer) toggleContainer.style.display = 'none';
 
                 // Bereich sicher schließen
-                const bereich = document.getElementById('gruppenErstellenBereich');
+                const bereich = document.getElementById('gruppenErstellungBereich');
                 if (bereich) bereich.classList.remove('active');
 
                 // Hinweis entfernen, falls vorhanden
