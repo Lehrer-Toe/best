@@ -655,7 +655,8 @@ function loadDocxLibraries() {
     const tasks = [];
     // Überprüfen, ob PizZip bereits geladen ist
     if (typeof window.PizZip === 'undefined') {
-        tasks.push(add('https://cdnjs.cloudflare.com/ajax/libs/pizzip/3.2.5/pizzip.min.js'));
+        // KORRIGIERTER LINK AUF VERSION 3.2.0 VON JSDELIVR
+        tasks.push(add('https://cdn.jsdelivr.net/npm/pizzip@3.2.0/dist/pizzip.min.js'));
     }
     // Überprüfen, ob docxtemplater bereits geladen ist
     if (typeof window.docxtemplater === 'undefined') {
