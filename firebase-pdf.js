@@ -7,6 +7,15 @@ async function createPDF(schuelerId) {
 
     if (!window.firebaseFunctions.requireAuth()) return;
 
+    // Externe Bibliotheken sicherstellen
+    try {
+        await loadDocxLibraries();
+    } catch (libErr) {
+        console.error('❌ Konnte DOCX-Bibliotheken nicht laden:', libErr);
+        alert('Fehler beim Laden der Word-Bibliotheken.');
+        return;
+    }
+
     // Bewertung aus Cache finden
     const bewertungen = window.firebaseFunctions.getBewertungenFromCache();
     const bewertung = bewertungen.find(b => b.schuelerId === schuelerId);
@@ -21,6 +30,7 @@ async function createPDF(schuelerId) {
 
     try {
         const docxBlob = await generateDocxFromTemplate(docxData);
+        // Hier wird die displayDocxPDF Funktion aufgerufen, die den DOCX-Blob rendert
         displayDocxPDF(docxBlob, docxData);
         console.log('✅ PDF erstellt für:', bewertung.schuelerName);
     } catch (err) {
@@ -423,11 +433,9 @@ function displayPDF(content, schuelerName) {
             <button class="print-btn" onclick="window.print()">🖨️ Drucken</button>
             
             <div class="briefkopf">
-                <!-- Briefkopf-Bild -->
                 <img src="./briefkopf.png" alt="Briefkopf" class="briefkopf-bild" 
-                     onerror="this.style.display='none'; document.getElementById('briefkopf-fallback').style.display='block';">
+                    onerror="this.style.display='none'; document.getElementById('briefkopf-fallback').style.display='block';">
                 
-                <!-- Fallback falls Bild nicht geladen werden kann -->
                 <div id="briefkopf-fallback" class="briefkopf-fallback" style="display: none;">
                     <div class="briefkopf-logo-fallback">
                         <span>🎺</span>
@@ -521,6 +529,34 @@ function formatPDFContent(text, schuelerName) {
     });
     
     return formatted;
+}
+
+// Benötigte DOCX-Bibliotheken dynamisch laden
+function loadDocxLibraries() {
+    const head = document.head || document.getElementsByTagName('head')[0];
+
+    function add(src) {
+        return new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = src;
+            s.onload = resolve;
+            s.onerror = () => reject(new Error('Script failed: ' + src));
+            head.appendChild(s);
+        });
+    }
+
+    const tasks = [];
+    if (typeof window.PizZip === 'undefined') {
+        tasks.push(add('https://cdnjs.cloudflare.com/ajax/libs/pizzip/3.2.5/pizzip.min.js'));
+    }
+    if (typeof window.docxtemplater === 'undefined') {
+        tasks.push(add('https://cdnjs.cloudflare.com/ajax/libs/docxtemplater/3.37.2/docxtemplater.min.js'));
+    }
+    if (typeof window.docx === 'undefined') {
+        tasks.push(add('https://cdn.jsdelivr.net/npm/docx-preview@0.3.5/dist/docx-preview.min.js'));
+    }
+
+    return Promise.all(tasks);
 }
 
 // PDF-Button Status prüfen
