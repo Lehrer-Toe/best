@@ -500,7 +500,13 @@ function openTab(tabName, evt) {
     try {
         if (tabName === 'news') loadNews();
         if (tabName === 'themen') loadThemen();
-        if (tabName === 'gruppen') loadGruppen();
+        if (tabName === 'gruppen') {
+            loadGruppen();
+            // Berechtigungsprüfung für Gruppen-Tab
+            if (window.gruppenFunctions && window.gruppenFunctions.checkGruppenAnlegenBerechtigung) {
+                window.gruppenFunctions.checkGruppenAnlegenBerechtigung();
+            }
+        }
         if (tabName === 'lehrer') loadLehrer();
         if (tabName === 'daten') loadDatenverwaltung();
         if (tabName === 'bewerten') loadBewertungen();
