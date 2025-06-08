@@ -136,9 +136,9 @@ function showGruppenAnlegenUI(berechtigt) {
             const toggleBtn = document.getElementById('gruppenToggleBtn');
 
             if (berechtigt) {
-                // Zeige normale UI
+                // Zeige normale UI und Toggle-Button
                 gruppenAnlegenCard.style.display = 'block';
-                if (toggleBtn) toggleBtn.style.display = '';
+                if (toggleBtn) toggleBtn.style.display = 'flex';
 
                 // Eventuellen Hinweis entfernen
                 const hinweis = document.getElementById('keineGruppenBerechtigung');
