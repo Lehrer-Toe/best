@@ -510,7 +510,7 @@ function loadLehrer() {
     loadLehrerListe();
 }
 
-// Lehrer-Liste laden (ERWEITERT mit Gruppen-Berechtigung)
+// Lehrer-Liste laden
 async function loadLehrerListe() {
     try {
         const usersRef = window.firebaseFunctions.getDatabaseRef('users');
@@ -526,24 +526,24 @@ async function loadLehrerListe() {
             
             Object.entries(users).forEach(([key, user]) => {
                 if (user.role === 'lehrer') {
-                    // Standard: kann Gruppen anlegen (true)
-                    const kannGruppenAnlegen = user.kannGruppenAnlegen !== false;
-                    const checkboxChecked = kannGruppenAnlegen ? 'checked' : '';
+                    const kannGruppenAnlegen = user.berechtigungen?.kannGruppenAnlegen !== false;
+                    const berechtigungIcon = kannGruppenAnlegen ? '✅' : '🚫';
+                    const berechtigungText = kannGruppenAnlegen ? 'Kann Gruppen anlegen' : 'Keine Gruppenberechtigung';
                     
                     html += `
                         <div class="liste-item">
                             <div>
                                 <strong>${user.name}</strong><br>
                                 <small>E-Mail: ${user.email}</small><br>
-                                <label style="margin-top: 10px; cursor: pointer;">
-                                    <input type="checkbox" 
-                                           ${checkboxChecked}
-                                           onchange="toggleGruppenBerechtigung('${key}', this.checked)"
-                                           style="margin-right: 5px;">
-                                    Kann Gruppen anlegen
-                                </label>
+                                <small style="color: ${kannGruppenAnlegen ? '#27ae60' : '#e74c3c'}">
+                                    ${berechtigungIcon} ${berechtigungText}
+                                </small>
                             </div>
                             <div>
+                                <button class="btn ${kannGruppenAnlegen ? 'btn-danger' : 'btn-success'}" 
+                                        onclick="toggleGruppenBerechtigung('${key}', ${!kannGruppenAnlegen})">
+                                    ${kannGruppenAnlegen ? 'Berechtigung entziehen' : 'Berechtigung erteilen'}
+                                </button>
                                 <button class="btn btn-danger" onclick="lehrerLoeschen('${key}', '${user.name}')">Löschen</button>
                             </div>
                         </div>
@@ -567,42 +567,51 @@ async function loadLehrerListe() {
     }
 }
 
-// Gruppen-Berechtigung für Lehrer umschalten
-async function toggleGruppenBerechtigung(userKey, kannGruppenAnlegen) {
-    console.log('🔄 Ändere Gruppen-Berechtigung:', userKey, kannGruppenAnlegen);
-    
+// Gruppenberechtigung togglen
+async function toggleGruppenBerechtigung(userKey, berechtigung) {
     if (!window.firebaseFunctions.requireAdmin()) return;
     
     try {
-        const userRef = window.firebaseFunctions.getDatabaseRef(`users/${userKey}/kannGruppenAnlegen`);
-        await window.firebaseDB.set(userRef, kannGruppenAnlegen);
+        const userRef = window.firebaseFunctions.getDatabaseRef(`users/${userKey}`);
+        const snapshot = await window.firebaseDB.get(userRef);
         
-        // Cache aktualisieren wenn verfügbar
-        if (window.firebaseFunctions.dataCache.users && window.firebaseFunctions.dataCache.users[userKey]) {
-            window.firebaseFunctions.dataCache.users[userKey].kannGruppenAnlegen = kannGruppenAnlegen;
+        if (!snapshot.exists()) {
+            alert('Benutzer nicht gefunden!');
+            return;
         }
         
-        // News erstellen
-        const usersRef = window.firebaseFunctions.getDatabaseRef(`users/${userKey}`);
-        const userSnapshot = await window.firebaseDB.get(usersRef);
-        const userName = userSnapshot.exists() ? userSnapshot.val().name : 'Unbekannt';
+        const userData = snapshot.val();
         
+        // Berechtigungen aktualisieren
+        const updatedUser = {
+            ...userData,
+            berechtigungen: {
+                ...(userData.berechtigungen || {}),
+                kannGruppenAnlegen: berechtigung
+            }
+        };
+        
+        await window.firebaseDB.set(userRef, updatedUser);
+        
+        // News erstellen
         if (window.newsFunctions) {
-            const aktion = kannGruppenAnlegen ? 'kann jetzt Gruppen anlegen' : 'kann keine Gruppen mehr anlegen';
+            const aktion = berechtigung ? 'erteilt' : 'entzogen';
             await window.newsFunctions.createNewsForAction(
                 'Berechtigung geändert', 
-                `${userName} ${aktion}.`,
-                true
+                `${userData.name} wurde die Berechtigung zum Anlegen von Gruppen ${aktion}.`,
+                true,
+                userData.name // Direkt an den betroffenen Lehrer
             );
         }
         
-        console.log('✅ Gruppen-Berechtigung geändert für:', userName);
+        console.log(`✅ Gruppenberechtigung für ${userData.name} geändert:`, berechtigung);
+        
+        // Liste neu laden
+        loadLehrerListe();
         
     } catch (error) {
         console.error('❌ Fehler beim Ändern der Berechtigung:', error);
         alert('Fehler beim Ändern der Berechtigung: ' + error.message);
-        // Checkbox zurücksetzen
-        loadLehrerListe();
     }
 }
 
