@@ -163,7 +163,7 @@
             <div class="tab-nav">
                 <button class="tab-btn active" onclick="openTab('news')" id="newsTab">News</button>
                 <button class="tab-btn" onclick="openTab('themen')" id="themenTab">Themen</button>
-                <button class="tab-btn" onclick="openTab('gruppen')" id="gruppenTab">Gruppen erstellen</button>
+                <button class="tab-btn" onclick="openTab('gruppen')" id="gruppenTab">Gruppen verwalten</button>
                 <button class="tab-btn" onclick="openTab('klassen')" id="klassenTab" style="display:none;">Klassen verwalten</button>
                 <button class="tab-btn" onclick="openTab('lehrer')" id="lehrerTab">Lehrer verwalten</button>
                 <button class="tab-btn" onclick="openTab('daten')" id="datenTab">Datenverwaltung</button>
@@ -204,10 +204,9 @@
                 <div class="card">
                     <h3>Neues Thema vorschlagen</h3>
                     <div class="input-group">
-    <input type="text" id="neuesThema" placeholder="Thema eingeben...">
-    <button class="btn btn-success" onclick="themaHinzufuegen()">Fächer auswählen & Thema erstellen</button>
-    <button class="btn" id="themenEditButton" onclick="toggleThemenEditMode()">✏️ Themen bearbeiten</button>
-</div>
+                        <input type="text" id="neuesThema" placeholder="Thema eingeben...">
+                        <button class="btn btn-success" onclick="themaHinzufuegen()">Fächer auswählen & Thema erstellen</button>
+                    </div>
                 </div>
                 <div class="filter-section">
                     <div class="filter-group">
@@ -225,7 +224,7 @@
 
             <!-- Gruppen Tab -->
             <div id="gruppen" class="tab-content">
-                <h2>Gruppen erstellen</h2>
+                <h2>Gruppen verwalten</h2>
                 <div class="card">
                     <h3>Neue Gruppe anlegen</h3>
                     <div class="input-group">
