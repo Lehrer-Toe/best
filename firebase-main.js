@@ -289,7 +289,7 @@ async function loadBewertungsCheckpoints() {
         dataCache.bewertungsCheckpoints = {
             "Fachliches Arbeiten": ["Du arbeitest konzentriert"],
             "Zusammenarbeit": ["Du arbeitest gut im Team"],
-            "Kommunikation": ["Du drückst dich klar aus"]
+            "Kommunikation": ["Du drückt dich klar aus"]
         };
     }
 }
@@ -503,8 +503,8 @@ function openTab(tabName, evt) {
         if (tabName === 'gruppen') {
             loadGruppen();
             // Berechtigungsprüfung für Gruppen-Tab
-            if (window.gruppenFunctions && window.gruppenFunctions.checkGruppenAnlegenBerechtigung) {
-                window.gruppenFunctions.checkGruppenAnlegenBerechtigung();
+            if (window.authFunctions && window.authFunctions.checkGruppenAnlegenBerechtigung) {
+                window.authFunctions.checkGruppenAnlegenBerechtigung();
             }
         }
         if (tabName === 'lehrer') loadLehrer();
