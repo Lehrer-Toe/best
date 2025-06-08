@@ -127,7 +127,7 @@
         .toggle-switch {
             position: relative;
             display: inline-block;
-            width: 60px;
+            width: 180px;
             height: 30px;
         }
 
@@ -147,6 +147,12 @@
             background-color: #ccc;
             transition: .4s;
             border-radius: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 0.8rem;
         }
 
         .toggle-slider:before {
@@ -166,7 +172,7 @@
         }
 
         input:checked + .toggle-slider:before {
-            transform: translateX(30px);
+            transform: translateX(150px);
         }
 
         .gruppenerstellung-bereich {
@@ -295,13 +301,10 @@
                 <h2>Gruppen erstellen</h2>
                 
                 <div class="toggle-container" id="gruppenToggleContainer" style="display: none;">
-                    <div class="toggle-label">
-                        <span>🔒</span>
-                        <span>Gruppenerstellung aktivieren</span>
-                    </div>
+                    <span class="toggle-icon">🔒</span>
                     <label class="toggle-switch">
                         <input type="checkbox" id="gruppenErstellungToggle" onchange="toggleGruppenerstellung()">
-                        <span class="toggle-slider"></span>
+                        <span class="toggle-slider">Neue Gruppen erstellen</span>
                     </label>
                 </div>
 
