@@ -156,17 +156,6 @@
             transform: translateX(30px);
         }
 
-        .toggle-container {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .toggle-label {
-            font-weight: 500;
-            color: #2c3e50;
-        }
-
         @media (max-width: 768px) {
             .ausgewaehlter-schueler-item,
             .edit-schueler-item-erweitert {
@@ -245,11 +234,19 @@
                         <textarea id="newsText" placeholder="Nachrichtentext" rows="3" style="flex: 2; resize: vertical;"></textarea>
                     </div>
                     <div class="input-group">
-                        <label style="display: flex; align-items: center; gap: 5px;">
-                            <input type="checkbox" id="newsWichtig"> Als wichtig markieren
+                        <label style="display: flex; align-items: center; gap: 10px;">
+                            Als wichtig markieren:
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="newsWichtig">
+                                <span class="toggle-slider"></span>
+                            </label>
                         </label>
-                        <label style="display: flex; align-items: center; gap: 5px;">
-                            <input type="checkbox" id="newsZeitbegrenzt"> Zeitbegrenzt
+                        <label style="display: flex; align-items: center; gap: 10px;">
+                            Zeitbegrenzt:
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="newsZeitbegrenzt">
+                                <span class="toggle-slider"></span>
+                            </label>
                         </label>
                         <input type="date" id="newsAblauf" style="display: none;">
                         <button class="btn" onclick="adminNewsErstellen()">Nachricht veröffentlichen</button>
@@ -742,19 +739,5 @@
     <script src="firebase-uebersicht.js"></script>
     <script src="firebase-pdf.js"></script>
     <script src="firebase-init.js"></script>
-
-    <script>
-        // Toggle-Funktionalität für News
-        document.addEventListener('DOMContentLoaded', function() {
-            const zeitbegrenztToggle = document.getElementById('newsZeitbegrenzt');
-            const ablaufField = document.getElementById('newsAblauf');
-            
-            if (zeitbegrenztToggle && ablaufField) {
-                zeitbegrenztToggle.addEventListener('change', function() {
-                    ablaufField.style.display = this.checked ? 'block' : 'none';
-                });
-            }
-        });
-    </script>
 </body>
 </html>
