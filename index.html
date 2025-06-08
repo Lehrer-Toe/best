@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zeig, was du kannst!</title>
     
-    <!-- CSS Module - Reihenfolge ist wichtig! -->
     <link rel="stylesheet" href="css/base.css">
     <link rel="stylesheet" href="css/login.css">
     <link rel="stylesheet" href="css/header.css">
@@ -195,7 +194,6 @@
     </style>
 </head>
 <body>
-    <!-- Loading Screen -->
     <div id="loadingScreen" class="loading-container">
         <div class="loading-card">
             <h1>Zeig, was du kannst!</h1>
@@ -205,7 +203,6 @@
         </div>
     </div>
 
-    <!-- Login Screen -->
     <div id="loginScreen" class="login-container" style="display: none;">
         <div class="login-card">
             <h1>Zeig, was du kannst!</h1>
@@ -225,7 +222,6 @@
         </div>
     </div>
 
-    <!-- Main App -->
     <div id="appContainer" class="app-container" style="display: none;">
         <div class="header">
             <h1>Zeig, was du kannst!</h1>
@@ -249,7 +245,6 @@
                 <button class="tab-btn" onclick="openTab('adminvorlagen')" id="adminvorlagenTab">System-Vorlagen</button>
             </div>
 
-            <!-- News Tab -->
             <div id="news" class="tab-content active">
                 <h2>Aktuelle News</h2>
                 <div id="adminNewsEditor" class="card" style="display: none;">
@@ -270,11 +265,9 @@
                     </div>
                 </div>
                 <div id="newsList">
-                    <!-- News werden hier dynamisch eingefügt -->
-                </div>
+                    </div>
             </div>
 
-            <!-- Themen Tab -->
             <div id="themen" class="tab-content">
                 <h2>Themenvorschläge</h2>
                 <div class="card">
@@ -289,21 +282,17 @@
                         <label>Filter nach Fach:</label>
                         <select id="themenFachFilter" onchange="filterThemen()">
                             <option value="">Alle Fächer</option>
-                            <!-- Fächer werden dynamisch geladen -->
-                        </select>
+                            </select>
                     </div>
                 </div>
                 <div class="liste" id="themenListe">
-                    <!-- Themen werden hier angezeigt -->
-                </div>
+                    </div>
             </div>
 
-            <!-- Gruppen Tab -->
             <div id="gruppen" class="tab-content">
                 <h2>Gruppen erstellen</h2>
                 
-                <!-- Toggle für Gruppenerstellung -->
-                <div class="toggle-container">
+                <div class="toggle-container" id="gruppenToggleContainer" style="display: none;">
                     <div class="toggle-label">
                         <span>🔒</span>
                         <span>Gruppenerstellung aktivieren</span>
@@ -325,8 +314,7 @@
                         <h4>1. Klasse auswählen:</h4>
                         <select id="gruppenKlasseSelect" onchange="klasseGewaehlt()" style="width: 100%; padding: 10px; margin-bottom: 20px;">
                             <option value="">Klasse auswählen...</option>
-                            <!-- Klassen werden dynamisch geladen -->
-                        </select>
+                            </select>
                         
                         <h4>2. Schüler auswählen:</h4>
                         <div id="verfuegbareSchueler">
@@ -341,10 +329,8 @@
                 </div>
                 
                 <div class="liste" id="gruppenListe">
-                    <!-- Gruppen werden hier angezeigt -->
-                </div>
+                    </div>
                 
-                <!-- Gruppen bearbeiten Modal -->
                 <div id="gruppenEditModal" class="modal hidden">
                     <div class="modal-content">
                         <h3>Gruppe bearbeiten</h3>
@@ -354,8 +340,7 @@
                         </div>
                         <h4>Schüler:</h4>
                         <div id="editSchuelerListe">
-                            <!-- Schüler werden hier angezeigt -->
-                        </div>
+                            </div>
                         <div class="modal-buttons">
                             <button class="btn btn-success" onclick="gruppeEditSpeichern()">Speichern</button>
                             <button class="btn btn-danger" onclick="gruppeEditAbbrechen()">Abbrechen</button>
@@ -364,39 +349,32 @@
                 </div>
             </div>
 
-            <!-- Klassen verwalten Tab (nur Admin) -->
             <div id="klassen" class="tab-content">
                 <h2>Klassen verwalten</h2>
                 
-                <!-- Filter-Bereich -->
                 <div class="klassen-filter-section">
                     <div class="klassen-filter-group">
                         <label>Filter nach Klasse:</label>
                         <select id="klassenFilter" onchange="filterKlassen()">
                             <option value="">Alle Klassen</option>
-                            <!-- Wird dynamisch geladen -->
-                        </select>
+                            </select>
                         
                         <label>Filter nach Schuljahr:</label>
                         <select id="schuljahrFilter" onchange="filterKlassen()">
-                            <!-- Wird dynamisch geladen -->
-                        </select>
+                            </select>
                     </div>
                 </div>
                 
-                <!-- Neue Klasse anlegen -->
                 <div class="card">
                     <h3>Neue Klasse anlegen</h3>
                     <div class="input-group">
                         <input type="text" id="klassenName" placeholder="Klassenname (z.B. 9a, 10b)">
                         <select id="klassenSchuljahr">
-                            <!-- Wird dynamisch geladen -->
-                        </select>
+                            </select>
                         <button class="btn btn-success" onclick="klasseAnlegen()">Klasse anlegen</button>
                     </div>
                 </div>
                 
-                <!-- Schüler-Datei hochladen -->
                 <div class="upload-bereich">
                     <h3>📁 Schüler aus Datei hochladen</h3>
                     <div class="upload-format-info">
@@ -415,8 +393,7 @@
                     <div class="input-group">
                         <select id="uploadKlasseSelect">
                             <option value="">Klasse für Upload auswählen...</option>
-                            <!-- Wird dynamisch geladen -->
-                        </select>
+                            </select>
                         
                         <select id="uploadFormat">
                             <option value="vorname-nachname">Vorname Nachname</option>
@@ -435,24 +412,19 @@
                     </div>
                 </div>
                 
-                <!-- Upload-Vorschau -->
                 <div id="uploadVorschau" class="upload-vorschau hidden">
                     <h3>Vorschau der hochgeladenen Schüler</h3>
                     <div id="uploadVorschauInhalt">
-                        <!-- Wird dynamisch gefüllt -->
-                    </div>
+                        </div>
                     <div class="modal-buttons">
                         <button class="btn btn-success" onclick="schuelerDatenBestaetigen()">Schüler übernehmen</button>
                         <button class="btn btn-danger" onclick="uploadVorschauSchliessen()">Abbrechen</button>
                     </div>
                 </div>
                 
-                <!-- Klassen-Liste -->
                 <div class="liste" id="klassenListe">
-                    <!-- Klassen werden hier angezeigt -->
-                </div>
+                    </div>
                 
-                <!-- Klassen bearbeiten Modal -->
                 <div id="klasseEditModal" class="modal hidden">
                     <div class="modal-content">
                         <h3>Klasse bearbeiten</h3>
@@ -463,14 +435,12 @@
                         <div class="input-group">
                             <label>Schuljahr:</label>
                             <select id="editKlassenSchuljahr">
-                                <!-- Wird dynamisch geladen -->
-                            </select>
+                                </select>
                         </div>
                         
                         <h4>Schüler in der Klasse:</h4>
                         <div id="klasseSchuelerListe">
-                            <!-- Schüler werden hier angezeigt -->
-                        </div>
+                            </div>
                         
                         <h4>Schüler manuell hinzufügen:</h4>
                         <div class="input-group">
@@ -487,7 +457,6 @@
                 </div>
             </div>
 
-            <!-- Lehrer verwalten Tab -->
             <div id="lehrer" class="tab-content">
                 <h2>Lehrer verwalten</h2>
                 <div class="card">
@@ -500,11 +469,9 @@
                     </div>
                 </div>
                 <div class="liste" id="lehrerListe">
-                    <!-- Lehrer werden hier angezeigt -->
-                </div>
+                    </div>
             </div>
 
-            <!-- Datenverwaltung Tab -->
             <div id="daten" class="tab-content">
                 <h2>Datenverwaltung</h2>
                 <div class="card">
@@ -543,12 +510,10 @@
                 <div class="card">
                     <h3>Statistiken</h3>
                     <div id="statistiken">
-                        <!-- Statistiken werden hier angezeigt -->
-                    </div>
+                        </div>
                 </div>
             </div>
 
-            <!-- Bewerten Tab -->
             <div id="bewerten" class="tab-content">
                 <h2>Schüler bewerten</h2>
                 <div class="filter-section">
@@ -567,32 +532,25 @@
                     </div>
                 </div>
                 <div id="bewertungsListe">
-                    <!-- Zu bewertende Schüler -->
-                </div>
+                    </div>
                 <div id="bewertungsRaster" class="bewertung-container hidden">
-                    <!-- Bewertungsbereich mit Tabs -->
                     <div class="bewertung-tabs">
                         <button class="bewertung-tab-btn active" onclick="openBewertungTab('bewertung')">Bewertung</button>
                         <button class="bewertung-tab-btn" onclick="openBewertungTab('staerken')">Stärken</button>
                     </div>
                     
-                    <!-- Notenschnitt - bleibt immer sichtbar -->
                     <div class="durchschnitt-sticky">
                         Durchschnitt: <span id="durchschnittAnzeige">-</span>
                     </div>
                     
-                    <!-- Tab Bewertung -->
                     <div id="bewertungTab" class="bewertung-tab-content active">
                         <div id="bewertungsRasterContent">
-                            <!-- Bewertungsraster wird hier angezeigt -->
-                        </div>
+                            </div>
                     </div>
                     
-                    <!-- Tab Stärken -->
                     <div id="staerkenTab" class="bewertung-tab-content">
                         <div id="staerkenCheckliste">
-                            <!-- Stärken-Checkliste wird hier angezeigt -->
-                        </div>
+                            </div>
                     </div>
                     
                     <div class="speichern-buttons">
@@ -602,7 +560,6 @@
                 </div>
             </div>
 
-            <!-- Vorlagen Tab -->
             <div id="vorlagen" class="tab-content">
                 <h2>Bewertungsvorlagen</h2>
                 <div class="card">
@@ -633,29 +590,22 @@
                     </div>
                 </div>
                 <div class="liste" id="vorlagenListe">
-                    <!-- Vorlagen werden hier angezeigt -->
-                </div>
+                    </div>
             </div>
 
-            <!-- Admin System-Vorlagen Tab (nur Admin) -->
             <div id="adminvorlagen" class="tab-content">
                 <h2>System-Vorlagen bearbeiten</h2>
                 
-                <!-- Fächer verwalten -->
                 <div class="card">
                     <div id="faecherVerwaltung">
-                        <!-- Fächer-Verwaltung wird hier angezeigt -->
-                    </div>
+                        </div>
                 </div>
                 
-                <!-- Bewertungs-Checkpoints und Formulierungen verwalten -->
                 <div class="card">
                     <div id="checkpointsVerwaltung">
-                        <!-- Erweiterte Checkpoints-Verwaltung wird hier angezeigt -->
-                    </div>
+                        </div>
                 </div>
                 
-                <!-- Briefvorlage -->
                 <div class="card">
                     <h3>Briefvorlage</h3>
                     <p><em>Verwenden Sie [NAME] als Platzhalter für den Schülernamen.</em></p>
@@ -671,11 +621,9 @@
                 </div>
             </div>
 
-            <!-- Übersicht Tab -->
             <div id="uebersicht" class="tab-content">
                 <h2>Meine Übersicht</h2>
                 
-                <!-- Filter-Bereich -->
                 <div class="filter-section">
                     <div class="filter-group">
                         <label>Sortierung:</label>
@@ -699,8 +647,7 @@
                 <div class="card">
                     <h3>Statistiken</h3>
                     <div id="lehrerStatistiken">
-                        <!-- Statistiken werden hier angezeigt -->
-                    </div>
+                        </div>
                 </div>
                 <div class="card">
                     <h3>Meine Schüler & Bewertungen</h3>
@@ -710,13 +657,11 @@
                     </div>
                 </div>
                 <div class="liste" id="meineSchuelerListe">
-                    <!-- Schüler werden hier angezeigt -->
-                </div>
+                    </div>
             </div>
         </div>
     </div>
 
-    <!-- Firebase SDK - v9 (modular) -->
     <script type="module">
         // Firebase v9 - modular SDK
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js';
@@ -755,7 +700,6 @@
         }
     </script>
 
-    <!-- Firebase App Scripts - RICHTIGE REIHENFOLGE WICHTIG! -->
     <script src="firebase-main.js"></script>
     <script src="firebase-auth.js"></script>
     <script src="firebase-news.js"></script>
@@ -770,7 +714,6 @@
     <script src="firebase-pdf.js"></script>
     <script src="firebase-init.js"></script>
     
-    <!-- Toggle-Funktion für Gruppenerstellung -->
     <script>
         function toggleGruppenerstellung() {
             const toggle = document.getElementById('gruppenErstellungToggle');
@@ -782,6 +725,32 @@
                 bereich.classList.remove('active');
             }
         }
+
+        // Diese Funktion sollte aufgerufen werden, nachdem der Berechtigungsstatus des Benutzers ermittelt wurde
+        // (z.B. nach erfolgreichem Login und Laden der Benutzerrolle aus Firebase).
+        // Für Demonstrationszwecke ist hier eine isUserAuthorized Variable angenommen.
+        window.showGroupCreationToggleIfAuthorized = function(isUserAuthorized) {
+            const toggleContainer = document.getElementById('gruppenToggleContainer');
+            if (toggleContainer) {
+                if (isUserAuthorized) {
+                    toggleContainer.style.display = 'flex'; 
+                } else {
+                    toggleContainer.style.display = 'none';
+                }
+            }
+        };
+
+        // Beispielaufruf, der in einer realen Anwendung durch die Authentifizierungslogik ausgelöst werden sollte:
+        // onAuthStateChanged(auth, (user) => {
+        //   if (user) {
+        //     // Annahme: Benutzerrollen werden aus Firestore oder Realtime Database geladen
+        //     // und in 'isUserAuthorizedForGroupCreation' gespeichert.
+        //     // Beispiel: const userIsAdmin = checkUserRole(user.uid); 
+        //     // showGroupCreationToggleIfAuthorized(userIsAdmin); 
+        //   } else {
+        //     showGroupCreationToggleIfAuthorized(false); // Benutzer ist abgemeldet
+        //   }
+        // });
     </script>
 </body>
 </html>
