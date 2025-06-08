@@ -1,5 +1,5 @@
-// Firebase Gruppen-Verwaltungs-System - Realtime Database mit Klassen-Integration
-console.log('👥 Firebase Gruppen-Verwaltungs-System geladen (mit Klassen-Integration)');
+// Firebase Gruppen-System - Realtime Database mit Klassen-Integration
+console.log('👥 Firebase Gruppen-System geladen (mit Klassen-Integration)');
 
 // Globale Variablen für Gruppenbearbeitung
 let aktuelleGruppeEdit = null;
@@ -62,6 +62,44 @@ function loadGruppen() {
     updateKlassenauswahlForGruppen();
     
     console.log('👥 Gruppen geladen:', meineGruppen.length, 'für aktuellen Benutzer');
+    
+    // Prüfe ob Benutzer Gruppen anlegen darf und zeige/verstecke den Bereich entsprechend
+    checkGruppenAnlegenBerechtigung();
+}
+
+// Prüfe ob aktueller Benutzer Gruppen anlegen darf
+async function checkGruppenAnlegenBerechtigung() {
+    if (window.firebaseFunctions.isAdmin()) {
+        // Admin darf immer Gruppen anlegen
+        return;
+    }
+    
+    try {
+        const userEmail = window.authFunctions.getUserEmail();
+        const sanitizedEmail = window.firebaseFunctions.sanitizeEmail(userEmail);
+        
+        const userRef = window.firebaseFunctions.getDatabaseRef(`users/${sanitizedEmail}`);
+        const snapshot = await window.firebaseDB.get(userRef);
+        
+        if (snapshot.exists()) {
+            const userData = snapshot.val();
+            // Wenn kannGruppenAnlegen false ist, verstecke den Bereich
+            if (userData.kannGruppenAnlegen === false) {
+                const gruppenErstellenCard = document.querySelector('#gruppen .card');
+                if (gruppenErstellenCard) {
+                    gruppenErstellenCard.style.display = 'none';
+                    
+                    // Füge Hinweis hinzu
+                    const hinweis = document.createElement('div');
+                    hinweis.className = 'card';
+                    hinweis.innerHTML = '<p style="color: #e74c3c;">Sie haben keine Berechtigung, neue Gruppen anzulegen. Bitte wenden Sie sich an einen Administrator.</p>';
+                    gruppenErstellenCard.parentNode.insertBefore(hinweis, gruppenErstellenCard);
+                }
+            }
+        }
+    } catch (error) {
+        console.error('❌ Fehler beim Prüfen der Berechtigung:', error);
+    }
 }
 
 // Meine Gruppen holen (erstellt oder zum Prüfen)
@@ -322,11 +360,34 @@ function ausgewaehltenSchuelerEntfernen(index) {
     updateAusgewaehlteSchuelerAnzeige();
 }
 
-// Neue Gruppe erstellen
+// Neue Gruppe erstellen (ERWEITERT mit Berechtigungsprüfung)
 async function gruppeErstellen() {
     console.log('👥 Erstelle neue Gruppe...');
     
     if (!window.firebaseFunctions.requireAuth()) return;
+    
+    // Prüfe ob Benutzer Gruppen anlegen darf
+    if (!window.firebaseFunctions.isAdmin()) {
+        try {
+            const userEmail = window.authFunctions.getUserEmail();
+            const sanitizedEmail = window.firebaseFunctions.sanitizeEmail(userEmail);
+            
+            const userRef = window.firebaseFunctions.getDatabaseRef(`users/${sanitizedEmail}`);
+            const snapshot = await window.firebaseDB.get(userRef);
+            
+            if (snapshot.exists()) {
+                const userData = snapshot.val();
+                if (userData.kannGruppenAnlegen === false) {
+                    alert('Sie haben keine Berechtigung, Gruppen anzulegen. Bitte wenden Sie sich an einen Administrator.');
+                    return;
+                }
+            }
+        } catch (error) {
+            console.error('❌ Fehler beim Prüfen der Berechtigung:', error);
+            alert('Fehler beim Prüfen der Berechtigung. Bitte versuchen Sie es später erneut.');
+            return;
+        }
+    }
     
     const themaInput = document.getElementById('gruppenThema');
     const thema = themaInput?.value.trim();
@@ -668,4 +729,4 @@ window.gruppenFunctions = {
     updateKlassenauswahlForGruppen
 };
 
-console.log('✅ Firebase Gruppen-Verwaltungs-System bereit (mit Klassen-Integration)');
+console.log('✅ Firebase Gruppen-System bereit (mit Klassen-Integration)');
