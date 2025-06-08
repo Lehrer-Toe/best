@@ -136,9 +136,17 @@ function showGruppenAnlegenUI(berechtigt) {
             const toggleContainer = document.getElementById('gruppenToggleContainer');
 
             if (berechtigt) {
-                // Zeige normale UI
-                gruppenAnlegenCard.style.display = 'block';
+                // Bereich initial eingeklappt lassen
+                gruppenAnlegenCard.style.display = 'none';
                 if (toggleContainer) toggleContainer.style.display = 'flex';
+
+                // Toggle zurücksetzen
+                const toggle = document.getElementById('gruppenErstellungToggle');
+                if (toggle) toggle.checked = false;
+
+                // Sicherstellen, dass Bereich geschlossen ist
+                const bereich = document.getElementById('gruppenErstellungBereich');
+                if (bereich) bereich.classList.remove('active');
 
                 // Eventuellen Hinweis entfernen
                 const hinweis = document.getElementById('keineGruppenBerechtigung');

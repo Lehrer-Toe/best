@@ -170,12 +170,14 @@
         }
 
         .gruppenerstellung-bereich {
+            display: none;
             transition: all 0.3s ease;
             opacity: 0.5;
             pointer-events: none;
         }
 
         .gruppenerstellung-bereich.active {
+            display: block;
             opacity: 1;
             pointer-events: auto;
         }
@@ -716,11 +718,13 @@
         function toggleGruppenerstellung() {
             const toggle = document.getElementById('gruppenErstellungToggle');
             const bereich = document.getElementById('gruppenErstellungBereich');
-            
+
             if (toggle.checked) {
-                bereich.classList.add('active'); // Macht den Bereich sichtbar und interaktiv
+                bereich.classList.add('active'); // Bereich erscheint
+                bereich.style.display = 'block';
             } else {
-                bereich.classList.remove('active'); // Macht den Bereich halb-transparent und nicht interaktiv
+                bereich.classList.remove('active'); // Bereich wird ausgeblendet
+                bereich.style.display = 'none';
             }
         }
 
