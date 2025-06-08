@@ -105,50 +105,212 @@
             margin-bottom: 10px;
         }
 
-        /* Gruppen-Erstellen Toggle Bereich */
-        .gruppen-toggle-container {
+        /* Modernes Toggle-Design */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 30px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #ccc;
+            transition: 0.3s;
+            border-radius: 30px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 4px;
+            bottom: 4px;
+            background: white;
+            transition: 0.3s;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        input:checked + .toggle-slider {
+            background: #2196F3;
+        }
+
+        input:focus + .toggle-slider {
+            box-shadow: 0 0 1px #2196F3;
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(30px);
+        }
+
+        /* Verbesserte Gruppen-Seite */
+        .gruppen-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .gruppen-header h2 {
+            margin: 0;
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .gruppen-header p {
+            margin: 0;
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .gruppen-creation-section {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
             margin-bottom: 2rem;
         }
 
-        .gruppen-erstellen-bereich {
-            margin-top: 1rem;
-            opacity: 0;
-            max-height: 0;
-            overflow: hidden;
-            transition: all 0.3s ease-in-out;
+        .step-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+            position: relative;
         }
 
-        .gruppen-erstellen-bereich.active {
-            opacity: 1;
-            max-height: 1000px;
+        .step-indicator::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #e1e8ed;
+            z-index: 1;
         }
 
-        .toggle-btn {
-            background: #27ae60;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1rem;
-            font-weight: 600;
-            transition: all 0.3s;
+        .step {
+            background: white;
+            border: 2px solid #e1e8ed;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            justify-content: center;
+            font-weight: bold;
+            color: #666;
+            z-index: 2;
+            position: relative;
         }
 
-        .toggle-btn:hover {
-            background: #219653;
+        .step.active {
+            background: #667eea;
+            border-color: #667eea;
+            color: white;
+        }
+
+        .step.completed {
+            background: #27ae60;
+            border-color: #27ae60;
+            color: white;
+        }
+
+        .step-content {
+            padding: 1.5rem;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+        }
+
+        .step-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+
+        .gruppen-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .schueler-card {
+            background: white;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 8px 0;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .schueler-card:hover {
+            border-color: #667eea;
             transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
 
-        .toggle-btn.active {
-            background: #e74c3c;
+        .schueler-card.selected {
+            border-color: #667eea;
+            background: #e8f4fd;
         }
 
-        .toggle-btn.active:hover {
-            background: #c0392b;
+        .zuweisung-section {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin-top: 1rem;
+        }
+
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+
+        .toggle-label {
+            font-weight: 500;
+            color: #2c3e50;
         }
 
         @media (max-width: 768px) {
@@ -160,6 +322,23 @@
             
             .schueler-auswahl-grid {
                 grid-template-columns: 1fr;
+            }
+
+            .step-indicator {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .step-indicator::before {
+                display: none;
+            }
+
+            .gruppen-header {
+                padding: 1rem;
+            }
+
+            .gruppen-header h2 {
+                font-size: 1.5rem;
             }
         }
     </style>
@@ -209,7 +388,7 @@
             <div class="tab-nav">
                 <button class="tab-btn active" onclick="openTab('news')" id="newsTab">News</button>
                 <button class="tab-btn" onclick="openTab('themen')" id="themenTab">Themen</button>
-                <button class="tab-btn" onclick="openTab('gruppen')" id="gruppenTab">Gruppen erstellen</button>
+                <button class="tab-btn" onclick="openTab('gruppen')" id="gruppenTab">Gruppen verwalten</button>
                 <button class="tab-btn" onclick="openTab('klassen')" id="klassenTab" style="display:none;">Klassen verwalten</button>
                 <button class="tab-btn" onclick="openTab('lehrer')" id="lehrerTab">Lehrer verwalten</button>
                 <button class="tab-btn" onclick="openTab('daten')" id="datenTab">Datenverwaltung</button>
@@ -229,12 +408,20 @@
                         <textarea id="newsText" placeholder="Nachrichtentext" rows="3" style="flex: 2; resize: vertical;"></textarea>
                     </div>
                     <div class="input-group">
-                        <label style="display: flex; align-items: center; gap: 5px;">
-                            <input type="checkbox" id="newsWichtig"> Als wichtig markieren
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 5px;">
-                            <input type="checkbox" id="newsZeitbegrenzt"> Zeitbegrenzt
-                        </label>
+                        <div class="toggle-container">
+                            <span class="toggle-label">Als wichtig markieren:</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="newsWichtig">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="toggle-container">
+                            <span class="toggle-label">Zeitbegrenzt:</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="newsZeitbegrenzt">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
                         <input type="date" id="newsAblauf" style="display: none;">
                         <button class="btn" onclick="adminNewsErstellen()">Nachricht veröffentlichen</button>
                     </div>
@@ -268,43 +455,74 @@
                 </div>
             </div>
 
-            <!-- Gruppen Tab -->
+            <!-- Gruppen Tab - VERBESSERT -->
             <div id="gruppen" class="tab-content">
-                <h2>Gruppen erstellen</h2>
-                
-                <!-- Toggle-Button für Gruppen-Erstellung -->
-                <div class="gruppen-toggle-container">
-                    <button class="toggle-btn" id="gruppenToggleBtn" onclick="toggleGruppenErstellung()">
-                        <span>➕</span>
-                        <span id="gruppenToggleText">Gruppen neu anlegen</span>
-                    </button>
+                <div class="gruppen-header">
+                    <h2>👥 Gruppen verwalten</h2>
+                    <p>Erstellen und verwalten Sie Projektgruppen mit Schülerzuweisungen</p>
                 </div>
 
-                <!-- Gruppen-Erstellen Bereich (standardmäßig versteckt) -->
-                <div class="gruppen-erstellen-bereich" id="gruppenErstellenBereich">
-                    <div class="card">
-                        <h3>Neue Gruppe anlegen</h3>
+                <!-- Statistiken -->
+                <div class="gruppen-stats">
+                    <div class="stat-card">
+                        <div class="stat-value" id="gruppenAnzahl">0</div>
+                        <div class="stat-label">Aktive Gruppen</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="schuelerAnzahl">0</div>
+                        <div class="stat-label">Zugewiesene Schüler</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="bewerteteGruppen">0</div>
+                        <div class="stat-label">Bewertete Gruppen</div>
+                    </div>
+                </div>
+
+                <div class="gruppen-creation-section">
+                    <h3>✨ Neue Gruppe erstellen</h3>
+                    
+                    <!-- Schritt-Anzeige -->
+                    <div class="step-indicator">
+                        <div class="step active" id="step1">1</div>
+                        <div class="step" id="step2">2</div>
+                        <div class="step" id="step3">3</div>
+                    </div>
+
+                    <!-- Schritt 1: Thema -->
+                    <div class="step-content">
+                        <div class="step-title">📚 Projektthema festlegen</div>
                         <div class="input-group">
-                            <input type="text" id="gruppenThema" placeholder="Thema (oder aus Liste wählen)">
+                            <input type="text" id="gruppenThema" placeholder="Projektthema eingeben...">
                             <button class="btn" onclick="gruppeErstellen()">Gruppe erstellen</button>
                         </div>
-                        
-                        <div style="margin-top: 1rem;">
-                            <h4>1. Klasse auswählen:</h4>
-                            <select id="gruppenKlasseSelect" onchange="klasseGewaehlt()" style="width: 100%; padding: 10px; margin-bottom: 20px;">
-                                <option value="">Klasse auswählen...</option>
-                                <!-- Klassen werden dynamisch geladen -->
-                            </select>
-                            
-                            <h4>2. Schüler auswählen:</h4>
-                            <div id="verfuegbareSchueler">
-                                <p>Bitte wählen Sie eine Klasse aus.</p>
-                            </div>
-                            
-                            <h4>3. Lehrer und Fächer zuweisen:</h4>
-                            <div id="ausgewaehlteSchuelerAnzeige">
-                                <p>Keine Schüler ausgewählt.</p>
-                            </div>
+                    </div>
+                    
+                    <!-- Schritt 2: Klasse auswählen -->
+                    <div class="step-content">
+                        <div class="step-title">🏫 Klasse auswählen</div>
+                        <select id="gruppenKlasseSelect" onchange="klasseGewaehlt()" style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #e1e8ed;">
+                            <option value="">Klasse auswählen...</option>
+                            <!-- Klassen werden dynamisch geladen -->
+                        </select>
+                    </div>
+                    
+                    <!-- Schritt 3: Schüler auswählen -->
+                    <div class="step-content">
+                        <div class="step-title">👨‍🎓 Schüler auswählen</div>
+                        <div id="verfuegbareSchueler">
+                            <p style="text-align: center; color: #666; padding: 2rem;">
+                                👆 Bitte wählen Sie zuerst eine Klasse aus
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <!-- Schritt 4: Zuweisungen -->
+                    <div class="zuweisung-section">
+                        <div class="step-title">⚙️ Lehrer und Fächer zuweisen</div>
+                        <div id="ausgewaehlteSchuelerAnzeige">
+                            <p style="text-align: center; color: #666;">
+                                👆 Wählen Sie zuerst Schüler aus der Liste aus
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -736,35 +954,53 @@
     <script src="firebase-admin.js"></script>
     <script src="firebase-datenverwaltung.js"></script>
     <script src="firebase-uebersicht.js"></script>
-    <!-- Bibliotheken für DOCX-Verarbeitung -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pizzip/3.2.5/pizzip.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/docxtemplater/3.37.2/docxtemplater.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/docx-preview@0.3.5/dist/docx-preview.min.js"></script>
     <script src="firebase-pdf.js"></script>
     <script src="firebase-init.js"></script>
 
-    <!-- Gruppen Toggle JavaScript -->
     <script>
-        // Toggle-Funktion für Gruppen-Erstellung
-        function toggleGruppenErstellung() {
-            const bereich = document.getElementById('gruppenErstellenBereich');
-            const button = document.getElementById('gruppenToggleBtn');
-            const text = document.getElementById('gruppenToggleText');
+        // Toggle-Funktionalität für News
+        document.addEventListener('DOMContentLoaded', function() {
+            const zeitbegrenztToggle = document.getElementById('newsZeitbegrenzt');
+            const ablaufField = document.getElementById('newsAblauf');
             
-            if (bereich.classList.contains('active')) {
-                // Verstecken
-                bereich.classList.remove('active');
-                button.classList.remove('active');
-                button.innerHTML = '<span>➕</span><span id="gruppenToggleText">Gruppen neu anlegen</span>';
-                console.log('📂 Gruppen-Erstellung deaktiviert');
-            } else {
-                // Anzeigen
-                bereich.classList.add('active');
-                button.classList.add('active');
-                button.innerHTML = '<span>➖</span><span id="gruppenToggleText">Neu anlegen deaktivieren</span>';
-                console.log('📂 Gruppen-Erstellung aktiviert');
+            if (zeitbegrenztToggle && ablaufField) {
+                zeitbegrenztToggle.addEventListener('change', function() {
+                    ablaufField.style.display = this.checked ? 'block' : 'none';
+                });
             }
+        });
+
+        // Statistiken für Gruppen-Seite aktualisieren
+        function updateGruppenStatistiken() {
+            const gruppen = window.firebaseFunctions?.getGruppenFromCache() || [];
+            const currentUserName = window.firebaseFunctions?.getCurrentUserName() || '';
+            
+            const meineGruppen = gruppen.filter(gruppe => 
+                gruppe.schueler && gruppe.schueler.some(s => s.lehrer === currentUserName)
+            );
+            
+            let schuelerGesamt = 0;
+            meineGruppen.forEach(gruppe => {
+                if (gruppe.schueler) {
+                    schuelerGesamt += gruppe.schueler.filter(s => s.lehrer === currentUserName).length;
+                }
+            });
+            
+            const bewertungen = window.firebaseFunctions?.getBewertungenFromCache() || [];
+            const bewerteteGruppen = bewertungen.length;
+            
+            // Statistiken aktualisieren
+            const gruppenAnzahlEl = document.getElementById('gruppenAnzahl');
+            const schuelerAnzahlEl = document.getElementById('schuelerAnzahl'); 
+            const bewerteteGruppenEl = document.getElementById('bewerteteGruppen');
+            
+            if (gruppenAnzahlEl) gruppenAnzahlEl.textContent = meineGruppen.length;
+            if (schuelerAnzahlEl) schuelerAnzahlEl.textContent = schuelerGesamt;
+            if (bewerteteGruppenEl) bewerteteGruppenEl.textContent = bewerteteGruppen;
         }
+
+        // Gruppen-Statistiken regelmäßig aktualisieren
+        setInterval(updateGruppenStatistiken, 5000);
     </script>
 </body>
 </html>
