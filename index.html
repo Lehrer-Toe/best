@@ -105,6 +105,82 @@
             margin-bottom: 10px;
         }
 
+        /* Toggle-Switch Styles */
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .toggle-label {
+            font-weight: 600;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 30px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 30px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: #667eea;
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(30px);
+        }
+
+        .gruppenerstellung-bereich {
+            transition: all 0.3s ease;
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .gruppenerstellung-bereich.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
         @media (max-width: 768px) {
             .ausgewaehlter-schueler-item,
             .edit-schueler-item-erweitert {
@@ -225,7 +301,20 @@
             <!-- Gruppen Tab -->
             <div id="gruppen" class="tab-content">
                 <h2>Gruppen erstellen</h2>
-                <div class="card">
+                
+                <!-- Toggle für Gruppenerstellung -->
+                <div class="toggle-container">
+                    <div class="toggle-label">
+                        <span>🔒</span>
+                        <span>Gruppenerstellung aktivieren</span>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="gruppenErstellungToggle" onchange="toggleGruppenerstellung()">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+                <div class="card gruppenerstellung-bereich" id="gruppenErstellungBereich">
                     <h3>Neue Gruppe anlegen</h3>
                     <div class="input-group">
                         <input type="text" id="gruppenThema" placeholder="Thema (oder aus Liste wählen)">
@@ -680,5 +769,19 @@
     <script src="firebase-uebersicht.js"></script>
     <script src="firebase-pdf.js"></script>
     <script src="firebase-init.js"></script>
+    
+    <!-- Toggle-Funktion für Gruppenerstellung -->
+    <script>
+        function toggleGruppenerstellung() {
+            const toggle = document.getElementById('gruppenErstellungToggle');
+            const bereich = document.getElementById('gruppenErstellungBereich');
+            
+            if (toggle.checked) {
+                bereich.classList.add('active');
+            } else {
+                bereich.classList.remove('active');
+            }
+        }
+    </script>
 </body>
 </html>
