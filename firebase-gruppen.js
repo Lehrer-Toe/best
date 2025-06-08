@@ -1,5 +1,5 @@
-// Firebase Gruppen-System - Realtime Database mit Klassen-Integration
-console.log('👥 Firebase Gruppen-System geladen (mit Klassen-Integration)');
+// Firebase Gruppen-Verwaltungs-System - Realtime Database mit Klassen-Integration
+console.log('👥 Firebase Gruppen-Verwaltungs-System geladen (mit Klassen-Integration)');
 
 // Globale Variablen für Gruppenbearbeitung
 let aktuelleGruppeEdit = null;
@@ -668,4 +668,4 @@ window.gruppenFunctions = {
     updateKlassenauswahlForGruppen
 };
 
-console.log('✅ Firebase Gruppen-System bereit (mit Klassen-Integration)');
+console.log('✅ Firebase Gruppen-Verwaltungs-System bereit (mit Klassen-Integration)');
