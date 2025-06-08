@@ -1,6 +1,9 @@
 
 let currentUser = null;
 let firebaseUser = null;
+// Aktuellen Benutzer auch im globalen Window verfügbar machen,
+// damit andere Module (z.B. firebase-gruppen.js) darauf zugreifen können
+window.currentUser = null;
 let autoLogoutTimer = null;
 
 const AUTO_LOGOUT_TIME = 20 * 60 * 1000; // 20 Minuten in Millisekunden
@@ -14,6 +17,7 @@ function initializeAuth() {
         } else {
             firebaseUser = null;
             currentUser = null;
+            window.currentUser = null;
             stopAutoLogoutTimer();
             showLoginScreen();
         }
@@ -82,6 +86,8 @@ async function handleAuthenticatedUser(firebaseUser) {
                 uid: firebaseUser.uid,
                 ...userData
             };
+            // Auch für andere Skripte bereitstellen
+            window.currentUser = currentUser;
             
             showApp();
             
@@ -194,8 +200,9 @@ async function firebaseLogout() {
     try {
         stopAutoLogoutTimer();
         await window.firebaseAuth.signOut(window.auth);
-        
+
         currentUser = null;
+        window.currentUser = null;
         firebaseUser = null;
         
         hideAllTabs();
