@@ -245,20 +245,12 @@
                         <textarea id="newsText" placeholder="Nachrichtentext" rows="3" style="flex: 2; resize: vertical;"></textarea>
                     </div>
                     <div class="input-group">
-                        <div class="toggle-container">
-                            <span class="toggle-label">Als wichtig markieren:</span>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="newsWichtig">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-                        <div class="toggle-container">
-                            <span class="toggle-label">Zeitbegrenzt:</span>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="newsZeitbegrenzt">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
+                        <label style="display: flex; align-items: center; gap: 5px;">
+                            <input type="checkbox" id="newsWichtig"> Als wichtig markieren
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 5px;">
+                            <input type="checkbox" id="newsZeitbegrenzt"> Zeitbegrenzt
+                        </label>
                         <input type="date" id="newsAblauf" style="display: none;">
                         <button class="btn" onclick="adminNewsErstellen()">Nachricht veröffentlichen</button>
                     </div>
