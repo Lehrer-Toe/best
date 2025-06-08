@@ -1,27 +1,32 @@
 // Firebase PDF-Generierung System
 console.log('📄 Firebase PDF System geladen');
 
-// PDF für Schüler erstellen
-function createPDF(schuelerId) {
+// PDF für Schüler erstellen (DOCX-Vorlage verwenden)
+async function createPDF(schuelerId) {
     console.log('📄 Erstelle PDF für Schüler:', schuelerId);
-    
+
     if (!window.firebaseFunctions.requireAuth()) return;
-    
+
     // Bewertung aus Cache finden
     const bewertungen = window.firebaseFunctions.getBewertungenFromCache();
     const bewertung = bewertungen.find(b => b.schuelerId === schuelerId);
-    
+
     if (!bewertung || !bewertung.staerken) {
         alert('Keine vollständige Bewertung für PDF vorhanden.');
         return;
     }
-    
-    // PDF-Inhalt generieren
-    const pdfContent = generatePDFContent(bewertung);
-    
-    // PDF anzeigen
-    displayPDF(pdfContent, bewertung.schuelerName);
-    console.log('✅ PDF erstellt für:', bewertung.schuelerName);
+
+    // Daten für DOCX zusammenstellen
+    const docxData = generateDocxData(bewertung);
+
+    try {
+        const docxBlob = await generateDocxFromTemplate(docxData);
+        displayDocxPDF(docxBlob, docxData);
+        console.log('✅ PDF erstellt für:', bewertung.schuelerName);
+    } catch (err) {
+        console.error('❌ Fehler bei der DOCX-Erstellung:', err);
+        alert('Fehler beim Erstellen des PDFs.');
+    }
 }
 
 // PDF-Inhalt generieren
@@ -112,6 +117,125 @@ function ersetzePlatzhalter(text, schuelerName) {
         .replace(/\[NAME\]/g, schuelerName)
         .replace(/\[name\]/g, schuelerName)
         .replace(/\[Name\]/g, schuelerName);
+}
+
+// DOCX-Vorlage laden und Platzhalter ersetzen
+async function generateDocxFromTemplate(data) {
+    const response = await fetch('./Vorlage_PDF.docx');
+    const arrayBuffer = await response.arrayBuffer();
+    const zip = new PizZip(arrayBuffer);
+    let xml = zip.file('word/document.xml').asText();
+
+    xml = xml
+        .replace('[Betreff]', data.betreff)
+        .replace('[Anrede]', data.anrede)
+        .replace('[Textbox]', data.textbox)
+        .replace('[Grussformel]', data.grussformel);
+
+    zip.file('word/document.xml', xml);
+    return zip.generate({ type: 'blob' });
+}
+
+// DOCX im neuen Fenster rendern und Drucken ermöglichen
+function displayDocxPDF(blob, data) {
+    const popup = window.open('', '_blank', 'width=800,height=1000');
+
+    const html = `
+        <!DOCTYPE html>
+        <html lang="de">
+        <head>
+            <meta charset="UTF-8">
+            <title>${data.betreff}</title>
+            <style>
+                body { margin:0; padding:20px; font-family:'Times New Roman', serif; }
+                .print-btn { position:fixed; top:10px; right:10px; background:#667eea; color:#fff; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; z-index:1000; }
+            </style>
+            <script src="https://cdn.jsdelivr.net/npm/docx-preview@0.3.5/dist/docx-preview.min.js"></script>
+        </head>
+        <body>
+            <button class="print-btn" onclick="window.print()">🖨️ Drucken</button>
+            <div id="docx-container"></div>
+        </body>
+        </html>`;
+
+    popup.document.write(html);
+    popup.document.close();
+
+    const load = () => {
+        if (popup.docx && popup.document.getElementById('docx-container')) {
+            popup.docx.renderAsync(blob, popup.document.getElementById('docx-container'));
+        } else {
+            setTimeout(load, 100);
+        }
+    };
+    load();
+}
+
+// Daten für die DOCX-Vorlage vorbereiten
+function generateDocxData(bewertung) {
+    const briefvorlage = window.firebaseFunctions.dataCache.briefvorlage;
+    const staerkenFormulierungen = window.firebaseFunctions.dataCache.staerkenFormulierungen;
+    const bewertungsCheckpoints = window.firebaseFunctions.dataCache.bewertungsCheckpoints;
+
+    const defaultBriefvorlage = {
+        anrede: 'Liebe/r [NAME],\n\nim Rahmen des Projekts "Zeig, was du kannst!" hast du folgende Stärken gezeigt:',
+        schluss: 'Wir gratulieren dir zu diesen Leistungen und freuen uns auf weitere erfolgreiche Projekte.\n\nMit freundlichen Grüßen\nDein Lehrerteam'
+    };
+
+    const vorlage = briefvorlage || defaultBriefvorlage;
+
+    const anrede = ersetzePlatzhalter(vorlage.anrede, bewertung.schuelerName);
+    const grussformel = ersetzePlatzhalter(vorlage.schluss, bewertung.schuelerName);
+
+    let textbox = '';
+    const saetze = [];
+
+    Object.keys(bewertung.staerken).forEach(kategorie => {
+        const aktivierte = bewertung.staerken[kategorie];
+        if (aktivierte && aktivierte.length > 0) {
+            aktivierte.forEach(index => {
+                const key = `${kategorie}_${index}`;
+                let formulierung = staerkenFormulierungen ? staerkenFormulierungen[key] : null;
+                if (!formulierung) {
+                    if (bewertungsCheckpoints && bewertungsCheckpoints[kategorie] && bewertungsCheckpoints[kategorie][index]) {
+                        formulierung = bewertungsCheckpoints[kategorie][index];
+                    } else {
+                        formulierung = `Du zeigst Stärken im Bereich ${kategorie}`;
+                    }
+                }
+
+                if (formulierung) {
+                    let satz = ersetzePlatzhalter(formulierung, bewertung.schuelerName);
+                    if (!satz.endsWith('.') && !satz.endsWith('!') && !satz.endsWith('?')) {
+                        satz += '.';
+                    }
+                    saetze.push(satz);
+                }
+            });
+        }
+    });
+
+    if (saetze.length > 0) {
+        textbox += saetze.join('\n') + '\n\n';
+    }
+
+    if (bewertung.freitext) {
+        const formatierterFreitext = ersetzePlatzhalter(bewertung.freitext, bewertung.schuelerName);
+        textbox += formatierterFreitext + '\n\n';
+    }
+
+    textbox += `Gesamtnote: ${bewertung.endnote}`;
+
+    return {
+        betreff: `Projektbewertung - ${bewertung.schuelerName}`,
+        anrede,
+        textbox,
+        grussformel,
+        datum: window.firebaseFunctions.formatGermanDate(),
+        thema: bewertung.thema,
+        lehrer: bewertung.lehrer,
+        schueler: bewertung.schuelerName
+    };
 }
 
 // PDF in neuem Fenster anzeigen - KORRIGIERT mit Briefkopf-Bild
