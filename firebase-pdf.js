@@ -1,4 +1,6 @@
-// Firebase PDF-Generierung System
+// firebase-pdf.js
+// Dieses Skript ist für die Generierung und den Download von DOCX-Dateien zuständig.
+
 console.log('📄 Firebase PDF System geladen');
 
 /**
@@ -17,7 +19,6 @@ async function createPDF(schuelerId) {
     }
 
     // Externe Bibliotheken sicherstellen (PizZip, docxtemplater)
-    // docx-preview wird nicht mehr benötigt, da wir direkt herunterladen
     try {
         await loadDocxLibraries();
         console.log('✅ DOCX-Bibliotheken (PizZip, docxtemplater) erfolgreich geladen.');
@@ -31,13 +32,14 @@ async function createPDF(schuelerId) {
     const bewertungen = window.firebaseFunctions.getBewertungenFromCache();
     const bewertung = bewertungen.find(b => b.schuelerId === schuelerId);
 
-    if (!bewertung || !bewertung.staerken) {
+    if (!bewertung || !bewertung.staerken || Object.keys(bewertung.staerken).length === 0 || !bewertung.endnote) {
         alert('Keine vollständige Bewertung für PDF vorhanden. Bitte stellen Sie sicher, dass Stärken und eine Endnote eingetragen sind.');
+        console.warn('Bewertung unvollständig für PDF:', bewertung);
         return;
     }
 
     // Daten für DOCX zusammenstellen, die in die Vorlage eingefügt werden
-    const docxData = generateDocxData(bewertung);
+    const docxData = generateDocxData(bewertung); // <<< Jetzt ist diese Funktion hier definiert
 
     try {
         // DOCX-Datei aus Vorlage generieren
@@ -52,6 +54,32 @@ async function createPDF(schuelerId) {
         alert('Fehler beim Erstellen oder Herunterladen des Dokuments. Detaillierte Fehlerinformationen finden Sie in der Browser-Konsole.');
     }
 }
+
+/**
+ * Sammelt und formatiert die Daten aus dem Bewertungsobjekt für die DOCX-Vorlage.
+ * Dies ist der Adapter zwischen deinen Bewertungsdaten und den DOCX-Platzhaltern.
+ * @param {object} bewertung - Das vollständige Bewertungsobjekt des Schülers.
+ * @returns {object} Ein Objekt, dessen Schlüssel den Platzhaltern in der DOCX-Vorlage entsprechen.
+ */
+function generateDocxData(bewertung) {
+    // Rufe die bereits bestehende Funktion auf, die den Inhalt generiert.
+    // Sie sollte ein Objekt mit 'titel', 'inhalt', 'datum', 'schueler', 'thema', 'lehrer' zurückgeben.
+    const contentData = generatePDFContent(bewertung); 
+
+    // Mapping der generierten Inhalte auf die Platzhalter in deiner DOCX-Vorlage.
+    // Die Schlüssel hier MÜSSEN genau den Namen deiner Platzhalter in der DOCX-Vorlage entsprechen (z.B. "[Betreff]" -> 'Betreff').
+    return {
+        Betreff: `Bewertung für ${bewertung.schuelerName} - ${contentData.thema || ''}`, 
+        Anrede: contentData.anrede, 
+        Textbox: contentData.inhalt, 
+        Grussformel: contentData.schluss, 
+        Datum: contentData.datum,
+        Thema: contentData.thema,
+        Lehrer: contentData.lehrer,
+        Schueler: contentData.schueler
+    };
+}
+
 
 /**
  * Generiert den Textinhalt für das PDF/DOCX basierend auf der Schülerbewertung.
@@ -134,7 +162,11 @@ function generatePDFContent(bewertung) {
         datum: window.firebaseFunctions.formatGermanDate(),
         schueler: bewertung.schuelerName,
         thema: bewertung.thema,
-        lehrer: bewertung.lehrer
+        lehrer: bewertung.lehrer,
+        // Optional: füge hier auch Anrede und Schluss separat hinzu,
+        // falls die DOCX-Vorlage sie als eigene Platzhalter erwartet.
+        anrede: anrede, 
+        schluss: schluss
     };
 }
 
@@ -162,7 +194,7 @@ async function generateDocxFromTemplate(data) {
     // Annahme: Vorlage_PDF.docx liegt im selben Verzeichnis wie die HTML/JS-Datei
     const response = await fetch('./Vorlage_PDF.docx');
     if (!response.ok) {
-        throw new Error(`DOCX-Vorlage konnte nicht geladen werden: ${response.statusText}`);
+        throw new Error(`DOCX-Vorlage konnte nicht geladen werden: ${response.statusText} (URL: ${response.url})`);
     }
     const arrayBuffer = await response.arrayBuffer();
     
@@ -170,39 +202,58 @@ async function generateDocxFromTemplate(data) {
     const zip = new PizZip(arrayBuffer);
     
     // docxtemplater ist hier die gängige Bibliothek für komplexere Vorlagen
-    // Für die hier gezeigte einfache String-Ersetzung wäre docxtemplater selbst overkill,
-    // aber es ist gut, wenn die Absicht ist, eine echte docxtemplater-Vorlage zu nutzen.
-    // Wenn es nur um einfache String-Ersetzung in XML geht, ist der aktuelle Ansatz ok.
-    // ACHTUNG: Die aktuelle Implementierung ersetzt Platzhalter DIREKT im XML.
+    // Deine aktuelle Implementierung ersetzt Platzhalter DIREKT im XML.
     // Eine korrekte docxtemplater-Nutzung sähe so aus:
     /*
     const doc = new window.docxtemplater(zip, {
         paragraphLoop: true,
         linebreaks: true,
     });
-    doc.setData(data);
+    doc.setData(data); // Hier werden die Daten übergeben
     doc.render();
-    return doc.get  Zip().generate({ type: 'blob' });
+    return doc.getZip().generate({ type: 'blob' });
     */
-    // Da deine Vorlage einfache String-Ersetzung verwendet, bleibt der folgende Code.
-    // Für komplexere Vorlagen mit Schleifen, Bedingungen etc. müsste docxtemplater eingesetzt werden.
+    // Da deine Vorlage einfache String-Ersetzung verwendet, behalten wir den direkten XML-Ansatz bei,
+    // aber mit einer dynamischen Ersetzungsschleife, die robuster ist.
 
     let xml = zip.file('word/document.xml').asText();
 
-    // Platzhalter im XML der DOCX-Datei ersetzen
-    xml = xml
-        .replace(/\[Betreff\]/g, data.betreff || '')
-        .replace(/\[Anrede\]/g, data.anrede || '')
-        .replace(/\[Textbox\]/g, data.textbox || '')
-        .replace(/\[Grussformel\]/g, data.grussformel || '')
-        .replace(/\[Datum\]/g, data.datum || '')
-        .replace(/\[Thema\]/g, data.thema || '')
-        .replace(/\[Lehrer\]/g, data.lehrer || '')
-        .replace(/\[Schueler\]/g, data.schueler || '');
+    // Schleife durch die übergebenen Daten und ersetze die Platzhalter dynamisch
+    // Beispiel: data = { Betreff: "xyz", Anrede: "abc" }
+    // Platzhalter in der DOCX sind [Betreff], [Anrede]
+    for (const key in data) {
+        if (Object.prototype.hasOwnProperty.call(data, key)) {
+            // Erstelle ein RegExp, das exakt den Platzhalter [KEY] matched
+            // 'g' für globale Ersetzung, damit alle Vorkommen ersetzt werden
+            const placeholder = new RegExp(`\\[${key}\\]`, 'g');
+            // Ersetze den Platzhalter. Nutze data[key] und einen leeren String als Fallback.
+            // Der Inhalt muss evtl. XML-escaped werden, wenn er Sonderzeichen enthält.
+            // Für einfachen Text ist dies oft nicht nötig, aber bei HTML-Inhalten schon.
+            xml = xml.replace(placeholder, escapeXml(data[key] || '')); 
+        }
+    }
 
     zip.file('word/document.xml', xml);
     return zip.generate({ type: 'blob' });
 }
+
+/**
+ * Helferfunktion zum XML-Escaping von Text, um Probleme mit Sonderzeichen in DOCX-XML zu vermeiden.
+ * @param {string} unsafe - Der unsichere String.
+ * @returns {string} Der XML-escaped String.
+ */
+function escapeXml(unsafe) {
+    return unsafe.replace(/[<>&'"]/g, function (c) {
+        switch (c) {
+            case '<': return '&lt;';
+            case '>': return '&gt;';
+            case '&': return '&amp;';
+            case "'": return '&apos;';
+            case '"': return '&quot;';
+        }
+    });
+}
+
 
 /**
  * Bietet eine generierte DOCX-Datei (als Blob) direkt zum Download an.
@@ -214,7 +265,10 @@ function downloadDocx(blob, schuelerName) {
     const a = document.createElement('a');
     a.href = url;
     // Dateiname formatieren (z.B. "Bewertung_Max_Mustermann.docx")
-    a.download = `Bewertung_${schuelerName.replace(/ /g, '_')}.docx`; // Leerzeichen durch Unterstriche ersetzen
+    // Umlaute und Sonderzeichen im Dateinamen sollten vermieden oder kodiert werden.
+    // Hier einfach ein grundlegendes Ersetzen von Leerzeichen.
+    const safeSchuelerName = schuelerName.replace(/[^a-zA-Z0-9äöüÄÖÜß\s]/g, '').replace(/ /g, '_');
+    a.download = `Bewertung_${safeSchuelerName}.docx`; 
     document.body.appendChild(a); // Element dem DOM hinzufügen (kurzzeitig)
     a.click(); // Klick simulieren, um den Download auszulösen
     document.body.removeChild(a); // Element wieder entfernen
@@ -544,15 +598,12 @@ function loadDocxLibraries() {
     const tasks = [];
     // Überprüfen, ob PizZip bereits geladen ist
     if (typeof window.PizZip === 'undefined') {
-        // KORRIGIERTER LINK AUF VERSION 3.2.0 VON JSDELIVR
         tasks.push(add('https://cdn.jsdelivr.net/npm/pizzip@3.2.0/dist/pizzip.min.js'));
     }
     // Überprüfen, ob docxtemplater bereits geladen ist
     if (typeof window.docxtemplater === 'undefined') {
         tasks.push(add('https://cdnjs.cloudflare.com/ajax/libs/docxtemplater/3.37.2/docxtemplater.min.js'));
     }
-    // docx-preview wird nicht mehr benötigt und nicht mehr hier geladen.
-    // Es gab auch keine Probleme mit dem Laden von docxtemplater und PizZip im Hauptfenster.
 
     return Promise.all(tasks);
 }
@@ -566,10 +617,11 @@ function updatePDFButtonStatus(schuelerId) {
     const bewertungen = window.firebaseFunctions.getBewertungenFromCache();
     const bewertung = bewertungen.find(b => b.schuelerId === schuelerId);
     // Annahme: Der Button hat einen onclick-Handler, der die schuelerId enthält,
-    // z.B. onclick="createPDF('schueler123')"
+    // z.B. onclick="pdfFunctions.createPDF('schueler123')"
     const button = document.querySelector(`[onclick*="${schuelerId}"]`);
     
     if (button && button.textContent.includes('PDF')) { // Nur Buttons mit "PDF" Text prüfen
+        // Eine Bewertung ist "vollständig", wenn sie existiert, eine Endnote hat und Stärken besitzt.
         const verfuegbar = bewertung && bewertung.endnote && bewertung.staerken && Object.keys(bewertung.staerken).length > 0;
         
         if (verfuegbar) {
@@ -616,12 +668,12 @@ window.pdfFunctions = {
     createPDF,
     updatePDFButtonStatus,
     updateAllPDFButtons,
-    // displayPDF bleibt, falls du es für andere Zwecke brauchst, aber es wird nicht mehr von createPDF verwendet
+    // displayPDF bleibt, falls du es für andere Zwecke brauchst (HTML-basierte PDF-Vorschau)
     displayPDF, 
     // Intern genutzte Funktionen können auch bei Bedarf exportiert werden
-    generateDocxData,
+    generateDocxData, // Jetzt auch exportiert, falls von außen benötigt
     generateDocxFromTemplate,
-    downloadDocx // downloadDocx ist jetzt die öffentliche Funktion
+    downloadDocx 
 };
 
 console.log('✅ Firebase PDF System bereit');
