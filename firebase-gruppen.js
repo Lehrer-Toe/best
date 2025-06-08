@@ -132,36 +132,33 @@ function showGruppenAnlegenUI(berechtigt) {
         });
         
         if (gruppenAnlegenCard) {
+            // Toggle-Button holen
+            const toggleBtn = document.getElementById('gruppenToggleBtn');
+
             if (berechtigt) {
-                // Zeige normale UI
+                // Zeige normale UI und Toggle-Button
                 gruppenAnlegenCard.style.display = 'block';
+                if (toggleBtn) toggleBtn.style.display = 'flex';
+
+                // Eventuellen Hinweis entfernen
+                const hinweis = document.getElementById('keineGruppenBerechtigung');
+                if (hinweis) hinweis.remove();
+
                 console.log('✅ Gruppen-Anlegen UI angezeigt');
             } else {
-                // Verstecke UI und zeige Hinweis
+                // Verstecke UI und Toggle-Button
                 gruppenAnlegenCard.style.display = 'none';
-                
-                // Prüfe ob Hinweis schon existiert
-                if (!document.getElementById('keineGruppenBerechtigung')) {
-                    const hinweis = document.createElement('div');
-                    hinweis.id = 'keineGruppenBerechtigung';
-                    hinweis.className = 'card';
-                    hinweis.style.background = '#fff3cd';
-                    hinweis.style.border = '1px solid #ffeaa7';
-                    hinweis.innerHTML = `
-                        <h3 style="color: #856404;">🚫 Keine Berechtigung</h3>
-                        <p style="color: #856404;">
-                            Sie haben keine Berechtigung, neue Gruppen anzulegen. 
-                            Bitte wenden Sie sich an Ihren Administrator, wenn Sie diese Funktion benötigen.
-                        </p>
-                    `;
-                    
-                    // Füge Hinweis vor der Gruppenliste ein
-                    const gruppenListe = document.getElementById('gruppenListe');
-                    if (gruppenListe && gruppenListe.parentNode) {
-                        gruppenListe.parentNode.insertBefore(hinweis, gruppenListe);
-                    }
-                }
-                console.log('⚠️ Hinweis angezeigt: Keine Berechtigung');
+                if (toggleBtn) toggleBtn.style.display = 'none';
+
+                // Bereich sicher schließen
+                const bereich = document.getElementById('gruppenErstellenBereich');
+                if (bereich) bereich.classList.remove('active');
+
+                // Hinweis entfernen, falls vorhanden
+                const hinweis = document.getElementById('keineGruppenBerechtigung');
+                if (hinweis) hinweis.remove();
+
+                console.log('⚠️ Gruppen-Anlegen UI ausgeblendet (keine Berechtigung)');
             }
         } else {
             console.warn('⚠️ Gruppen-Anlegen Card nicht gefunden');
