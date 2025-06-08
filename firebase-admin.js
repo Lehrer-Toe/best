@@ -510,7 +510,7 @@ function loadLehrer() {
     loadLehrerListe();
 }
 
-// Lehrer-Liste laden
+// Lehrer-Liste laden (ERWEITERT mit Gruppen-Berechtigung)
 async function loadLehrerListe() {
     try {
         const usersRef = window.firebaseFunctions.getDatabaseRef('users');
@@ -526,11 +526,22 @@ async function loadLehrerListe() {
             
             Object.entries(users).forEach(([key, user]) => {
                 if (user.role === 'lehrer') {
+                    // Standard: kann Gruppen anlegen (true)
+                    const kannGruppenAnlegen = user.kannGruppenAnlegen !== false;
+                    const checkboxChecked = kannGruppenAnlegen ? 'checked' : '';
+                    
                     html += `
                         <div class="liste-item">
                             <div>
                                 <strong>${user.name}</strong><br>
-                                <small>E-Mail: ${user.email}</small>
+                                <small>E-Mail: ${user.email}</small><br>
+                                <label style="margin-top: 10px; cursor: pointer;">
+                                    <input type="checkbox" 
+                                           ${checkboxChecked}
+                                           onchange="toggleGruppenBerechtigung('${key}', this.checked)"
+                                           style="margin-right: 5px;">
+                                    Kann Gruppen anlegen
+                                </label>
                             </div>
                             <div>
                                 <button class="btn btn-danger" onclick="lehrerLoeschen('${key}', '${user.name}')">Löschen</button>
@@ -553,6 +564,45 @@ async function loadLehrerListe() {
         if (liste) {
             liste.innerHTML = '<div class="card"><p style="color: #e74c3c;">Fehler beim Laden der Lehrer-Liste!</p></div>';
         }
+    }
+}
+
+// Gruppen-Berechtigung für Lehrer umschalten
+async function toggleGruppenBerechtigung(userKey, kannGruppenAnlegen) {
+    console.log('🔄 Ändere Gruppen-Berechtigung:', userKey, kannGruppenAnlegen);
+    
+    if (!window.firebaseFunctions.requireAdmin()) return;
+    
+    try {
+        const userRef = window.firebaseFunctions.getDatabaseRef(`users/${userKey}/kannGruppenAnlegen`);
+        await window.firebaseDB.set(userRef, kannGruppenAnlegen);
+        
+        // Cache aktualisieren wenn verfügbar
+        if (window.firebaseFunctions.dataCache.users && window.firebaseFunctions.dataCache.users[userKey]) {
+            window.firebaseFunctions.dataCache.users[userKey].kannGruppenAnlegen = kannGruppenAnlegen;
+        }
+        
+        // News erstellen
+        const usersRef = window.firebaseFunctions.getDatabaseRef(`users/${userKey}`);
+        const userSnapshot = await window.firebaseDB.get(usersRef);
+        const userName = userSnapshot.exists() ? userSnapshot.val().name : 'Unbekannt';
+        
+        if (window.newsFunctions) {
+            const aktion = kannGruppenAnlegen ? 'kann jetzt Gruppen anlegen' : 'kann keine Gruppen mehr anlegen';
+            await window.newsFunctions.createNewsForAction(
+                'Berechtigung geändert', 
+                `${userName} ${aktion}.`,
+                true
+            );
+        }
+        
+        console.log('✅ Gruppen-Berechtigung geändert für:', userName);
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Ändern der Berechtigung:', error);
+        alert('Fehler beim Ändern der Berechtigung: ' + error.message);
+        // Checkbox zurücksetzen
+        loadLehrerListe();
     }
 }
 
@@ -625,7 +675,8 @@ window.adminFunctions = {
     loadLehrer,
     loadDatenverwaltung,
     updateFirebaseInfo,
-    schuljahrSpeichern
+    schuljahrSpeichern,
+    toggleGruppenBerechtigung
 };
 
 console.log('✅ Firebase Admin-System bereit');
