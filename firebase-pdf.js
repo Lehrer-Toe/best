@@ -211,7 +211,7 @@ async function generateDocxFromTemplate(data) {
 function displayDocxPDF(blob, data) {
     const popup = window.open('', '_blank', 'width=800,height=1000');
 
-    // HTML-Struktur für das Popup-Fenster mit docx-preview Integration
+    // HTML-Struktur für das Popup-Fenster OHNE das docx-preview Skript im head
     const html = `
         <!DOCTYPE html>
         <html lang="de">
@@ -225,7 +225,6 @@ function displayDocxPDF(blob, data) {
                     .print-btn { display: none; }
                 }
             </style>
-            <script src="https://cdn.jsdelivr.net/npm/docx-preview@0.3.5/dist/docx-preview.min.js"></script>
         </head>
         <body>
             <button class="print-btn" onclick="window.print()">🖨️ Drucken</button>
@@ -234,27 +233,38 @@ function displayDocxPDF(blob, data) {
         </html>`;
 
     popup.document.write(html);
-    popup.document.close();
+    popup.document.close(); // Wichtig, um das Dokument zu schließen und das Parsen zu beenden
 
-    // Warten, bis docx-preview geladen und das Container-Element verfügbar ist
-    const loadAndRenderDocx = () => {
+    // docx-preview Skript dynamisch laden, NACHDEM das Popup-HTML geschrieben wurde
+    const script = popup.document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/docx-preview@0.3.5/dist/docx-preview.min.js';
+    
+    script.onload = () => {
+        // Jetzt, da das Skript geladen ist, können wir es verwenden
+        const docxPreviewOptions = {
+            className: "docx-wrapper",
+            inWrapper: true,
+            ignoreStyles: false,
+            breakPages: true,
+            debug: false
+        };
+        // Sicherstellen, dass docx und das Container-Element im Popup verfügbar sind
         if (popup.docx && popup.document.getElementById('docx-container')) {
-            // Optionen für docx-preview, z.B. um Bilder in der DOCX zu rendern
-            const docxPreviewOptions = {
-                className: "docx-wrapper", // Klasse für den Wrapper
-                inWrapper: true,           // Inhalt in einem Wrapper
-                ignoreStyles: false,       // Styles aus der DOCX übernehmen
-                breakPages: true,          // Seitenumbrüche beachten
-                debug: false               // Debug-Infos ausgeben
-            };
             popup.docx.renderAsync(blob, popup.document.getElementById('docx-container'), null, docxPreviewOptions)
                 .then(() => console.log('DOCX-Preview erfolgreich gerendert.'))
                 .catch(err => console.error('Fehler beim Rendern des DOCX-Previews:', err));
         } else {
-            setTimeout(loadAndRenderDocx, 100); // Erneut versuchen, wenn noch nicht bereit
+            console.error('Popup-Elemente für DOCX-Preview nicht bereit oder docx-Preview-Objekt fehlt.');
         }
     };
-    loadAndRenderDocx();
+    
+    script.onerror = (err) => {
+        console.error('Fehler beim Laden von docx-preview.min.js im Popup:', err);
+        alert('Fehler beim Laden der DOCX-Vorschau. Bitte versuchen Sie es erneut.');
+    };
+    
+    // Das Skript zum Head des Popup-Dokuments hinzufügen
+    popup.document.head.appendChild(script);
 }
 
 /**
@@ -662,10 +672,10 @@ function loadDocxLibraries() {
     if (typeof window.docxtemplater === 'undefined') {
         tasks.push(add('https://cdnjs.cloudflare.com/ajax/libs/docxtemplater/3.37.2/docxtemplater.min.js'));
     }
-    // Überprüfen, ob docx-preview bereits geladen ist (window.docx ist das Hauptobjekt)
-    if (typeof window.docx === 'undefined') {
-        tasks.push(add('https://cdn.jsdelivr.net/npm/docx-preview@0.3.5/dist/docx-preview.min.js'));
-    }
+    // docx-preview wird jetzt nicht mehr hier geladen, sondern dynamisch im Popup selbst
+    // if (typeof window.docx === 'undefined') {
+    //     tasks.push(add('https://cdn.jsdelivr.net/npm/docx-preview@0.3.5/dist/docx-preview.min.js'));
+    // }
 
     return Promise.all(tasks);
 }
