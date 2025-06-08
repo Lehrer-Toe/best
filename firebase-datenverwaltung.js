@@ -391,7 +391,7 @@ async function datenLoeschen(typ) {
     }
 }
 
-// Lehrer hinzufügen
+// Lehrer hinzufügen (ERWEITERT mit kannGruppenAnlegen)
 async function lehrerHinzufuegen() {
     console.log('👨‍🏫 Füge neuen Lehrer hinzu...');
     
@@ -428,6 +428,7 @@ async function lehrerHinzufuegen() {
             name,
             email,
             role: 'lehrer',
+            kannGruppenAnlegen: true, // NEU: Standardmäßig kann jeder Lehrer Gruppen anlegen
             erstellt: window.firebaseFunctions.formatGermanDate(),
             timestamp: window.firebaseFunctions.getTimestamp()
         });
