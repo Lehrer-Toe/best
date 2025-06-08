@@ -469,9 +469,9 @@ function generateNotenButtons(kategorieIndex, vorhandeneNote) {
     let html = '';
     
     noten.forEach(note => {
-        const noteStr = note.toString().replace('.', '-');
+        const noteStr = note.toFixed(1).replace('.', '-');
         const isSelected = vorhandeneNote === note ? 'selected' : '';
-        html += `<button class="note-btn note-${noteStr} ${isSelected}" 
+        html += `<button class="note-btn note-${noteStr} ${isSelected}"
                        onclick="noteSetzen(${kategorieIndex}, ${note})">${note}</button>`;
     });
     
@@ -490,7 +490,7 @@ function noteSetzen(kategorieIndex, note) {
     if (note === undefined) {
         kategorie.querySelector('.nicht-bewertet-btn').classList.add('selected');
     } else {
-        const noteStr = note.toString().replace('.', '-');
+        const noteStr = note.toFixed(1).replace('.', '-');
         kategorie.querySelector(`.note-${noteStr}`).classList.add('selected');
     }
     
